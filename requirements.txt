@@ -1,0 +1,61 @@
+# =============================================================================
+# Arkon Manufacturing AI - Python Dependencies
+# Python: 3.12  (see .python-version)
+# =============================================================================
+# Setup:
+#   python3.12 -m venv ~/venvs/arkon-manufacturing-ai_mac_venv
+#   source ~/venvs/arkon-manufacturing-ai_mac_venv/bin/activate
+#   pip install -r requirements.txt
+#
+# PyTorch (CV module) - install separately AFTER the above:
+#   pip install torch torchvision torchaudio
+#   (Mac Apple Silicon uses MPS backend automatically)
+# =============================================================================
+
+# ── Data & Numerics ──────────────────────────────────────────────────────────
+numpy>=1.26,<2.0
+pandas>=2.1
+scipy>=1.11
+
+# ── Machine Learning ─────────────────────────────────────────────────────────
+scikit-learn>=1.4
+xgboost>=2.0
+imbalanced-learn>=0.12        # SMOTE for Scania class imbalance
+
+# ── Time Series ──────────────────────────────────────────────────────────────
+statsmodels>=0.14
+
+# ── Computer Vision ──────────────────────────────────────────────────────────
+Pillow>=10.0
+opencv-python>=4.9
+albumentations>=1.3           # image augmentation
+# torch + torchvision → install separately (see header)
+
+# ── Visualization ────────────────────────────────────────────────────────────
+matplotlib>=3.8
+seaborn>=0.13
+plotly>=5.18
+
+# ── Streamlit App ────────────────────────────────────────────────────────────
+streamlit>=1.32
+streamlit-option-menu>=0.3
+
+# ── LLM / RAG ────────────────────────────────────────────────────────────────
+langchain>=0.1
+langchain-community>=0.0.20
+chromadb>=0.4                 # vector store
+openai>=1.0                   # or swap for anthropic>=0.20
+
+# ── Jupyter ──────────────────────────────────────────────────────────────────
+jupyter>=1.0
+ipykernel>=6.29
+notebook>=7.0
+
+# ── MLOps ────────────────────────────────────────────────────────────────────
+mlflow>=2.10                  # experiment tracking + model registry
+
+# ── Utilities ────────────────────────────────────────────────────────────────
+kaggle>=1.6
+tqdm>=4.66
+python-dotenv>=1.0            # .env for API keys
+joblib>=1.3

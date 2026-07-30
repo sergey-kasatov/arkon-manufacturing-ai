@@ -1,0 +1,9 @@
+{
+    "python.defaultInterpreterPath": "/Users/kasser/venvs/arkon-manufacturing-ai_mac_venv/bin/python3",
+    "python.venvPath": "/Users/kasser/venvs",
+    "python.interpreters.exclude": [
+        "/usr/bin/python*",
+        "/usr/local/bin/python*",
+        "/opt/homebrew/bin/python*"
+    ]
+}

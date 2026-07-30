@@ -1,0 +1,35 @@
+# Datasets: third-party data, restored with data/download_datasets.sh.
+# Two files exceed the GitHub 100 MB limit, so the raw data never goes in git.
+data/*
+!data/README.md
+!data/download_datasets.sh
+
+# MLflow tracking store and artifacts
+mlruns/
+mlflow.db
+
+# Trained models and checkpoints
+models/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Environments and secrets
+.env
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Backups and file-transfer artefacts
+*.bak
+*.bak-*
+.smbdelete*
+sed??????
+
+# OS
+.DS_Store
+Thumbs.db
