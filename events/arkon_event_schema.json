@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "arkon_event_schema.json",
+  "title": "Arkon risk event",
+  "description": "Shared event contract published by every Arkon model module after its own validation step. Owner: docs/Project_Charter.md sections 6 and 7.",
+  "type": "object",
+  "required": [
+    "event_id", "event_time", "source_module", "business_domain", "risk_type",
+    "risk_score", "priority", "summary", "evidence", "context_origin",
+    "recommended_action", "status"
+  ],
+  "properties": {
+    "event_id": {"type": "string", "pattern": "^arkon-[0-9]{4}-[0-9]{6}$"},
+    "event_time": {"type": "string", "format": "date-time"},
+    "source_module": {"enum": ["cmapss_rul", "scania_aps", "casting_cv", "nhtsa_nlp"]},
+    "business_domain": {"enum": ["asset_reliability", "fleet_reliability", "visual_inspection", "field_quality"]},
+    "risk_type": {"type": "string", "minLength": 1},
+    "risk_score": {"type": "number", "minimum": 0, "maximum": 1},
+    "priority": {"enum": ["P1", "P2", "P3", "P4"]},
+    "summary": {"type": "string", "minLength": 1},
+    "evidence": {
+      "type": "object",
+      "required": ["record_id", "model_version", "prediction", "threshold"],
+      "additionalProperties": true
+    },
+    "context_origin": {"enum": ["real", "simulated"]},
+    "recommended_action": {"type": "string"},
+    "status": {"enum": ["new", "acknowledged", "in_containment", "resolved", "closed", "false_positive"]},
+    "operational_context": {
+      "type": "object",
+      "description": "Simulated demonstration fields (shift, line, owner). Must always be labelled as simulated, charter section 5.",
+      "required": ["context_origin"],
+      "properties": {
+        "context_origin": {"const": "simulated"}
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -83,7 +83,42 @@ Every model publishes a common event after its own validation step. This makes t
 
 The exact priority thresholds will be defined per module and documented with the model. A risk score is not automatically a production stop decision.
 
-## 7. Target architecture
+## 7. Quality Steering Cell operating rules
+
+Decided 2026-08-10. These rules govern what happens after an event is published.
+
+### 7.1 Priority levels
+
+P1 is the highest severity.
+
+| Priority | Meaning | Response expectation (demo scale) |
+|---|---|---|
+| P1 | Critical: imminent failure or safety-relevant defect risk | Immediate alert; acknowledge within 15 minutes or escalate to the Quality Manager |
+| P2 | High: threshold breach requiring same-shift action | Alert; acknowledge within 1 hour |
+| P3 | Medium: degradation trend for planned work | Queued; reviewed daily, no push alert |
+| P4 | Low or informational: recorded for trend analysis | Dashboard only |
+
+Each module documents its own risk_score-to-priority thresholds next to the model. Initial CMAPSS FD001 mapping on predicted RUL in cycles: RUL <= 10 is P1, RUL <= 25 is P2, RUL <= 50 is P3, above 50 is P4.
+
+### 7.2 Incident lifecycle
+
+new -> acknowledged -> in_containment -> resolved -> closed
+
+A reviewed incident may instead be marked false_positive; that outcome is kept and feeds threshold tuning. Every transition is timestamped in the incident record, and response-time KPIs are computed from these timestamps. The demo must show at least one full path from new to closed.
+
+### 7.3 Ownership and assignment
+
+Assignment happens at workflow intake, not in the model adapter. A routing table maps business_domain and priority to a role: asset_reliability to Maintenance Planner, fleet_reliability to Fleet Reliability Engineer, visual_inspection to QC Engineer, field_quality to Field Quality Analyst. P1 additionally notifies the Quality Manager. The people behind the roles come from a simulated roster file labelled `context_origin: simulated` under the section 5 rules.
+
+### 7.4 Communication and escalation
+
+The alert channel is a Telegram bot driven by n8n: an incident card with priority, summary, evidence reference, and for computer-vision events the defect image, plus inline acknowledge and close buttons. The channel is an adapter: a corporate deployment would swap the Telegram node for a Microsoft Teams node without changing the workflow. P1 and P2 incidents that are not acknowledged within their response window trigger a manager notification. A daily digest summarises open incidents.
+
+### 7.5 Incident store and dashboards
+
+The incident record of truth is one SQLite database written by the n8n workflow; its exact mount location is fixed against the NAS compose file at deployment time. Streamlit reads the store directly and serves as the live operational cockpit. Tableau reads periodic extracts and serves as the executive KPI view: open incidents by priority, response times, and trend Pareto. A live Tableau connection would require a paid Tableau Server; extract refresh is the documented portfolio boundary.
+
+## 8. Target architecture
 
 ```text
 Public datasets
@@ -110,7 +145,7 @@ Streamlit operational cockpit and Tableau executive view
 
 n8n orchestrates operational work. It does not train or host machine-learning models. The workflow receives an event through a webhook, API call, or controlled file input, validates it, prevents duplicate alerts, assigns a priority route, records the incident, requests human approval where required, and stores closure feedback.
 
-## 8. Delivery sequence
+## 9. Delivery sequence
 
 ### Phase 0: Foundation
 
@@ -143,7 +178,7 @@ n8n orchestrates operational work. It does not train or host machine-learning mo
 - Demonstrate one complete incident path from model output to human-reviewed closure.
 - Document limitations, false-positive trade-offs, and simulated-data boundaries.
 
-## 9. MVP success criteria
+## 10. MVP success criteria
 
 The MVP is complete when all of the following are true:
 
@@ -153,6 +188,6 @@ The MVP is complete when all of the following are true:
 - The decision and event status can be seen in an operational interface.
 - The repository documents data provenance, model limitations, and any simulated context.
 
-## 10. Immediate next action
+## 11. Immediate next action
 
-Begin Phase 1 by completing the CMAPSS baseline. The first deliverable is a saved prediction table and a documented RUL threshold that can be transformed into sample Arkon risk events. n8n begins immediately after that event output exists.
+Phase 1 status 2026-08-11: the CMAPSS baseline is reproducible (Linear Regression RMSE 20.79, XGBoost RMSE 17.11 on the FD001 test set), predictions are saved, and 100 validated risk events exist in `events/out/`. Next action: deploy the n8n Quality Steering Cell workflow per `n8n/README.md` in an interactive session, where the Telegram credentials and the NAS incident-store mount are decided.

@@ -23,6 +23,14 @@ _NB_DIR     = _UTILS_DIR.parent                        # notebooks/
 PROJECT_ROOT = _NB_DIR.parent                          # project root
 
 
+def _rel_to_project(path: Path) -> str:
+    """Display helper: path relative to project root, absolute if outside."""
+    try:
+        return str(Path(path).resolve().relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Device
 # ─────────────────────────────────────────────────────────────────────────────
@@ -150,7 +158,7 @@ def save_figure(
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{name}.{fmt}"
     fig.savefig(path, dpi=dpi, bbox_inches="tight")
-    print(f"  ✓ Saved → {path.relative_to(PROJECT_ROOT)}")
+    print(f"  ✓ Saved → {_rel_to_project(path)}")
     if close:
         plt.close(fig)
     return path
@@ -264,7 +272,8 @@ class CheckpointManager:
     def __init__(self, checkpoint_dir=None):
         if checkpoint_dir is None:
             checkpoint_dir = PROJECT_ROOT / "models" / "checkpoints"
-        self.dir = Path(checkpoint_dir)
+        # Resolve so relative dirs passed from notebooks don't break display paths
+        self.dir = Path(checkpoint_dir).resolve()
         self.dir.mkdir(parents=True, exist_ok=True)
 
     # ── sklearn / XGBoost ────────────────────────────────────────────────────
@@ -277,7 +286,7 @@ class CheckpointManager:
         joblib.dump(model, path)
         if metadata:
             self._save_meta(name, metadata)
-        print(f"  ✓ Checkpoint saved → {path.relative_to(PROJECT_ROOT)}")
+        print(f"  ✓ Checkpoint saved → {_rel_to_project(path)}")
         return path
 
     def load_sklearn(self, name: str):
@@ -287,7 +296,7 @@ class CheckpointManager:
             raise FileNotFoundError(f"Checkpoint not found: {path}")
         model = joblib.load(path)
         meta  = self._load_meta(name)
-        print(f"  ✓ Checkpoint loaded ← {path.relative_to(PROJECT_ROOT)}")
+        print(f"  ✓ Checkpoint loaded ← {_rel_to_project(path)}")
         if meta:
             print(f"    metadata: {meta}")
         return model, meta
@@ -306,7 +315,7 @@ class CheckpointManager:
         torch.save(payload, path)
         if metadata:
             self._save_meta(name, metadata)
-        print(f"  ✓ Checkpoint saved → {path.relative_to(PROJECT_ROOT)}")
+        print(f"  ✓ Checkpoint saved → {_rel_to_project(path)}")
         return path
 
     def load_torch(self, name: str, map_location="cpu"):
@@ -318,7 +327,7 @@ class CheckpointManager:
         payload = torch.load(path, map_location=map_location)
         state   = payload.get("state_dict")
         meta    = payload.get("metadata", self._load_meta(name))
-        print(f"  ✓ Checkpoint loaded ← {path.relative_to(PROJECT_ROOT)}")
+        print(f"  ✓ Checkpoint loaded ← {_rel_to_project(path)}")
         if meta:
             print(f"    metadata: {meta}")
         return state, meta

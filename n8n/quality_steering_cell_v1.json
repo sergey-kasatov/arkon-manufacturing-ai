@@ -1,0 +1,304 @@
+{
+  "name": "Arkon Quality Steering Cell v1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "arkon-event",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000001-0000-0000-0000-000000000001",
+      "name": "Event Intake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-620, 0],
+      "webhookId": "arkon-event-intake"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Arkon Quality Steering Cell - intake logic.\n// Validates the event contract (events/arkon_event_schema.json),\n// deduplicates, and builds the incident record.\nconst REQUIRED = [\"event_id\", \"event_time\", \"source_module\", \"business_domain\", \"risk_type\", \"risk_score\", \"priority\", \"summary\", \"evidence\", \"context_origin\", \"recommended_action\", \"status\"];\nconst PRIORITIES = [\"P1\", \"P2\", \"P3\", \"P4\"];\n\nconst event = $json.body ?? $json;\nconst errors = [];\nfor (const f of REQUIRED) {\n  if (!(f in event)) errors.push(`missing field: ${f}`);\n}\nif (!errors.length) {\n  if (!PRIORITIES.includes(event.priority)) errors.push(`bad priority: ${event.priority}`);\n  if (typeof event.risk_score !== \"number\" || event.risk_score < 0 || event.risk_score > 1) errors.push(\"bad risk_score\");\n  if (!event.evidence || typeof event.evidence !== \"object\") errors.push(\"bad evidence\");\n  if (event.operational_context && event.operational_context.context_origin !== \"simulated\") errors.push(\"operational_context must be labelled simulated\");\n}\nif (errors.length) {\n  return { json: { valid: false, alert: false, duplicate: false, errors, event_id: event.event_id ?? null } };\n}\n\n// Dedup: the same evidence record + priority within 24 h creates no second incident.\n// Note: static data persists for production executions of an ACTIVE workflow.\nconst store = $getWorkflowStaticData(\"global\");\nstore.seen = store.seen || {};\nstore.counter = store.counter || 0;\nconst key = `${event.evidence.record_id}|${event.priority}`;\nconst now = Date.now();\nconst DEDUP_MS = 24 * 60 * 60 * 1000;\nconst isDuplicate = Boolean(store.seen[key] && (now - store.seen[key]) < DEDUP_MS);\nstore.seen[key] = now;\n\nlet incident = null;\nif (!isDuplicate) {\n  store.counter += 1;\n  incident = {\n    incident_id: `ARK-INC-${String(store.counter).padStart(5, \"0\")}`,\n    created_at: new Date().toISOString(),\n    status: \"new\",\n    priority: event.priority,\n    source_module: event.source_module,\n    business_domain: event.business_domain,\n    summary: event.summary,\n    recommended_action: event.recommended_action,\n    assigned_role: event.operational_context?.assigned_role ?? \"Quality Steering Cell\",\n    assigned_to: event.operational_context?.assigned_to ?? \"unassigned\",\n    escalation_contact: event.operational_context?.escalation_contact ?? null,\n    event: event,\n  };\n}\n\nreturn {\n  json: {\n    valid: true,\n    duplicate: isDuplicate,\n    alert: !isDuplicate && [\"P1\", \"P2\"].includes(event.priority),\n    incident,\n    incident_json: incident ? JSON.stringify(incident) : null,\n    event_id: event.event_id,\n    priority: event.priority,\n    summary: event.summary,\n  },\n};"
+      },
+      "id": "a1000001-0000-0000-0000-000000000002",
+      "name": "Validate + Dedup + Incident",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000001-0000-0000-0000-000000000003",
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-180, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"rejected\", errors: $json.errors}) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a1000001-0000-0000-0000-000000000004",
+      "name": "Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [40, 160]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-duplicate",
+              "leftValue": "={{ $json.duplicate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000001-0000-0000-0000-000000000005",
+      "name": "Duplicate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [40, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"duplicate_suppressed\", event_id: $json.event_id}) }}",
+        "options": {}
+      },
+      "id": "a1000001-0000-0000-0000-000000000006",
+      "name": "Respond Duplicate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [260, 60]
+    },
+    {
+      "parameters": {
+        "command": "=mkdir -p \"$(dirname \"${ARKON_INCIDENTS_PATH:-/data/arkon/incidents.jsonl}\")\" && printf '%s\\n' '{{ $json.incident_json }}' >> \"${ARKON_INCIDENTS_PATH:-/data/arkon/incidents.jsonl}\""
+      },
+      "id": "a1000001-0000-0000-0000-000000000007",
+      "name": "Append Incident Record",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [260, -160]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-alert",
+              "leftValue": "={{ $json.alert }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000001-0000-0000-0000-000000000008",
+      "name": "Alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, -160]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.ARKON_TELEGRAM_CHAT_ID }}",
+        "text": "=🚨 *Arkon Quality Steering Cell*\n*{{ $json.priority }}* incident *{{ $json.incident.incident_id }}*\n\n{{ $json.summary }}\n\nAssigned: {{ $json.incident.assigned_to }} ({{ $json.incident.assigned_role }})\nAction: {{ $json.incident.recommended_action }}\nEvent: `{{ $json.event_id }}`",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "a1000001-0000-0000-0000-000000000009",
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [700, -240],
+      "credentials": {
+        "telegramApi": {
+          "id": null,
+          "name": "Arkon Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"incident_created_alert_sent\", incident_id: $json.incident.incident_id, priority: $json.priority}) }}",
+        "options": {}
+      },
+      "id": "a1000001-0000-0000-0000-000000000010",
+      "name": "Respond Alerted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [920, -240]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"incident_recorded\", incident_id: $json.incident.incident_id, priority: $json.priority}) }}",
+        "options": {}
+      },
+      "id": "a1000001-0000-0000-0000-000000000011",
+      "name": "Respond Recorded",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [700, -60]
+    }
+  ],
+  "connections": {
+    "Event Intake": {
+      "main": [
+        [
+          {
+            "node": "Validate + Dedup + Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate + Dedup + Incident": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Respond Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append Incident Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Incident Record": {
+      "main": [
+        [
+          {
+            "node": "Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert?": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Recorded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Alert": {
+      "main": [
+        [
+          {
+            "node": "Respond Alerted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

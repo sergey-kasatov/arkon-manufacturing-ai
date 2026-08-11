@@ -49,13 +49,16 @@ Arkon Manufacturing AI Platform
 ## What's Built
 
 - [x] Project structure & environment setup
-- [x] Dataset downloads (CMAPSS, Scania, Casting Product)
-- [ ] EDA notebooks - all 3 datasets
-- [ ] Time Series model - RUL prediction (CMAPSS)
+- [x] Dataset downloads (all 7 datasets)
+- [x] Project Charter - risk events, P1-P4 priorities, steering-cell rules (`docs/Project_Charter.md`)
+- [x] Time Series module - CMAPSS EDA + preprocessing + RUL models (LR RMSE 20.79, XGBoost RMSE 17.11, MLflow-tracked)
+- [x] Risk-event layer - schema, validator, CMAPSS adapter, 100 validated events (`events/`)
+- [x] n8n Quality Steering Cell - workflow draft + replay script (`n8n/`)
+- [ ] n8n deployment on NAS + Telegram alerts (interactive session)
 - [ ] ML model - XGBoost fault classifier (Scania APS)
 - [ ] CV model - binary defect detection CNN (Casting Product)
 - [ ] Streamlit app - unified dashboard
-- [ ] RAG chatbot - ChromaDB + LLM
+- [ ] RAG chatbot - ChromaDB + LLM (OpenAI-compatible provider, DeepSeek planned)
 
 ---
 

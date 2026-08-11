@@ -1,0 +1,11 @@
+{
+  "context_origin": "simulated",
+  "note": "Fictional roster for workflow demonstration only. All names are invented. Rules: docs/Project_Charter.md sections 5 and 7.3.",
+  "roles": {
+    "asset_reliability": {"role": "Maintenance Planner", "people": ["D. Keller", "M. Brandt"]},
+    "fleet_reliability": {"role": "Fleet Reliability Engineer", "people": ["M. Sato", "J. Winter"]},
+    "visual_inspection": {"role": "QC Engineer", "people": ["A. Novak", "P. Lindt"]},
+    "field_quality": {"role": "Field Quality Analyst", "people": ["L. Fischer"]},
+    "escalation": {"role": "Quality Manager", "people": ["R. Ortiz"]}
+  }
+}
