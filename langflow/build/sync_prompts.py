@@ -36,6 +36,12 @@ BINDINGS = {
     "procedure_v2": ("document_store.md", "Procedure Specialist", "system_prompt"),
     "route_incident_v2": ("sprint4_refinement.md", "Intent Router", "routes:Incident status"),
     "route_briefing": ("sprint4_refinement.md", "Intent Router", "routes:Shift briefing"),
+    "route_unclear": ("sprint4_refinement.md", "Intent Router", "routes:Unclear request"),
+    "router_instructions_v3": ("sprint4_refinement.md", "Intent Router", "custom_prompt"),
+    # A route can carry a fixed message that reaches its output with no model
+    # call. Two of the six do, and they are prompts like any other.
+    "unclear_message": ("sprint4_refinement.md", "Intent Router", "routes:Unclear request:output_value"),
+    "scope_out_message": ("sprint4_refinement.md", "Intent Router", "routes:Out of scope:output_value"),
 }
 
 
@@ -65,15 +71,16 @@ def main():
         template = node["data"]["node"]["template"]
 
         if field.startswith("routes:"):
-            category = field.split(":", 1)[1]
+            parts = field.split(":")
+            category, key = parts[1], (parts[2] if len(parts) > 2 else "route_description")
             routes = template["routes"]["value"]
             row = next((r for r in routes if r.get("route_category") == category), None)
             if row is None:
                 raise SystemExit("no route %r on %s" % (category, display_name))
-            if row.get("route_description", "").strip() != wanted:
-                row["route_description"] = wanted
+            if (row.get(key) or "").strip() != wanted:
+                row[key] = wanted
                 changed += 1
-                print("  updated route %-18s on %s" % (category, display_name))
+                print("  updated route %-18s %s" % (category, key))
             continue
 
         if (template[field].get("value") or "").strip() != wanted:

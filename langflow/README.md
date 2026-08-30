@@ -14,8 +14,9 @@ course build record, prompts and test evidence live in the vault at
 `020 Projects/AI_Agents_2B_Meridian/build/`.
 
 **Status: deployed 2026-08-30**, endpoint `arkon-quality-assistant`. Sprints 1 to
-3 complete and validated, and the document store is in: the procedure specialist
-answers from the Arkon documents and names the one it used.
+5 complete and validated: 19 nodes, six routes, a document store the procedure
+specialist answers from and names its source, a live lookup, a human approval
+gate over the one write, and a shift-briefing sub-flow.
 
 ## Flow
 
@@ -32,11 +33,21 @@ Intent Router  (Smart Router, LLM categorisation)
    |                            |-- Approve -> Escalation Specialist -> Chat Output
    |                            |                 ^ API Request -> escalation record API
    |                            `-- Reject  -> Escalation Declined   -> Chat Output
+   |-- Unclear request    -------------------------> Chat Output
    `-- Out of scope       -------------------------> Chat Output
 ```
 
-The out-of-scope branch carries a fixed Route Message on the router, so it
-reaches its output with no agent in between and no second model call.
+The last two branches carry a fixed Route Message on the router, so each reaches
+its output with no agent in between and no second model call.
+
+They are two branches rather than one because the operator is owed the right
+reason. Out of scope means the question is about something other than the Arkon
+quality operating model. Unclear request means it is Arkon work with a piece
+missing: a pronoun with no antecedent, a follow-up whose subject was never named,
+a request naming no incident, unit or topic. Answering the second as the first
+tells an operator the assistant does not handle their subject when the truth is
+that it could not tell which subject was meant, and a wrong reason trains people
+to stop asking.
 
 The shift briefing branch has the same shape for a different reason. Its
 sub-flow produces a fixed four-block format read at speed at shift change, and
@@ -95,6 +106,7 @@ python langflow/build/build_sprint3_flow.py <briefing-flow-id>
 python langflow/build/build_ingest_flow.py --deploy   # the document store, uploads and ingests
 python langflow/build/build_retrieval.py       # the store as the procedure specialist's tool
 python langflow/build/build_sprint4_flow.py <briefing-flow-id>   # the briefing gets its own branch
+python langflow/build/build_sprint5_flow.py    # Sprint 5, the sixth route for a message it cannot place
 python langflow/build/layout_flow.py           # positions, run last
 ```
 
@@ -123,6 +135,12 @@ through the v1 API at all. Both read the superuser credentials from the compose
 
 Prompts are not stored in these scripts. They are read out of the vault build
 artifacts at generation time, so the documents and the canvas cannot drift.
+
+`build/sync_prompts.py` keeps that true after generation time. It rewrites only
+the bound prompt fields on an existing canvas, adds nothing, and refuses a node
+it cannot find, so fixing a prompt no longer means re-running the whole chain.
+That matters because `build_retrieval.py` is not idempotent: a second run would
+add the store nodes again.
 
 ## Deploying it
 
@@ -249,30 +267,26 @@ claim, and it now has one measurement behind it instead of none.
   anywhere. The fix is a fallback branch that tells the Quality Manager; it is
   not built because it cannot be tested without waiting out the window, and an
   untested branch on the path that pages a human is worse than a named gap.
-- **An underspecified question is answered as an off-topic one.** "And what
-  about that one?" with no antecedent goes to the out-of-scope branch, because
-  the canvas gives the router no place to put a message it cannot classify.
-  Nothing is invented, which is the behaviour that matters, but the operator is
-  told the wrong reason. Read out of `llm_conditional_router.py` on 2026-08-30,
-  because this gap had been described two different wrong ways before that:
+- **Fixed in Sprint 5, kept here because the road to it is the useful part.** An
+  underspecified question used to be answered as an off-topic one. The fix looked
+  like one field and was not. Read out of `llm_conditional_router.py` in the
+  running container, after this gap had been described two different wrong ways:
 
-  - Smart Router **does** have an Else output. `enable_else_output`, advanced,
-    off by default and off here. "The router has no fallback" is wrong.
+  - Smart Router **does** have an Else output, `enable_else_output`, advanced and
+    off by default. "The router has no fallback" was wrong.
   - Its Else branch returns the **user's own input text** when nothing matches,
-    unless `Override Output` is set. So switching it on and wiring it straight to
-    an output gives an assistant that repeats the question back, which is worse
-    than the current behaviour.
+    unless `Override Output` is set. Switching it on and wiring it to an output
+    gives an assistant that repeats the question back.
   - `Override Output` does not fix that: its own help text says it replaces the
-    output value **for all routes**, not just Else. There is no per-branch
-    fallback message on the component.
-  - What does work is one node downstream: Else into a Prompt Template holding
-    the fixed sentence, then into a Chat Output. No model call, same shape as the
-    out-of-scope branch already on this canvas.
+    output value **for all routes**. There is no per-branch fallback message.
 
-  So the fix is two nodes and a checkbox, and the cost is not the building. It is
-  the re-validation: a sixth destination changes the classification surface for
-  all five existing routes, and Sprint 4 is validated. Do not turn it on before a
-  presentation without re-running the seven-exchange protocol.
+  So the Else was rejected and a sixth route added instead, carrying its own
+  fixed `output_value`, which is the shape the out-of-scope branch already used.
+  The real cost was never the building: a sixth destination changes the
+  classification surface for all five existing routes, so the whole protocol ran
+  again. Six routes plus both gate paths, all correct, escalation store up by
+  exactly one line.
+
 - **Two paragraphs of the procedure prompt describe the deployment, not the
   quality system.** The simulated-context rule and the version-1 write boundary
   are in the prompt rather than the document store, because both have to hold

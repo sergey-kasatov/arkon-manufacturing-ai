@@ -33,6 +33,11 @@ LAYOUT = {
     "ChatOutput-KxTA8":    (-150, -750),
     "ChatOutput-inc01":    (-150, -150),
     "ChatOutput-oos01":    (-150, 150),
+    # Sprint 5. The same shape as the out-of-scope output, a fixed Route Message
+    # straight from the router with no agent and no model call, but it cannot sit
+    # beside it: the output column is 300 apart and a Chat Output is taller than
+    # that. It goes in the gap below the declined branch instead.
+    "ChatOutput-unc01":    (-150, 1600),
     "ChatOutput-esc01":    (-150, 450),
     "ChatOutput-dec01":    (-150, 1000),
 
