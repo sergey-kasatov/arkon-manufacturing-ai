@@ -10,6 +10,7 @@ Cell. Contract owner: `docs/Project_Charter.md` sections 6 and 7.
 | `roster.json` | Simulated assignment roster, labelled `context_origin: simulated` |
 | `make_events_cmapss.py` | CMAPSS adapter: test predictions to events JSONL |
 | `make_events_scania.py` | Scania APS adapter: the same, for the tabular module |
+| `make_events_casting.py` | Casting defect adapter: the same, for the vision module |
 | `out/` | Generated event batches (demo input for the n8n workflow) |
 
 ## Usage
@@ -17,8 +18,10 @@ Cell. Contract owner: `docs/Project_Charter.md` sections 6 and 7.
 ```bash
 python events/make_events_cmapss.py
 python events/make_events_scania.py
+python events/make_events_casting.py
 python events/validate_event.py events/out/cmapss_events_full_fleet.jsonl
 python events/validate_event.py events/out/scania_events.jsonl
+python events/validate_event.py events/out/casting_events.jsonl
 ```
 
 ## CMAPSS priority mapping (charter 7.1)
@@ -46,6 +49,25 @@ event per engine, P4 included, because 707 engines is a fleet an operator
 watches. The Scania test set is 16,000 service records of which 738 are flagged;
 publishing 15,262 P4 events would bury the store to say nothing. The denominator
 is printed on every run and recorded in the model card.
+
+## Casting defect priority mapping (charter 7.1)
+
+Predicted defect probability: `>= 0.99 -> P3`, operating point to 0.99 -> `P2`,
+below the operating point -> no event. No P1 in version 1.
+
+**The bands descend the opposite way to the other two modules and the reason is
+measured.** Banding by descending confidence produced 447 P1 events out of one
+715-image batch, which is 447 immediate alerts on a fifteen-minute clock. On that
+batch every one of the 447 confident flags was genuinely defective, while the 13
+uncertain ones were defective 6 times out of 13. A confident defect is the
+routine case; the uncertain band is where the line stops, because the part can be
+neither passed nor scrapped without a person. So the uncertain band gets the
+shorter clock.
+
+No P1 because no single part on an inspection line is a fifteen-minute
+emergency. The signal that would justify one is a defect **rate**, which is a
+batch-level event, and it is not built because this dataset carries no honest
+baseline rate: its test split is 63 percent defective by curation.
 
 ## Data integrity
 
