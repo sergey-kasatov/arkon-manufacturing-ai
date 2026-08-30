@@ -13,6 +13,19 @@ instance on the NAS (pinned image, see the vault runbook
 | `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30 |
 | `comparison_slice_v1.json` | read | `POST /webhook/arkon-slice` | 2026-08-30 |
 
+**Module-agnostic as of 2026-08-30, and now measured.** The first Scania APS
+event was posted to the intake webhook and created `ARK-INC-00017` with no
+change to any workflow: intake validates a contract rather than a domain, and it
+takes the assignee from the event's own `operational_context`. The status API
+did need one fix, and it was not cosmetic. Its projection filled `predicted_rul`
+from `evidence.prediction` whatever the module was, so a Scania failure
+probability of 0.0373 was served as a remaining useful life of 0.0373 cycles and
+the assistant read it out as one. The projection now returns the `evidence`
+object as published and keeps the CMAPSS aliases only for record ids carrying
+the `FD<n>-Unit-` marker. Three filters were added at the same time -
+`record_id`, `source_module`, `business_domain` - because every module carries
+those by contract, while `unit` only means something for CMAPSS.
+
 ## Event intake (write path)
 
 **Status: deployed and verified 2026-08-30** on n8n 2.29.9. Sixteen incidents

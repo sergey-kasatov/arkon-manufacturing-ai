@@ -172,24 +172,40 @@ contract, so most of this build is already module-agnostic and stays untouched:
   produced the incident. A new module adds no route.
 - The shift briefing reports whatever is open.
 
-Three things are CMAPSS-shaped today, and they are all small.
+Three things were CMAPSS-shaped, they were all called small, and **the second
+module arrived on 2026-08-30 and showed that one of them was not.** All three
+are now fixed. The record of what each one actually cost is worth keeping.
 
-**The status API's `unit` filter parses `evidence.record_id` as
-`FD001-Unit-092`.** Another module has another id shape. The fix is a generic
-`record_id` filter plus filters on `source_module` and `business_domain`, which
-are contract fields every module already carries.
+**The status API projected `predicted_rul` and `priority_threshold` by name, and
+this one was serious.** Those keys live in the CMAPSS `evidence` object, and the
+projection filled them from `evidence.prediction` whatever the module was. The
+first Scania incident, `ARK-INC-00017`, therefore came back carrying
+`predicted_rul: 0.0373` - an APS failure probability presented as a remaining
+useful life - and the assistant told an operator the truck had 0.0373 cycles of
+life left. Nothing failed: not the model, not the adapter, not the workflow, not
+the API, not the prompt. Fixed by returning the `evidence` object as the module
+published it and keeping the CMAPSS aliases only for CMAPSS record ids.
 
-**The status API projects `predicted_rul` and `priority_threshold` by name.**
-Those keys live in the CMAPSS `evidence` object; a vision module's evidence
-holds something else. The fix is to return `evidence` as it stands and keep the
-friendly aliases only when the keys are present.
+**The status API's `unit` filter parsed `evidence.record_id` as
+`FD001-Unit-092`.** It read `SCANIA-APS-000056` as unit `000056`, which is not a
+unit and does not exist. Fixed: `unit` now answers only for record ids carrying
+the `FD<n>-Unit-` marker, and `record_id`, `source_module` and `business_domain`
+are filterable because every module carries them by contract. `unit=92` still
+works, so nothing on the canvas had to change.
 
 **The procedure specialist's prompt carried the quality rules as text**,
-including the CMAPSS threshold table. This was the one that mattered and it is
-**done**: the rules now come from the document store, so a second module is added
-by writing its model card and dropping it in rather than by editing a prompt.
-That is what turns a single-module assistant into the platform's assistant, and
-it is why the store was worth building beyond the course asking for it.
+including the CMAPSS threshold table. The rules now come from the document
+store, so a second module is added by writing its model card and dropping it in
+rather than by editing a prompt. That is what turns a single-module assistant
+into the platform's assistant, and it is why the store was worth building beyond
+the course asking for it.
+
+**What the second module cost in total: one API projection.** The intake
+workflow validated a `scania_aps` event and created an incident with no change
+at all, because it validates a contract rather than a domain and takes the
+assignee from the event's own `operational_context`. The escalation workflow,
+the router's five intents and the shift briefing were untouched. That was the
+claim, and it now has one measurement behind it instead of none.
 
 ## Known gaps
 
