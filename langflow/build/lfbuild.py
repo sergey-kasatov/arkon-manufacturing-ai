@@ -21,8 +21,15 @@ def escaped(obj):
 
 
 def node_from_spec(spec, node_id, position, values=None, outputs=None,
-                   selected_output=None, tool_mode=False, display_name=None):
-    """Build a node envelope from a component spec fetched from the catalog."""
+                   selected_output=None, tool_mode=False, display_name=None,
+                   type_name=None):
+    """Build a node envelope from a component spec fetched from the catalog.
+
+    ``type_name`` overrides the type derived from the node id. Bundle components
+    need it: Langflow's own export gives the Qdrant node the id prefix
+    ``ext:qdrant:QdrantVectorStoreComponent@official`` but the plain class name as
+    its type, and the two are not interchangeable.
+    """
     node = copy.deepcopy(spec)
     for field, value in (values or {}).items():
         if field not in node["template"]:
@@ -38,7 +45,7 @@ def node_from_spec(spec, node_id, position, values=None, outputs=None,
         "id": node_id,
         "node": node,
         "showNode": True,
-        "type": node_id.rsplit("-", 1)[0],
+        "type": type_name or node_id.rsplit("-", 1)[0],
     }
     if selected_output:
         data["selected_output"] = selected_output

@@ -11,6 +11,7 @@ Usage (over ssh):
     python3 lf_api.py delete <flow_id>
     python3 lf_api.py run <flow_id_or_endpoint> <message> [session_id]
     python3 lf_api.py session <flow_id_or_endpoint> <turns.json> <session_id>
+    python3 lf_api.py upload <file>
     python3 lf_api.py components [substring]
     python3 lf_api.py component <type_name>
     python3 lf_api.py raw <METHOD> <path> [json_body_file]
@@ -211,6 +212,39 @@ def cmd_session(target, turns_file, session_id):
         print()
 
 
+def cmd_upload(path):
+    """Upload a file to the user file store and print the stored path it gets.
+
+    The File component takes that stored path, not a local one, so an ingestion
+    flow built from a script has to put the document into Langflow first.
+    Multipart is hand-built because the NAS python has no requests.
+    """
+    payload = pathlib.Path(path)
+    boundary = "----arkonBuildBoundary"
+    crlf = "\r\n"
+    head = (
+        "--" + boundary + crlf
+        + 'Content-Disposition: form-data; name="file"; filename="' + payload.name + '"' + crlf
+        + "Content-Type: application/octet-stream" + crlf + crlf
+    )
+    body = head.encode() + payload.read_bytes() + (crlf + "--" + boundary + "--" + crlf).encode()
+    request = urllib.request.Request(
+        BASE + "/api/v2/files",
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": "Bearer " + login(),
+            "Content-Type": "multipart/form-data; boundary=" + boundary,
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            print(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as err:
+        sys.exit("HTTP %s on upload" % err.code + chr(10)
+                 + err.read().decode("utf-8", "replace")[:2000])
+
+
 def cmd_components(substring=None):
     catalog = api("GET", "/api/v1/all")
     for category, entries in sorted(catalog.items()):
@@ -245,6 +279,7 @@ COMMANDS = {
     "delete": cmd_delete,
     "run": cmd_run,
     "session": cmd_session,
+    "upload": cmd_upload,
     "components": cmd_components,
     "component": cmd_component,
     "raw": cmd_raw,

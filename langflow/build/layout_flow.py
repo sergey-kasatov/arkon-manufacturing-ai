@@ -36,6 +36,12 @@ LAYOUT = {
     "ChatOutput-esc01":    (-150, 450),
     "ChatOutput-dec01":    (-150, 1000),
 
+    # The document store feeds the procedure specialist. It sits above the input
+    # column rather than in the tool band below, because it is the only tool on
+    # the top branch and dropping it down there would cross every other edge.
+    "OpenRouterEmbeddings-emb01":                        (-2100, -1300),
+    "ext:qdrant:QdrantVectorStoreComponent@official-kb01": (-1650, -750),
+
     "APIRequest-inc01":    (-1650, 700),     # tool of the incident specialist
     "RunFlow-brf01":       (-1650, 1250),    # tool of the incident specialist
     "APIRequest-esc01":    (-1050, 1550),    # tool of the escalation specialist
@@ -67,7 +73,8 @@ print("laid out %d nodes" % len(moved))
 
 # Report the grid so a collision is visible without opening the UI
 HEIGHTS = {"Agent": 470, "SmartRouter": 470, "APIRequest": 420, "HumanInput": 370,
-           "RunFlow": 370, "ChatInput": 210, "ChatOutput": 170}
+           "RunFlow": 370, "ChatInput": 210, "ChatOutput": 170,
+           "QdrantVectorStoreComponent": 470, "OpenRouterEmbeddings": 370}
 boxes = []
 for node in flow["data"]["nodes"]:
     kind = node["data"]["type"]

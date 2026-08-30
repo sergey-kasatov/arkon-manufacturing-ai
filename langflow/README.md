@@ -14,7 +14,8 @@ course build record, prompts and test evidence live in the vault at
 `020 Projects/AI_Agents_2B_Meridian/build/`.
 
 **Status: deployed 2026-08-30**, endpoint `arkon-quality-assistant`. Sprints 1 to
-3 complete and validated. The document store is not built yet; see Known gaps.
+3 complete and validated, and the document store is in: the procedure specialist
+answers from the Arkon documents and names the one it used.
 
 ## Flow
 
@@ -23,6 +24,7 @@ Chat Input
    |
 Intent Router  (Smart Router, LLM categorisation)
    |-- Quality procedure  -> Procedure Specialist  -> Chat Output
+   |                            ^ Qdrant (tool mode) -> arkon-knowledge
    |-- Incident status    -> Incident Specialist   -> Chat Output
    |                            ^ API Request (tool mode) -> incident status API
    |                            ^ Run Flow (tool mode)    -> Arkon_Shift_Briefing
@@ -63,6 +65,8 @@ that conflates them will invent a status for one of them.
 |---|---|
 | `arkon_quality_assistant.json` | The main canvas, importable into Langflow |
 | `arkon_shift_briefing.json` | The shift handover sub-flow, called through Run Flow and runnable on its own endpoint |
+| `arkon_knowledge_ingest.json` | The ingestion flow: four Arkon documents into the Qdrant collection `arkon-knowledge` |
+| `components/openrouter_embeddings.py` | A custom embedding component, because nothing Langflow ships can reach OpenRouter embeddings |
 
 ## How the flow JSON is generated
 
@@ -76,11 +80,19 @@ which is how "one canvas refined across sprints" stays reproducible rather than
 being a claim:
 
 ```bash
+python langflow/build/fetch_specs.py           # component templates from the running instance
 python langflow/build/build_arkon_flow.py      # Sprint 1, from the course LS2 seed
 python langflow/build/build_sprint2_flow.py    # Sprint 2, adds routing and the live lookup
 python langflow/build/build_sprint3_flow.py <briefing-flow-id>
+python langflow/build/build_ingest_flow.py --deploy   # the document store, uploads and ingests
+python langflow/build/build_retrieval.py       # the store as the procedure specialist's tool
 python langflow/build/layout_flow.py           # positions, run last
 ```
+
+`fetch_specs.py` comes first because every other script instantiates nodes from
+the templates the running Langflow reports, and those templates are not in the
+repository. It fetches them over ssh through `lf_api.py` on the NAS, so no
+Langflow credential is ever needed on the workstation.
 
 `layout_flow.py` must run last: the sprint scripts place each node as they add
 it and do not know what the canvas ends up looking like. It also refuses to
@@ -107,10 +119,12 @@ NAS. Neither is optional and neither is obvious from an error message:
   Request component validates URLs with `validators.url()`, which rejects any
   hostname without a dot, so `http://n8n:5678` fails as "Invalid URL provided"
   before a request is ever made.
-- Langflow runs with `LANGFLOW_SSRF_ALLOWED_HOSTS=n8n.arkon.internal`. Outbound
-  calls into private IP ranges are blocked by default, which covers every sibling
-  container. The allow-list holds that one host and nothing else, which is what
-  keeps a model-written URL from being a request-forgery surface.
+- Langflow runs with `LANGFLOW_SSRF_ALLOWED_HOSTS=n8n.arkon.internal,qdrant`.
+  Outbound calls into private IP ranges are blocked by default, which covers
+  every sibling container. The allow-list holds those two hosts and nothing else,
+  which is what keeps a model-written URL from being a request-forgery surface.
+  Qdrant needs its entry even though it is not an HTTP tool: the component runs
+  the same guard on its own host before handing it to qdrant-client.
 
 ## Testing it
 
@@ -152,25 +166,25 @@ Those keys live in the CMAPSS `evidence` object; a vision module's evidence
 holds something else. The fix is to return `evidence` as it stands and keep the
 friendly aliases only when the keys are present.
 
-**The procedure specialist's prompt carries the quality rules as text**,
-including the CMAPSS threshold table. This is the one that matters, and it is
-exactly what the document store removes. Once the rules are retrieved from the
-Arkon documents rather than written into the prompt, a second module is added by
-writing its model card and dropping it into the store. That is the real argument
-for finishing the document store, beyond the course asking for it: it is what
-turns a single-module assistant into the platform's assistant.
+**The procedure specialist's prompt carried the quality rules as text**,
+including the CMAPSS threshold table. This was the one that mattered and it is
+**done**: the rules now come from the document store, so a second module is added
+by writing its model card and dropping it in rather than by editing a prompt.
+That is what turns a single-module assistant into the platform's assistant, and
+it is why the store was worth building beyond the course asking for it.
 
 ## Known gaps
 
-- **No document store yet.** The procedure specialist answers from its own
-  prompt, and the Qdrant collection has not been built. The embedding provider is
-  not settled: OpenRouter, the credential already configured in Langflow, does
-  serve embeddings including `google/gemini-embedding-001`, but they are listed
-  at `/api/v1/embeddings/models` rather than in the general model catalogue, and
-  whether a Langflow component can address them has not been tested. Once
-  retrieval is in, the procedural facts come out of the prompt and the same test
-  questions must still be answered correctly; that is the only way to show
-  retrieval is working rather than the model reciting its instructions.
+- **The document store holds four documents and is not coverage.** Charter, SOP,
+  model card and event contract, 37 chunks. Six validation questions span all
+  four and one of them is deliberately unanswerable, which shows retrieval works
+  and shows the refusal path holds. It does not show the store answers everything
+  an operator will ask. A question outside those four documents gets the fallback
+  sentence, which is the correct behaviour and still a gap in the knowledge base.
+- **Re-ingestion is idempotent only while the documents are unchanged.** Point ids
+  are a hash of chunk text plus metadata, so an edited document leaves its old
+  chunks behind as orphans. Editing a source document means dropping the
+  collection and re-running, which takes about a minute and is not automated.
 - **One write, and only one.** After a human approves at the gate, the assistant
   can record an escalation. It cannot acknowledge, close or resolve an incident,
   because the Steering Cell has no write path for those states in version 1, and

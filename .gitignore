@@ -33,3 +33,7 @@ sed??????
 # OS
 .DS_Store
 Thumbs.db
+
+# Langflow component templates, fetched from the running instance by
+# langflow/build/fetch_specs.py. Generated, and large.
+langflow/build/spec_*.json
