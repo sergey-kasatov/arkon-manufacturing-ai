@@ -99,11 +99,14 @@ where moving files on a NAS is not an option, the status API takes
 ## Known gaps
 
 - **No document store yet.** The procedure specialist answers from its own
-  prompt. The Qdrant collection needs an embedding provider key inside Langflow,
-  and OpenRouter, the credential already configured there, serves no embedding
-  models. Once retrieval is in, the procedural facts come out of the prompt and
-  the same test questions must still be answered correctly; that is the only way
-  to show retrieval is working rather than the model reciting its instructions.
+  prompt, and the Qdrant collection has not been built. The embedding provider is
+  not settled: OpenRouter, the credential already configured in Langflow, does
+  serve embeddings including `google/gemini-embedding-001`, but they are listed
+  at `/api/v1/embeddings/models` rather than in the general model catalogue, and
+  whether a Langflow component can address them has not been tested. Once
+  retrieval is in, the procedural facts come out of the prompt and the same test
+  questions must still be answered correctly; that is the only way to show
+  retrieval is working rather than the model reciting its instructions.
 - **One write, and only one.** After a human approves at the gate, the assistant
   can record an escalation. It cannot acknowledge, close or resolve an incident,
   because the Steering Cell has no write path for those states in version 1, and
