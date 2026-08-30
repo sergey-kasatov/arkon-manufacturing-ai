@@ -98,7 +98,7 @@ P1 is the highest severity.
 | P3 | Medium: degradation trend for planned work | Queued; reviewed daily, no push alert |
 | P4 | Low or informational: recorded for trend analysis | Dashboard only |
 
-Each module documents its own risk_score-to-priority thresholds next to the model. Initial CMAPSS FD001 mapping on predicted RUL in cycles: RUL <= 10 is P1, RUL <= 25 is P2, RUL <= 50 is P3, above 50 is P4.
+Each module documents its own risk_score-to-priority thresholds next to the model. CMAPSS mapping on predicted RUL in cycles: RUL <= 10 is P1, RUL <= 25 is P2, RUL <= 50 is P3, above 50 is P4. The thresholds were set against the FD001 baseline and kept unchanged when the model moved to the full fleet on 2026-08-30, because the model scores the four subsets evenly; they are recorded here as a tuning input rather than a validated optimum.
 
 ### 7.2 Incident lifecycle
 
@@ -116,7 +116,7 @@ The alert channel is a Telegram bot driven by n8n: an incident card with priorit
 
 ### 7.5 Incident store and dashboards
 
-The incident record of truth is one SQLite database written by the n8n workflow; its exact mount location is fixed against the NAS compose file at deployment time. Streamlit reads the store directly and serves as the live operational cockpit. Tableau reads periodic extracts and serves as the executive KPI view: open incidents by priority, response times, and trend Pareto. A live Tableau connection would require a paid Tableau Server; extract refresh is the documented portfolio boundary.
+The incident record of truth is one SQLite database written by the n8n workflow; its exact mount location is fixed against the NAS compose file at deployment time. **Deviation in v1, 2026-08-30:** the deployed workflow appends to a JSONL file at `/data/arkon/incidents.jsonl` on the NAS instead. The move to a queryable store is scheduled together with the lifecycle transitions of section 7.2, since both are needed by the same consumer, and now targets the n8n Data Table node rather than a separate SQLite file: it is native to the deployed platform and supports insert, get, update and upsert. See `n8n/README.md`. Streamlit reads the store directly and serves as the live operational cockpit. Tableau reads periodic extracts and serves as the executive KPI view: open incidents by priority, response times, and trend Pareto. A live Tableau connection would require a paid Tableau Server; extract refresh is the documented portfolio boundary.
 
 ## 8. Target architecture
 
@@ -190,4 +190,11 @@ The MVP is complete when all of the following are true:
 
 ## 11. Immediate next action
 
-Phase 1 status 2026-08-11: the CMAPSS baseline is reproducible (Linear Regression RMSE 20.79, XGBoost RMSE 17.11 on the FD001 test set), predictions are saved, and 100 validated risk events exist in `events/out/`. Next action: deploy the n8n Quality Steering Cell workflow per `n8n/README.md` in an interactive session, where the Telegram credentials and the NAS incident-store mount are decided.
+**Phase 1 closed 2026-08-30.** All four deliverables are done and verified:
+
+- The CMAPSS model is reproducible and now covers the full fleet, all four subsets, 709 engines, six operating regimes and two fault modes. XGBoost reaches RMSE 16.95 on the benchmark task, one prediction per engine at its last observed cycle, and scores the hardest subset about as well as the easiest. Full figures, the FD001 comparison and the limitations are in `docs/Model_Card_CMAPSS_RUL.md`; the training script is `notebooks/01_timeseries/cmapss_full_fleet.py`.
+- The risk-event adapter produces contract-valid events; 100 exist in `events/out/`.
+- Simulated operational context is attached and labelled per section 5.
+- The n8n Quality Steering Cell is deployed on the NAS and verified end to end: contract violations rejected with HTTP 400, incidents created with `ARK-INC-*` ids, duplicates suppressed across production runs, incident records appended to the store, and Telegram cards delivered for P1 and P2. Deployment record and the three n8n 2.0 traps met on the way are in `n8n/README.md`.
+
+Next action: Phase 3 brings the grounded assistant forward, built on Langflow against this documentation and the deployed workflow. Phase 2 model modules follow.

@@ -51,14 +51,16 @@ Arkon Manufacturing AI Platform
 - [x] Project structure & environment setup
 - [x] Dataset downloads (all 7 datasets)
 - [x] Project Charter - risk events, P1-P4 priorities, steering-cell rules (`docs/Project_Charter.md`)
-- [x] Time Series module - CMAPSS EDA + preprocessing + RUL models (LR RMSE 20.79, XGBoost RMSE 17.11, MLflow-tracked)
-- [x] Risk-event layer - schema, validator, CMAPSS adapter, 100 validated events (`events/`)
-- [x] n8n Quality Steering Cell - workflow draft + replay script (`n8n/`)
-- [ ] n8n deployment on NAS + Telegram alerts (interactive session)
+- [x] Time Series module - CMAPSS EDA + preprocessing + RUL baseline on FD001 (LR RMSE 20.79, XGBoost RMSE 17.11, MLflow-tracked)
+- [x] Time Series module, full fleet - all four CMAPSS subsets, 709 engines, six operating regimes, two fault modes, with temporal features over a 20-cycle window. XGBoost RMSE 11.01 on the benchmark task, scoring the hardest subset about as well as the easiest (`notebooks/01_timeseries/cmapss_full_fleet.py`, `docs/Model_Card_CMAPSS_RUL.md`)
+- [x] Risk-event layer - schema, validator, CMAPSS adapter, 707 validated events across the full fleet (`events/`)
+- [x] n8n Quality Steering Cell - deployed on the NAS and verified end to end: contract validation, 24 h duplicate suppression, JSONL incident store, Telegram cards for P1 and P2 (`n8n/`)
+- [x] Operating documentation - CMAPSS model card and Steering Cell SOP (`docs/`)
+- [ ] Incident lifecycle - acknowledge and close callbacks, escalation timer, queryable store
+- [ ] Grounded assistant - Langflow agent over these documents, calling the steering cell for live incident status
 - [ ] ML model - XGBoost fault classifier (Scania APS)
 - [ ] CV model - binary defect detection CNN (Casting Product)
 - [ ] Streamlit app - unified dashboard
-- [ ] RAG chatbot - ChromaDB + LLM (OpenAI-compatible provider, DeepSeek planned)
 
 ---
 

@@ -1,7 +1,7 @@
-"""Convert CMAPSS FD001 test predictions into Arkon risk events.
+"""Convert CMAPSS test predictions into Arkon risk events, whole fleet.
 
-Reads the prediction table produced by 03_cmapss_modeling.ipynb, keeps the
-last cycle per engine (its current state), maps predicted RUL to a priority,
+Reads the prediction table produced by notebooks/01_timeseries/cmapss_full_fleet.py,
+keeps the last cycle per engine (its current state), maps predicted RUL to a priority,
 attaches simulated operational context (fixed seed, labelled), validates
 every event, and writes JSONL for the n8n Quality Steering Cell.
 
@@ -22,13 +22,13 @@ import pandas as pd
 from validate_event import validate_event
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PRED_CSV = PROJECT_ROOT / "data" / "01_cmapss" / "processed" / "test_FD001_predictions.csv"
+PRED_CSV = PROJECT_ROOT / "data" / "01_cmapss" / "processed" / "test_full_fleet_predictions.csv"
 ROSTER_JSON = PROJECT_ROOT / "events" / "roster.json"
-OUT_PATH = PROJECT_ROOT / "events" / "out" / "cmapss_events_FD001.jsonl"
+OUT_PATH = PROJECT_ROOT / "events" / "out" / "cmapss_events_full_fleet.jsonl"
 
 RUL_CAP = 125
 SEED = 42
-MODEL_VERSION = "xgboost_v1"
+MODEL_VERSION = "xgboost_full_fleet_v1"
 
 # Priority mapping on predicted RUL in cycles - charter section 7.1
 PRIORITY_THRESHOLDS = [(10, "P1"), (25, "P2"), (50, "P3")]
@@ -50,7 +50,8 @@ def priority_for(pred_rul: float) -> str:
 
 # Load predictions - last cycle per engine is its current state
 df = pd.read_csv(PRED_CSV)
-last = df.sort_values("cycle").groupby("unit").tail(1).sort_values("unit")
+# Unit numbers repeat across the four subsets, so group by both.
+last = df[df["is_last_cycle"]].sort_values(["dataset", "unit"])
 
 # Simulated operational context - fixed seed and labelling per charter section 5
 rng = random.Random(SEED)
@@ -73,11 +74,11 @@ for i, row in enumerate(last.itertuples(index=False), start=1):
         "risk_score": round(1 - min(max(pred, 0), RUL_CAP) / RUL_CAP, 4),
         "priority": prio,
         "summary": (
-            f"Engine unit {int(row.unit)} predicted RUL {pred:.0f} cycles "
+            f"Engine unit {int(row.unit)} of {row.dataset} predicted RUL {pred:.0f} cycles "
             f"(priority threshold {THRESHOLD[prio]})."
         ),
         "evidence": {
-            "record_id": f"FD001-Unit-{int(row.unit):03d}",
+            "record_id": f"{row.dataset}-Unit-{int(row.unit):03d}",
             "model_version": MODEL_VERSION,
             "prediction": round(pred, 1),
             "threshold": THRESHOLD[prio],

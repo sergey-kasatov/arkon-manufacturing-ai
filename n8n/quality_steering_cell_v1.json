@@ -8,23 +8,29 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "a1000001-0000-0000-0000-000000000001",
+      "id": "e21c93e4-7561-4fac-833d-d554dd454985",
       "name": "Event Intake",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-620, 0],
+      "position": [
+        -1328,
+        240
+      ],
       "webhookId": "arkon-event-intake"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Arkon Quality Steering Cell - intake logic.\n// Validates the event contract (events/arkon_event_schema.json),\n// deduplicates, and builds the incident record.\nconst REQUIRED = [\"event_id\", \"event_time\", \"source_module\", \"business_domain\", \"risk_type\", \"risk_score\", \"priority\", \"summary\", \"evidence\", \"context_origin\", \"recommended_action\", \"status\"];\nconst PRIORITIES = [\"P1\", \"P2\", \"P3\", \"P4\"];\n\nconst event = $json.body ?? $json;\nconst errors = [];\nfor (const f of REQUIRED) {\n  if (!(f in event)) errors.push(`missing field: ${f}`);\n}\nif (!errors.length) {\n  if (!PRIORITIES.includes(event.priority)) errors.push(`bad priority: ${event.priority}`);\n  if (typeof event.risk_score !== \"number\" || event.risk_score < 0 || event.risk_score > 1) errors.push(\"bad risk_score\");\n  if (!event.evidence || typeof event.evidence !== \"object\") errors.push(\"bad evidence\");\n  if (event.operational_context && event.operational_context.context_origin !== \"simulated\") errors.push(\"operational_context must be labelled simulated\");\n}\nif (errors.length) {\n  return { json: { valid: false, alert: false, duplicate: false, errors, event_id: event.event_id ?? null } };\n}\n\n// Dedup: the same evidence record + priority within 24 h creates no second incident.\n// Note: static data persists for production executions of an ACTIVE workflow.\nconst store = $getWorkflowStaticData(\"global\");\nstore.seen = store.seen || {};\nstore.counter = store.counter || 0;\nconst key = `${event.evidence.record_id}|${event.priority}`;\nconst now = Date.now();\nconst DEDUP_MS = 24 * 60 * 60 * 1000;\nconst isDuplicate = Boolean(store.seen[key] && (now - store.seen[key]) < DEDUP_MS);\nstore.seen[key] = now;\n\nlet incident = null;\nif (!isDuplicate) {\n  store.counter += 1;\n  incident = {\n    incident_id: `ARK-INC-${String(store.counter).padStart(5, \"0\")}`,\n    created_at: new Date().toISOString(),\n    status: \"new\",\n    priority: event.priority,\n    source_module: event.source_module,\n    business_domain: event.business_domain,\n    summary: event.summary,\n    recommended_action: event.recommended_action,\n    assigned_role: event.operational_context?.assigned_role ?? \"Quality Steering Cell\",\n    assigned_to: event.operational_context?.assigned_to ?? \"unassigned\",\n    escalation_contact: event.operational_context?.escalation_contact ?? null,\n    event: event,\n  };\n}\n\nreturn {\n  json: {\n    valid: true,\n    duplicate: isDuplicate,\n    alert: !isDuplicate && [\"P1\", \"P2\"].includes(event.priority),\n    incident,\n    incident_json: incident ? JSON.stringify(incident) : null,\n    event_id: event.event_id,\n    priority: event.priority,\n    summary: event.summary,\n  },\n};"
+        "jsCode": "// Arkon Quality Steering Cell - intake logic.\n// Validates the event contract (events/arkon_event_schema.json),\n// deduplicates, and builds the incident record.\nconst REQUIRED = [\"event_id\", \"event_time\", \"source_module\", \"business_domain\", \"risk_type\", \"risk_score\", \"priority\", \"summary\", \"evidence\", \"context_origin\", \"recommended_action\", \"status\"];\nconst PRIORITIES = [\"P1\", \"P2\", \"P3\", \"P4\"];\n\nconst event = $json.body ?? $json;\nconst errors = [];\nfor (const f of REQUIRED) {\n  if (!(f in event)) errors.push(`missing field: ${f}`);\n}\nif (!errors.length) {\n  if (!PRIORITIES.includes(event.priority)) errors.push(`bad priority: ${event.priority}`);\n  if (typeof event.risk_score !== \"number\" || event.risk_score < 0 || event.risk_score > 1) errors.push(\"bad risk_score\");\n  if (!event.evidence || typeof event.evidence !== \"object\") errors.push(\"bad evidence\");\n  if (event.operational_context && event.operational_context.context_origin !== \"simulated\") errors.push(\"operational_context must be labelled simulated\");\n}\nif (errors.length) {\n  return { json: { valid: false, alert: false, duplicate: false, errors, event_id: event.event_id ?? null } };\n}\n\n// Dedup: the same evidence record + priority within 24 h creates no second incident.\n// Note: static data persists for production executions of an ACTIVE workflow.\nconst store = $getWorkflowStaticData(\"global\");\nstore.seen = store.seen || {};\nstore.counter = store.counter || 0;\nconst key = `${event.evidence.record_id}|${event.priority}`;\nconst now = Date.now();\nconst DEDUP_MS = 24 * 60 * 60 * 1000;\n// Drop entries that fell out of the dedup window, so static data\n// does not grow without bound over the life of the workflow.\nfor (const k of Object.keys(store.seen)) {\n  if (now - store.seen[k] >= DEDUP_MS) delete store.seen[k];\n}\nconst isDuplicate = Boolean(store.seen[key] && (now - store.seen[key]) < DEDUP_MS);\nstore.seen[key] = now;\n\nlet incident = null;\nif (!isDuplicate) {\n  store.counter += 1;\n  incident = {\n    incident_id: `ARK-INC-${String(store.counter).padStart(5, \"0\")}`,\n    created_at: new Date().toISOString(),\n    status: \"new\",\n    priority: event.priority,\n    source_module: event.source_module,\n    business_domain: event.business_domain,\n    summary: event.summary,\n    recommended_action: event.recommended_action,\n    assigned_role: event.operational_context?.assigned_role ?? \"Quality Steering Cell\",\n    assigned_to: event.operational_context?.assigned_to ?? \"unassigned\",\n    escalation_contact: event.operational_context?.escalation_contact ?? null,\n    event: event,\n  };\n}\n\nreturn {\n  json: {\n    valid: true,\n    duplicate: isDuplicate,\n    alert: !isDuplicate && [\"P1\", \"P2\"].includes(event.priority),\n    incident,\n    incident_json: incident ? JSON.stringify(incident) : null,\n    // One ready JSONL line, newline included, written by the file node.\n    incident_jsonl: incident ? JSON.stringify(incident) + \"\\n\" : null,\n    event_id: event.event_id,\n    priority: event.priority,\n    summary: event.summary,\n  },\n};"
       },
-      "id": "a1000001-0000-0000-0000-000000000002",
+      "id": "74b36c64-5f11-44ce-a083-704b915d058f",
       "name": "Validate + Dedup + Incident",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-400, 0]
+      "position": [
+        -1104,
+        240
+      ]
     },
     {
       "parameters": {
@@ -32,7 +38,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -50,11 +57,14 @@
         },
         "options": {}
       },
-      "id": "a1000001-0000-0000-0000-000000000003",
+      "id": "d8f281bb-6c43-4812-87e4-9adcfab884f1",
       "name": "Valid?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-180, 0]
+      "position": [
+        -880,
+        240
+      ]
     },
     {
       "parameters": {
@@ -64,11 +74,14 @@
           "responseCode": 400
         }
       },
-      "id": "a1000001-0000-0000-0000-000000000004",
+      "id": "65f51ac4-e0bc-44dd-a9f7-ea9f474455f5",
       "name": "Respond Invalid",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [40, 160]
+      "position": [
+        -656,
+        400
+      ]
     },
     {
       "parameters": {
@@ -76,7 +89,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -94,11 +108,14 @@
         },
         "options": {}
       },
-      "id": "a1000001-0000-0000-0000-000000000005",
+      "id": "94073cd8-234d-4e58-b5bd-86bd160d19fa",
       "name": "Duplicate?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [40, -80]
+      "position": [
+        -656,
+        160
+      ]
     },
     {
       "parameters": {
@@ -106,21 +123,14 @@
         "responseBody": "={{ JSON.stringify({status: \"duplicate_suppressed\", event_id: $json.event_id}) }}",
         "options": {}
       },
-      "id": "a1000001-0000-0000-0000-000000000006",
+      "id": "ee06d9b7-f835-4c5f-98e6-d01209f98169",
       "name": "Respond Duplicate",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [260, 60]
-    },
-    {
-      "parameters": {
-        "command": "=mkdir -p \"$(dirname \"${ARKON_INCIDENTS_PATH:-/data/arkon/incidents.jsonl}\")\" && printf '%s\\n' '{{ $json.incident_json }}' >> \"${ARKON_INCIDENTS_PATH:-/data/arkon/incidents.jsonl}\""
-      },
-      "id": "a1000001-0000-0000-0000-000000000007",
-      "name": "Append Incident Record",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [260, -160]
+      "position": [
+        -464,
+        -32
+      ]
     },
     {
       "parameters": {
@@ -128,12 +138,13 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
               "id": "cond-alert",
-              "leftValue": "={{ $json.alert }}",
+              "leftValue": "={{ $('Validate + Dedup + Incident').item.json.alert }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -146,28 +157,35 @@
         },
         "options": {}
       },
-      "id": "a1000001-0000-0000-0000-000000000008",
+      "id": "469a6fe3-0f10-4ac3-abb1-5f572f3bbbe2",
       "name": "Alert?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [480, -160]
+      "position": [
+        -224,
+        80
+      ]
     },
     {
       "parameters": {
-        "chatId": "={{ $env.ARKON_TELEGRAM_CHAT_ID }}",
-        "text": "=🚨 *Arkon Quality Steering Cell*\n*{{ $json.priority }}* incident *{{ $json.incident.incident_id }}*\n\n{{ $json.summary }}\n\nAssigned: {{ $json.incident.assigned_to }} ({{ $json.incident.assigned_role }})\nAction: {{ $json.incident.recommended_action }}\nEvent: `{{ $json.event_id }}`",
+        "chatId": "-5481573875",
+        "text": "=🚨 *Arkon Quality Steering Cell*\n*{{ $('Validate + Dedup + Incident').item.json.priority }}* incident *{{ $('Validate + Dedup + Incident').item.json.incident.incident_id }}*\n\n{{ $('Validate + Dedup + Incident').item.json.summary }}\n\nAssigned: {{ $('Validate + Dedup + Incident').item.json.incident.assigned_to }} ({{ $('Validate + Dedup + Incident').item.json.incident.assigned_role }})\nAction: {{ $('Validate + Dedup + Incident').item.json.incident.recommended_action }}\nEvent: `{{ $('Validate + Dedup + Incident').item.json.event_id }}`",
         "additionalFields": {
+          "appendAttribution": false,
           "parse_mode": "Markdown"
         }
       },
-      "id": "a1000001-0000-0000-0000-000000000009",
+      "id": "0e365a53-9c7f-43cf-9b8b-3c28ab1625e3",
       "name": "Telegram Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [700, -240],
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "8da0eedc-83f2-4583-a4c2-f9f01e701977",
       "credentials": {
         "telegramApi": {
-          "id": null,
           "name": "Arkon Telegram Bot"
         }
       }
@@ -175,26 +193,64 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({status: \"incident_created_alert_sent\", incident_id: $json.incident.incident_id, priority: $json.priority}) }}",
+        "responseBody": "={{ JSON.stringify({status: \"incident_created_alert_sent\", incident_id: $('Validate + Dedup + Incident').item.json.incident.incident_id, priority: $('Validate + Dedup + Incident').item.json.priority}) }}",
         "options": {}
       },
-      "id": "a1000001-0000-0000-0000-000000000010",
+      "id": "d13051ba-6a9a-43d4-ab0f-cbb7bef9fb82",
       "name": "Respond Alerted",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [920, -240]
+      "position": [
+        224,
+        0
+      ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({status: \"incident_recorded\", incident_id: $json.incident.incident_id, priority: $json.priority}) }}",
+        "responseBody": "={{ JSON.stringify({status: \"incident_recorded\", incident_id: $('Validate + Dedup + Incident').item.json.incident.incident_id, priority: $('Validate + Dedup + Incident').item.json.priority}) }}",
         "options": {}
       },
-      "id": "a1000001-0000-0000-0000-000000000011",
+      "id": "45b81aa7-c1f6-45a6-aab5-8a6e3ebf4ac9",
       "name": "Respond Recorded",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [700, -60]
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "incident_jsonl",
+        "options": {}
+      },
+      "id": "ba6dd87d-7464-495d-bff4-816e9a799f20",
+      "name": "Build Incident Line",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -464,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/data/arkon/incidents.jsonl",
+        "options": {
+          "append": true
+        }
+      },
+      "id": "d83fcc01-73ce-4b0d-bfa6-bc51d1997848",
+      "name": "Append Incident Record",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -224,
+        240
+      ]
     }
   ],
   "connections": {
@@ -249,7 +305,7 @@
         ],
         [
           {
-            "node": "Append Incident Record",
+            "node": "Build Incident Line",
             "type": "main",
             "index": 0
           }
@@ -295,10 +351,23 @@
           }
         ]
       ]
+    },
+    "Build Incident Line": {
+      "main": [
+        [
+          {
+            "node": "Append Incident Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
   },
   "pinData": {}
 }
