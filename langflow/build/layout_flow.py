@@ -45,8 +45,8 @@ LAYOUT = {
     # The shift briefing is its own branch since Sprint 4, not a tool: it goes
     # router -> sub-flow -> output with no agent in the path, which is what stops
     # its fixed format being paraphrased.
-    "RunFlow-brf02":       (-1050, 2100),
-    "ChatOutput-brf02":    (-150, 2100),
+    "RunFlow-brf02":       (-1050, 2250),
+    "ChatOutput-brf02":    (-150, 2250),
 
     "APIRequest-inc01":    (-1650, 700),     # tool of the incident specialist
     "APIRequest-esc01":    (-1050, 1550),    # tool of the escalation specialist

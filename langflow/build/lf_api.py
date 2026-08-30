@@ -95,6 +95,12 @@ def api(method, path, payload=None, raw=False, retried=False):
         if detail_bytes[:2] == GZIP_MAGIC:
             detail_bytes = gzip.decompress(detail_bytes)
         detail = detail_bytes.decode("utf-8", errors="replace")
+        if err.code == 401 and not retried:
+            # The cached token is there because /login is rate limited, which
+            # means it outlives its own validity and every call starts failing
+            # with "Token has expired" until the cache is cleared by hand.
+            TOKEN = login(force=True)
+            return api(method, path, payload, raw, retried=True)
         sys.exit("HTTP %s on %s %s\n%s" % (err.code, method, path, detail[:2000]))
 
 
