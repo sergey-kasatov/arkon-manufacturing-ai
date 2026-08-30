@@ -74,8 +74,30 @@ def ssh(command, stdin=None):
     return result.stdout.decode("utf-8")
 
 
+def purge_uploads():
+    """Delete any stored copy of a document we are about to upload.
+
+    /api/v2/files does not overwrite. Uploading a name that is already there
+    stores it as "<name> (1)", so every deploy used to add another copy, rewrite
+    the File paths in the flow JSON, and leave the superseded document sitting in
+    the store where a later build or a hand edit in the UI could pick it up
+    again. Deleting first makes the stored path stable across deploys and takes
+    the old document out of reach.
+    """
+    wanted = {name.rsplit(".", 1)[0] for _, name, _ in DOCUMENTS}
+    listing = json.loads(ssh("%s raw GET /api/v2/files" % REMOTE))
+    files = listing if isinstance(listing, list) else listing.get("files", [])
+    for entry in files:
+        # a re-upload is stored as "Name (1)", so match the stem as well
+        stem = entry["name"].split(" (")[0]
+        if stem in wanted:
+            ssh("%s raw DELETE /api/v2/files/%s" % (REMOTE, entry["id"]))
+            print("  removed  %-34s %7d bytes" % (entry["name"], entry["size"]))
+
+
 def upload_documents():
     """Put each document into the Langflow file store and return its stored path."""
+    purge_uploads()
     stored = []
     for repo_path, upload_name, label in DOCUMENTS:
         source = REPO / repo_path
@@ -83,6 +105,8 @@ def upload_documents():
             raise SystemExit("missing document: %s" % source)
         ssh("cat > '/tmp/%s'" % upload_name, stdin=source.read_bytes())
         answer = json.loads(ssh("%s upload '/tmp/%s'" % (REMOTE, upload_name)))
+        if not answer["path"].endswith("/" + upload_name):
+            raise SystemExit("stored under an unexpected path, purge did not take: %s" % answer["path"])
         stored.append(answer["path"])
         print("  uploaded %-34s %7d bytes  source=%s" % (upload_name, answer["size"], label))
     return stored

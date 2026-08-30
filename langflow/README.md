@@ -107,6 +107,15 @@ Langflow credential is ever needed on the workstation.
 it and do not know what the canvas ends up looking like. It also refuses to
 finish silently, printing any pair of nodes whose boxes overlap.
 
+`build_ingest_flow.py --deploy` deletes each document from the Langflow file
+store before uploading it. `/api/v2/files` does not overwrite: a name that is
+already there is stored as `<name> (1)`. Without the delete, every deploy added
+another copy, rewrote the File paths in the flow JSON, and left the superseded
+document in the store, which is the one place a stale Arkon document could come
+back from after the source was corrected. The upload now asserts it got the plain
+path, so a purge that silently failed stops the build instead of shipping a flow
+pointed at a copy.
+
 `build/lf_api.py` and `build/lf_v2.py` drive a running Langflow from the NAS.
 The second one exists because a canvas holding a Human Input node cannot be run
 through the v1 API at all. Both read the superuser credentials from the compose
@@ -194,6 +203,8 @@ it is why the store was worth building beyond the course asking for it.
   are a hash of chunk text plus metadata, so an edited document leaves its old
   chunks behind as orphans. Editing a source document means dropping the
   collection and re-running, which takes about a minute and is not automated.
+  Measured on 2026-08-30 after the charter correction: drop, re-ingest, 42
+  chunks; ingest again on the same documents, still 42.
 - **One write, and only one.** After a human approves at the gate, the assistant
   can record an escalation. It cannot acknowledge, close or resolve an incident,
   because the Steering Cell has no write path for those states in version 1, and
