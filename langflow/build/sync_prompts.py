@@ -1,0 +1,102 @@
+"""Write the vault prompt blocks into the existing canvas, and change nothing else.
+
+The build claims the documents and the canvas cannot drift, because the sprint
+scripts read the fenced blocks out of the vault build artifacts. That is true at
+build time and only then: editing a prompt afterwards meant re-running the whole
+sprint chain, and the retrieval script is not idempotent, so a re-run would add
+the store nodes a second time.
+
+This script closes that gap. It reads every `### BLOCK: name` from the vault
+documents, matches each to the node it belongs to, and rewrites exactly those
+fields in `arkon_quality_assistant.json`. No node is added, removed or moved. It
+prints what changed and refuses to touch a node it cannot find, so a rename in
+either place is an error rather than a silent no-op.
+
+Run it from the repository root, then upsert the flow:
+
+    python langflow/build/sync_prompts.py
+    python langflow/build/sync_prompts.py --deploy
+"""
+
+import json
+import pathlib
+import re
+import subprocess
+import sys
+
+HERE = pathlib.Path(__file__).parent
+REPO = HERE.parent.parent
+FLOW = REPO / "langflow" / "arkon_quality_assistant.json"
+VAULT = pathlib.Path(r"C:\Users\kasser\AI-Brain\020 Projects\AI_Agents_2B_Meridian\build")
+HOST = "ResSak@AK2101"
+REMOTE = "cd ~/arkon-tmp && python3 lf_api.py"
+
+# block name -> (source document, node display name, template field)
+BINDINGS = {
+    "procedure_v2": ("document_store.md", "Procedure Specialist", "system_prompt"),
+    "route_incident_v2": ("sprint4_refinement.md", "Intent Router", "routes:Incident status"),
+    "route_briefing": ("sprint4_refinement.md", "Intent Router", "routes:Shift briefing"),
+}
+
+
+def read_blocks(name):
+    text = (VAULT / name).read_text(encoding="utf-8")
+    return dict(re.findall(r"### BLOCK: (\w+)\n\n```text\n(.*?)\n```", text, flags=re.S))
+
+
+def node_by_name(flow, display_name):
+    for node in flow["data"]["nodes"]:
+        if node["data"]["node"].get("display_name") == display_name:
+            return node
+    raise SystemExit("no node named %r on the canvas" % display_name)
+
+
+def main():
+    flow = json.loads(FLOW.read_text(encoding="utf-8"))
+    cache, changed = {}, 0
+
+    for block_name, (document, display_name, field) in BINDINGS.items():
+        if document not in cache:
+            cache[document] = read_blocks(document)
+        if block_name not in cache[document]:
+            raise SystemExit("block %r not found in %s" % (block_name, document))
+        wanted = cache[document][block_name].strip()
+        node = node_by_name(flow, display_name)
+        template = node["data"]["node"]["template"]
+
+        if field.startswith("routes:"):
+            category = field.split(":", 1)[1]
+            routes = template["routes"]["value"]
+            row = next((r for r in routes if r.get("route_category") == category), None)
+            if row is None:
+                raise SystemExit("no route %r on %s" % (category, display_name))
+            if row.get("route_description", "").strip() != wanted:
+                row["route_description"] = wanted
+                changed += 1
+                print("  updated route %-18s on %s" % (category, display_name))
+            continue
+
+        if (template[field].get("value") or "").strip() != wanted:
+            template[field]["value"] = wanted
+            changed += 1
+            print("  updated %-14s on %s (%d characters)" % (field, display_name, len(wanted)))
+
+    if changed:
+        FLOW.write_text(json.dumps(flow, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        print("wrote %s, %d field(s) changed" % (FLOW.name, changed))
+    else:
+        print("the local flow already matches the documents")
+
+    # --deploy pushes whether or not the local file changed. The local file being
+    # in sync says nothing about the running instance, and an early return here
+    # made the first --deploy of this script a silent no-op.
+    if "--deploy" in sys.argv:
+        subprocess.run(["ssh", HOST, "cat > /tmp/arkon_flow.json"],
+                       input=FLOW.read_bytes(), check=True)
+        result = subprocess.run(["ssh", HOST, "%s upsert /tmp/arkon_flow.json" % REMOTE],
+                                capture_output=True, check=True)
+        print(result.stdout.decode("utf-8", "replace").strip())
+
+
+if __name__ == "__main__":
+    main()

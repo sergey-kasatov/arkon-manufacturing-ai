@@ -54,6 +54,11 @@ DOCUMENTS = [
     ("docs/Project_Charter.md", "Arkon_Project_Charter.md", "Arkon Project Charter"),
     ("docs/Steering_Cell_SOP.md", "Quality_Steering_Cell_SOP.md", "Quality Steering Cell SOP"),
     ("docs/Model_Card_CMAPSS_RUL.md", "CMAPSS_RUL_Model_Card.md", "CMAPSS RUL Model Card"),
+    # Phase 2, added 2026-08-30. This is the claim the store was built for: a new
+    # module is added by writing its model card and dropping it in here, not by
+    # editing a prompt.
+    ("docs/Model_Card_Scania_APS.md", "Scania_APS_Model_Card.md", "Scania APS Model Card"),
+    ("docs/Model_Card_Casting_CV.md", "Casting_Defect_Model_Card.md", "Casting Defect Model Card"),
     ("events/README.md", "Arkon_Event_Contract.md", "Arkon Event Contract"),
 ]
 
@@ -143,8 +148,12 @@ def clear_qdrant_api_key(node):
 
 def build(stored_paths):
     nodes, edges = [], []
+    # Below the last lane, computed rather than fixed: a hard-coded y collided
+    # with lane 5 the moment two more documents were added, and the overlap
+    # check in this file is what caught it.
     embeddings = lfbuild.node_from_spec(
-        spec("openrouterembeddings"), "OpenRouterEmbeddings-emb01", (-700, 2160),
+        spec("openrouterembeddings"), "OpenRouterEmbeddings-emb01",
+        (-700, len(DOCUMENTS) * 520 + 80),
         display_name="OpenRouter Embeddings",
     )
     store = lfbuild.node_from_spec(
