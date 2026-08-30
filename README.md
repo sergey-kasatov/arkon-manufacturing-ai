@@ -27,6 +27,90 @@ Arkon Manufacturing AI Platform
 └── 📊  BI Dashboard      Executive Level        Tableau           KPI Analytics
 ```
 
+### Runtime wiring, as deployed 2026-08-30
+
+The map above is the capability plan. This is what actually runs, and how the
+pieces reach each other.
+
+```text
+LAPTOP  (offline, run on demand)
+
+  data/01_cmapss
+      |
+      v  notebooks/01_timeseries/cmapss_full_fleet.py
+  XGBoost model, RMSE 11.01, R2 0.932, one prediction per engine
+      |
+      v  event adapter
+  events/out/cmapss_events_full_fleet.jsonl        707 events, 49 P1 / 87 P2
+      |
+      v  n8n/replay_events.py     HTTP POST, one request per event
+=============================================================================
+NAS AK2101, docker network msit-flowise_msit
+=============================================================================
+
+  n8n            container "n8n", port 5678, alias n8n.arkon.internal
+  +------------------------------------------------------------------+
+  | (1) POST /webhook/arkon-event          Quality Steering Cell      |
+  |     validate contract -> dedup 24h -> append incident -> alert?   |
+  |                                                          |        |
+  |                                                          +-----------> Telegram
+  |                                                                   |     P1 and P2 only
+  | (2) GET  /webhook/arkon-incident-status                           |
+  |     read store -> filter -> project -> JSON                       |
+  |     200 ok | 200 no_match | 400 rejected | 503 unavailable        |
+  |                                                                   |
+  | (3) POST /webhook/arkon-escalation                                |
+  |     validate -> does the incident exist? -> append escalation     |
+  +------------------------------------------------------------------+
+       |  (1) writes          |  (2) and (3) read       |  (3) writes
+       v                      v                         v
+   /data/arkon/incidents.jsonl                  /data/arkon/escalations.jsonl
+   host path /volume1/docker/arkon/, bind-mounted into the container
+
+  Langflow       container "langflow", port 7860
+  +------------------------------------------------------------------+
+  | flow: Arkon Quality Assistant                                     |
+  |                                                                   |
+  |   Chat Input -> Intent Router  (LLM classification, 4 routes)     |
+  |        |                                                          |
+  |        +-- Quality procedure  -> Procedure Specialist  -> output  |
+  |        |                                                          |
+  |        +-- Incident status    -> Incident Specialist   -> output  |
+  |        |      tool: API Request ---------------------------> (2)  |
+  |        |      tool: Run Flow --> Arkon_Shift_Briefing             |
+  |        |                                                          |
+  |        +-- Escalation request -> HUMAN APPROVAL GATE              |
+  |        |      Approve -> Escalation Specialist        -> output   |
+  |        |                   tool: API Request ---------------> (3) |
+  |        |      Reject  -> Escalation Declined          -> output   |
+  |        |                                                          |
+  |        +-- Out of scope ------------------------------> output    |
+  |               fixed text on the router, no agent, no model call   |
+  |                                                                   |
+  | flow: Arkon_Shift_Briefing                                        |
+  |   Chat Input -> Briefing Agent -> output                          |
+  |        tool: API Request ------------------------------------> (2)|
+  +------------------------------------------------------------------+
+```
+
+**Where the two systems meet is one file and three URLs.** n8n owns the incident
+store; Langflow never touches it. The assistant only ever sees what an endpoint
+chooses to return, which is why the store can change shape without touching the
+canvas, and why the assistant cannot invent a status: it has no other source.
+
+**Two host settings make the arrows work**, and neither is obvious from an error
+message. n8n carries the Docker network alias `n8n.arkon.internal`, because
+Langflow's API Request component validates URLs with `validators.url()` and
+rejects any hostname without a dot. And Langflow runs with
+`LANGFLOW_SSRF_ALLOWED_HOSTS=n8n.arkon.internal`, because it blocks outbound
+calls into private IP ranges by default. Details in `n8n/README.md` and
+`langflow/README.md`.
+
+**Direction of trust.** Everything the assistant can change goes through
+endpoint 3, and endpoint 3 is reachable only from the Approve branch of the
+human gate. Telegram is wired to endpoint 1 only, so no message reaches a person
+because of anything the assistant did.
+
 ---
 
 ## Datasets
