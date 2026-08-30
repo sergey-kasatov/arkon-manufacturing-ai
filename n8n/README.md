@@ -239,13 +239,24 @@ answered 200 with two P1 incidents.
 
 ### Reaching it from the agent
 
-The n8n container is attached to `msit-flowise_msit`, so Langflow and Flowise
-call it by container name. The laptop and the LAN use `AK2101` instead.
+The n8n container is attached to `msit-flowise_msit` and carries the network
+alias `n8n.arkon.internal` there. The laptop and the LAN use `AK2101` instead.
 
 ```text
-http://n8n:5678/webhook/arkon-incident-status?priority=P1&limit=3
+http://n8n.arkon.internal:5678/webhook/arkon-incident-status?priority=P1&limit=3
 http://AK2101:5678/webhook/arkon-incident-status?priority=P1&limit=3
 ```
+
+**The dotted alias is required, not decoration.** Langflow's API Request
+component validates its URL with `validators.url()`, which rejects any hostname
+containing no dot, so `http://n8n:5678/...` fails as "Invalid URL provided"
+before a request is made. That reads like a network fault and is not one:
+verified inside the container, `n8n` and `AK2101` are both rejected while an IP
+literal or any dotted name passes. The alias lives in the n8n compose file so it
+survives a recreate, and it keeps the call inside the container network. The
+caller also has to be allowed to make it: Langflow blocks outbound requests into
+private IP ranges by default and needs
+`LANGFLOW_SSRF_ALLOWED_HOSTS=n8n.arkon.internal`.
 
 ### Known boundaries of the status API
 
