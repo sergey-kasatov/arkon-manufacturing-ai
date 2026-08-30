@@ -96,6 +96,40 @@ genuinely answers 503, not by telling the assistant to pretend. For a live demo,
 where moving files on a NAS is not an option, the status API takes
 `simulate_failure=true` and returns the same 503 without touching the store.
 
+## What changes when a second module arrives
+
+The assistant is a permanent part of Arkon, not a demonstration built around one
+model. Scania, the casting-defect module and NHTSA all publish the same event
+contract, so most of this build is already module-agnostic and stays untouched:
+
+- The intake workflow validates a contract, not a domain, and its assignment
+  table already covers all four business domains.
+- The escalation workflow works from an incident id and knows nothing about
+  modules.
+- The router's four intents are about what the operator wants, not about what
+  produced the incident. A new module adds no route.
+- The shift briefing reports whatever is open.
+
+Three things are CMAPSS-shaped today, and they are all small.
+
+**The status API's `unit` filter parses `evidence.record_id` as
+`FD001-Unit-092`.** Another module has another id shape. The fix is a generic
+`record_id` filter plus filters on `source_module` and `business_domain`, which
+are contract fields every module already carries.
+
+**The status API projects `predicted_rul` and `priority_threshold` by name.**
+Those keys live in the CMAPSS `evidence` object; a vision module's evidence
+holds something else. The fix is to return `evidence` as it stands and keep the
+friendly aliases only when the keys are present.
+
+**The procedure specialist's prompt carries the quality rules as text**,
+including the CMAPSS threshold table. This is the one that matters, and it is
+exactly what the document store removes. Once the rules are retrieved from the
+Arkon documents rather than written into the prompt, a second module is added by
+writing its model card and dropping it into the store. That is the real argument
+for finishing the document store, beyond the course asking for it: it is what
+turns a single-module assistant into the platform's assistant.
+
 ## Known gaps
 
 - **No document store yet.** The procedure specialist answers from its own
