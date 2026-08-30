@@ -240,11 +240,15 @@ claim, and it now has one measurement behind it instead of none.
   untested branch on the path that pages a human is worse than a named gap.
 - **An underspecified question is answered as an off-topic one.** "And what
   about that one?" with no antecedent goes to the out-of-scope branch, because
-  the router has no category for a message it cannot place. Nothing is invented,
-  which is the behaviour that matters, but the operator is told the wrong reason.
-  The fix is a sixth route or the router's Else output; it changes the
-  classification surface for all five existing routes, so it wants time to
-  re-validate.
+  the canvas gives the router no place to put a message it cannot classify.
+  Nothing is invented, which is the behaviour that matters, but the operator is
+  told the wrong reason. **The fix is one field**, confirmed in the component
+  template on 2026-08-30: Smart Router carries `enable_else_output`, "Include an
+  Else output for cases that don't match any route", and it is off by default and
+  off here. What it costs is not the field, it is the re-validation: adding a
+  sixth destination changes the classification surface for all five existing
+  routes, and Sprint 4 is validated. Do not turn it on before a presentation
+  without re-running the seven-exchange protocol.
 - **Two paragraphs of the procedure prompt describe the deployment, not the
   quality system.** The simulated-context rule and the version-1 write boundary
   are in the prompt rather than the document store, because both have to hold
