@@ -73,7 +73,7 @@ that conflates them will invent a status for one of them.
 |---|---|
 | `arkon_quality_assistant.json` | The main canvas, importable into Langflow |
 | `arkon_shift_briefing.json` | The shift handover sub-flow, called through Run Flow and runnable on its own endpoint |
-| `arkon_knowledge_ingest.json` | The ingestion flow: four Arkon documents into the Qdrant collection `arkon-knowledge` |
+| `arkon_knowledge_ingest.json` | The ingestion flow: the Arkon documents into the Qdrant collection `arkon-knowledge`, one lane per document |
 | `components/openrouter_embeddings.py` | A custom embedding component, because nothing Langflow ships can reach OpenRouter embeddings |
 
 ## How the flow JSON is generated
@@ -196,7 +196,17 @@ works, so nothing on the canvas had to change.
 **The procedure specialist's prompt carried the quality rules as text**,
 including the CMAPSS threshold table. The rules now come from the document
 store, so a second module is added by writing its model card and dropping it in
-rather than by editing a prompt. That is what turns a single-module assistant
+rather than by editing a prompt.
+
+**That claim was tested on 2026-08-30 and it failed the first time.** The prompt
+still enumerated "four documents" and scoped itself to "what the CMAPSS model
+predicts and cannot do", so Phase 2 would have needed a prompt edit after all. It
+names no document and no module now: which documents exist is a property of the
+store, and the prompt says to search and see. The Scania and casting model cards
+were then added by dropping them in, and the assistant answers about both, cites
+them by name, and explains why their priority mappings differ from CMAPSS, with
+nothing on the canvas changed. Fixing a prompt without rebuilding the canvas is
+what `build/sync_prompts.py` is for. That is what turns a single-module assistant
 into the platform's assistant, and it is why the store was worth building beyond
 the course asking for it.
 
@@ -209,12 +219,13 @@ claim, and it now has one measurement behind it instead of none.
 
 ## Known gaps
 
-- **The document store holds four documents and is not coverage.** Charter, SOP,
-  model card and event contract, 37 chunks. Six validation questions span all
-  four and one of them is deliberately unanswerable, which shows retrieval works
-  and shows the refusal path holds. It does not show the store answers everything
-  an operator will ask. A question outside those four documents gets the fallback
-  sentence, which is the correct behaviour and still a gap in the knowledge base.
+- **The document store holds six documents and is not coverage.** Charter, SOP,
+  the three model cards and the event contract, 77 chunks as of 2026-08-30. The
+  validation questions span all of them and one is deliberately unanswerable,
+  which shows retrieval works and shows the refusal path holds. It does not show
+  the store answers everything an operator will ask. A question outside those six
+  documents gets the fallback sentence, which is the correct behaviour and still
+  a gap in the knowledge base.
 - **Re-ingestion is idempotent only while the documents are unchanged.** Point ids
   are a hash of chunk text plus metadata, so an edited document leaves its old
   chunks behind as orphans. Editing a source document means dropping the
@@ -242,13 +253,26 @@ claim, and it now has one measurement behind it instead of none.
   about that one?" with no antecedent goes to the out-of-scope branch, because
   the canvas gives the router no place to put a message it cannot classify.
   Nothing is invented, which is the behaviour that matters, but the operator is
-  told the wrong reason. **The fix is one field**, confirmed in the component
-  template on 2026-08-30: Smart Router carries `enable_else_output`, "Include an
-  Else output for cases that don't match any route", and it is off by default and
-  off here. What it costs is not the field, it is the re-validation: adding a
-  sixth destination changes the classification surface for all five existing
-  routes, and Sprint 4 is validated. Do not turn it on before a presentation
-  without re-running the seven-exchange protocol.
+  told the wrong reason. Read out of `llm_conditional_router.py` on 2026-08-30,
+  because this gap had been described two different wrong ways before that:
+
+  - Smart Router **does** have an Else output. `enable_else_output`, advanced,
+    off by default and off here. "The router has no fallback" is wrong.
+  - Its Else branch returns the **user's own input text** when nothing matches,
+    unless `Override Output` is set. So switching it on and wiring it straight to
+    an output gives an assistant that repeats the question back, which is worse
+    than the current behaviour.
+  - `Override Output` does not fix that: its own help text says it replaces the
+    output value **for all routes**, not just Else. There is no per-branch
+    fallback message on the component.
+  - What does work is one node downstream: Else into a Prompt Template holding
+    the fixed sentence, then into a Chat Output. No model call, same shape as the
+    out-of-scope branch already on this canvas.
+
+  So the fix is two nodes and a checkbox, and the cost is not the building. It is
+  the re-validation: a sixth destination changes the classification surface for
+  all five existing routes, and Sprint 4 is validated. Do not turn it on before a
+  presentation without re-running the seven-exchange protocol.
 - **Two paragraphs of the procedure prompt describe the deployment, not the
   quality system.** The simulated-context rule and the version-1 write boundary
   are in the prompt rather than the document store, because both have to hold

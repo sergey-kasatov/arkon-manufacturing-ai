@@ -166,8 +166,8 @@ n8n orchestrates operational work. It does not train or host machine-learning mo
 
 ### Phase 2: Additional model modules
 
-- Implement Scania APS classification and publish the same event contract.
-- Implement Casting Defect computer vision and publish the same event contract.
+- **DONE 2026-08-30.** Scania APS classification, publishing the same event contract. `docs/Model_Card_Scania_APS.md`.
+- **DONE 2026-08-30.** Casting Defect computer vision, publishing the same event contract. `docs/Model_Card_Casting_CV.md`.
 - Implement NHTSA text classification and field-quality trend detection, then publish the same event contract.
 
 ### Phase 3: Product integration
@@ -198,7 +198,7 @@ The MVP is complete when all of the following are true:
 
 **Phase 1 closed 2026-08-30.** All four deliverables are done and verified.
 
-The figures below were read from `docs/Model_Card_CMAPSS_RUL.md` and counted in `events/out/` on 2026-08-30. An earlier version of this block was written before the full-fleet retrain and carried that run's numbers; it is corrected here rather than left standing, because this charter is one of the four documents in the assistant's knowledge base and a wrong figure in it is a wrong figure the assistant will quote and cite.
+The figures below were read from `docs/Model_Card_CMAPSS_RUL.md` and counted in `events/out/` on 2026-08-30. An earlier version of this block was written before the full-fleet retrain and carried that run's numbers; it is corrected here rather than left standing, because this charter is one of the documents in the assistant's knowledge base and a wrong figure in it is a wrong figure the assistant will quote and cite.
 
 - **The CMAPSS model is reproducible and covers the full fleet:** all four subsets, 709 training and 707 test engines, six operating regimes and two fault modes. XGBoost reaches **RMSE 11.01, MAE 7.62, R2 0.932** on the benchmark task, which is one prediction per engine at its last observed cycle, n = 707. Across all 104,897 test rows it reaches **RMSE 10.05, MAE 6.13, R2 0.860**. It scores the hardest subset about as well as the easiest: FD004 11.48 against FD001 9.69. The whole gain is in the temporal features, worth 5.32 RMSE against 1.67 for the cycle counter and 0.77 for the extra subsets. Full figures, the ablation and the limitations are in `docs/Model_Card_CMAPSS_RUL.md`; the training script is `notebooks/01_timeseries/cmapss_full_fleet.py`.
 - **The risk-event adapter produces contract-valid events.** `events/out/cmapss_events_full_fleet.jsonl` holds **707 events**, one per test engine: 49 P1, 87 P2, 90 P3 and 481 P4 under the section 7.1 thresholds. The superseded FD001 baseline file `cmapss_events_FD001.jsonl` with its 100 events is kept beside it as the comparison point.
@@ -207,4 +207,11 @@ The figures below were read from `docs/Model_Card_CMAPSS_RUL.md` and counted in 
 
 **One Phase 3 item was brought forward and is also done.** The grounded assistant of section 9 was built on Langflow on 2026-08-30, against this documentation and the deployed workflow, and it closes the last open MVP criterion of section 10. Its precondition was the one Phase 3 states - documentation, model cards and incident records first - and that precondition was met before it was built. Two further n8n endpoints came with it: `GET /webhook/arkon-incident-status` and `POST /webhook/arkon-escalation`. See `langflow/README.md` and `n8n/README.md`.
 
-**Next action: Phase 2 model modules.** Scania APS classification and the Casting Defect vision module, each publishing the section 6 event contract, so the Steering Cell handles them without changing. Three details of the deployed system are still CMAPSS-shaped and are named under "What changes when a second module arrives" in `langflow/README.md`. NHTSA text classification follows them.
+**Phase 2 is two thirds done, 2026-08-30.** Two more modules publish the section 6 event contract and both were pushed through the deployed Steering Cell rather than only written.
+
+- **Scania APS classification** (`docs/Model_Card_Scania_APS.md`). Total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure: 416 false positives, 13 missed, recall 0.965, ROC AUC 0.995, which lands between second and third place of the 2016 challenge on the same test set. It closes a gap the CMAPSS card names and does not fix, its limitation 5: RMSE punishes both error directions equally while the business does not. Here the asymmetry is the metric, and the decision threshold is worth a factor of 3.8 while every structural choice sits inside the noise of the selection: three fold seeds produced three different winners. One event created `ARK-INC-00017`.
+- **Casting Defect visual inspection** (`docs/Model_Card_Casting_CV.md`). 715 test images, 0 defects missed and 7 good parts rejected, ROC AUC 0.9999. Its priority bands run the opposite way to the other two modules: banding by confidence produced 447 P1 events out of one batch, so a confident defect is P3 routine scrap and the uncertain band, where the model is a coin flip and the line actually stops, is P2. One event created `ARK-INC-00018`.
+
+**What the second and third modules cost the platform: one API projection.** The intake workflow validated both events and created both incidents with no change at all, because it validates a contract rather than a domain. The status API needed a real fix, and it was not the cosmetic one it had been recorded as: it projected `evidence.prediction` as `predicted_rul` for every module, so a Scania failure probability of 0.0373 was served as a remaining useful life of 0.0373 cycles and the assistant reported it as one. Nothing failed anywhere in the chain. The projection now returns the evidence object as published. Detail in `n8n/README.md` and `langflow/README.md`.
+
+**Next action: NHTSA text classification** and field-quality trend detection, the last Phase 2 module, then Phase 3's Streamlit and Tableau views, which are the two operational surfaces section 7.5 describes and neither of which exists.

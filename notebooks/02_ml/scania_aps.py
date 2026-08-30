@@ -26,18 +26,23 @@ were both worth measuring:
   - **class weighting**: `scale_pos_weight` on, or off.
 
 Every candidate gets its threshold tuned the same way, and the winner is picked
-on **out-of-fold cost**, never on the test set. Five-fold stratified
-cross-validation on the training rows produces one out-of-fold probability per
-row; the threshold that minimises cost on those is the candidate's threshold,
-and the cost at that threshold is its score. The model then refits on all the
-training rows and that threshold is applied to the test set once.
+on **out-of-fold cost, averaged over three independent fold seeds**, never on
+the test set. Five-fold stratified cross-validation on the training rows produces
+one out-of-fold probability per row; the threshold that minimises cost on those
+is that seed's threshold, and the cost at it is that seed's score. The candidate
+with the lowest mean score refits on all the training rows, with the mean of its
+three thresholds, and is applied to the test set once.
 
-A single validation split was the first design and it was replaced: the positive
-class is 1.7 percent of the rows, so one split's cost-optimal threshold is a
-noisy estimate, and the choice being made here is exactly a choice of threshold.
+**Three seeds rather than one, because one seed picks a different winner.**
+The first design used a single validation split, the second a single five-fold
+split. Repeating the second with three seeds produced three different winners and
+a spread of 4.7 to 8.5 percent between best and worst candidate. That is the
+finding rather than an inconvenience: on this dataset the four structural
+candidates sit inside the noise of the selection, and only the threshold matters.
+A rule that resolves a near-tie should at least flip more than one coin.
 
-The folds are stratified for the same reason: an unstratified fold can end up
-with almost no failures in it.
+The folds are stratified because the positive class is 1.7 percent of the rows,
+and an unstratified fold can end up with almost no failures in it.
 
 ## What the run reports
 
@@ -74,6 +79,8 @@ CKPT_DIR = PROJECT_ROOT / "models" / "checkpoints" / "scania"
 HEADER_LINES = 20
 SEED = 42
 FOLDS = 5
+# Three fold seeds. One is not enough: see the docstring.
+SELECTION_SEEDS = (42, 7, 2026)
 
 # The challenge metric, from data/02_scania/raw/aps_failure_description.txt.
 COST_FALSE_POSITIVE = 10   # an unnecessary check by a mechanic
@@ -164,10 +171,10 @@ def make_model(weighted, y):
     return XGBClassifier(**params)
 
 
-def out_of_fold_scores(X, y, weighted):
+def out_of_fold_scores(X, y, weighted, fold_seed):
     """One probability per training row, from a model that never saw that row."""
     scores = np.zeros(len(y), dtype=float)
-    splitter = StratifiedKFold(n_splits=FOLDS, shuffle=True, random_state=SEED)
+    splitter = StratifiedKFold(n_splits=FOLDS, shuffle=True, random_state=fold_seed)
     for train_index, test_index in splitter.split(X, y):
         model = make_model(weighted, y[train_index])
         model.fit(X.iloc[train_index], y[train_index])
@@ -195,22 +202,38 @@ def main():
     imputed_train = pd.DataFrame(imputer.transform(X_train), columns=features)
     imputed_test = pd.DataFrame(imputer.transform(X_test), columns=features)
 
-    print("\nselection, out-of-fold over %d stratified folds" % FOLDS)
-    selection = {}
+    print("\nselection, out-of-fold over %d stratified folds x %d seeds"
+          % (FOLDS, len(SELECTION_SEEDS)))
+    selection, winner_per_seed = {}, {}
     for name, impute, weighted in CANDIDATES:
         data = imputed_train if impute else X_train
-        scores = out_of_fold_scores(data, y_train, weighted)
-        threshold, oof_cost = best_threshold(y_train, scores)
+        per_seed = []
+        for fold_seed in SELECTION_SEEDS:
+            scores = out_of_fold_scores(data, y_train, weighted, fold_seed)
+            threshold, oof_cost = best_threshold(y_train, scores)
+            per_seed.append({"fold_seed": fold_seed, "threshold": round(threshold, 6),
+                             "out_of_fold_cost": oof_cost})
         selection[name] = {
             "median_imputation": impute,
             "class_weighting": weighted,
-            "threshold": round(threshold, 6),
-            "out_of_fold_cost": oof_cost,
-            "out_of_fold_pr_auc": round(float(average_precision_score(y_train, scores)), 4),
+            "per_seed": per_seed,
+            "mean_out_of_fold_cost": round(
+                sum(s["out_of_fold_cost"] for s in per_seed) / len(per_seed), 1),
+            "threshold": round(sum(s["threshold"] for s in per_seed) / len(per_seed), 6),
         }
-        print("  %-20s out-of-fold cost %6d   threshold %.6f" % (name, oof_cost, threshold))
+        print("  %-20s mean out-of-fold cost %8.1f   per seed %s   threshold %.6f"
+              % (name, selection[name]["mean_out_of_fold_cost"],
+                 [s["out_of_fold_cost"] for s in per_seed], selection[name]["threshold"]))
 
-    chosen = min(selection, key=lambda k: selection[k]["out_of_fold_cost"])
+    means = [v["mean_out_of_fold_cost"] for v in selection.values()]
+    spread = max(means) / min(means) - 1
+    for i, fold_seed in enumerate(SELECTION_SEEDS):
+        winner_per_seed[fold_seed] = min(
+            selection, key=lambda k: selection[k]["per_seed"][i]["out_of_fold_cost"])
+    print("  spread between best and worst candidate: %.1f%%" % (100 * spread))
+    print("  winner per seed: %s" % winner_per_seed)
+
+    chosen = min(selection, key=lambda k: selection[k]["mean_out_of_fold_cost"])
     impute, weighted = selection[chosen]["median_imputation"], selection[chosen]["class_weighting"]
     threshold = selection[chosen]["threshold"]
     print("chosen on out-of-fold cost: %s" % chosen)
@@ -286,7 +309,12 @@ def main():
         "cost_false_positive": COST_FALSE_POSITIVE,
         "cost_false_negative": COST_FALSE_NEGATIVE,
         "folds": FOLDS,
-        "selection_rule": "lowest out-of-fold cost over the training rows; the test set is scored once",
+        "selection_seeds": list(SELECTION_SEEDS),
+        "selection_rule": ("lowest MEAN out-of-fold cost over three fold seeds; the test set is "
+                           "scored once. One seed is not enough: three seeds produce three "
+                           "different winners"),
+        "candidate_spread": round(float(spread), 4),
+        "winner_per_seed": {str(k): v for k, v in winner_per_seed.items()},
         "chosen": chosen,
         "chosen_threshold": round(threshold, 6),
         "selection": selection,

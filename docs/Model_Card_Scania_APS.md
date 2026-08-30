@@ -77,34 +77,36 @@ The test set was scored once, after the choice was made.
 
 Every candidate gets its decision threshold tuned the same way: five-fold
 stratified cross-validation produces one out-of-fold probability per training
-row, and the threshold that minimises cost on those is the candidate's
-threshold. The search is exact rather than a grid, because the scores cluster
-hard at zero and a fixed grid can step over the optimum.
+row, and the threshold that minimises cost on those is that run's threshold. The
+search is exact rather than a grid, because the scores cluster hard at zero and a
+fixed grid can step over the optimum.
 
-| Candidate | Out-of-fold cost | Threshold |
-|---|---|---|
-| **imputed, no class weighting** | **35,670** | **0.003369** |
-| nan, no class weighting | 35,900 | 0.001952 |
-| nan, class weighting | 35,940 | 0.003567 |
-| imputed, class weighting | 37,360 | 0.004383 |
+**The whole selection runs three times, on three fold seeds, and that is the
+finding.** The first version of this card used one seed and reported two
+confident conclusions: that median imputation beats leaving NaN, and that class
+weighting hurts once the threshold is tuned. Repeating the selection with two
+more seeds produced **three different winners**.
+
+| Candidate | Mean out-of-fold cost | Seed 42 | Seed 7 | Seed 2026 | Threshold |
+|---|---|---|---|---|---|
+| **NaN kept, no class weighting** | **35,403** | 35,900 | **35,010** | 35,300 | **0.002366** |
+| Imputed, no class weighting | 35,870 | **35,670** | 35,240 | 36,700 | 0.004735 |
+| Imputed, class weighting | 36,410 | 37,360 | 36,860 | **35,010** | 0.005134 |
+| NaN kept, class weighting | 36,830 | 35,940 | 37,990 | 36,560 | 0.005436 |
+
+Spread between best and worst candidate: **4.0 percent**. Winner by seed: 42
+picks imputed-plain, 7 picks NaN-plain, 2026 picks imputed-weighted.
+
+**So the honest conclusion is that neither structural choice matters on this
+dataset.** They sit inside the noise of the selection, and a rule that resolves a
+near-tie by one coin flip will report whichever way that flip landed as a
+finding. The shipped rule takes the lowest mean over the three seeds, which picks
+NaN kept with no class weighting, and its threshold is the mean of the three.
 
 **Out-of-fold cost is a ranking device, not a number to compare with the test
 figure.** It is computed over 60,000 rows containing 1,000 positives, from models
 each trained on four fifths of the data; the test cost is over 16,000 rows with
 375 positives. The two are not on the same scale and are never compared here.
-
-The winner is median imputation with **no** class weighting. Both of those
-contradict the design this module started with, and both were changed because
-the measurement said so:
-
-- **Imputation beats leaving NaN**, which is the opposite of the usual advice for
-  gradient boosting. The plausible reading is that a median-filled column still
-  carries the shape of the distribution, while a NaN column forces every split on
-  that feature to spend its capacity on one binary default direction. It is a
-  reading, not a demonstration; the fact is the cost.
-- **Class weighting and threshold tuning are alternatives, not a pair.** Both move
-  the same boundary, and applying both over-corrects. With the threshold tuned,
-  weighting made things worse on three of the four measurements.
 
 ## 5. Performance
 
@@ -112,14 +114,14 @@ Test set, 16,000 rows, scored once at the threshold chosen in section 4.
 
 | Metric | Value |
 |---|---|
-| **Total cost** | **9,750** |
-| False positives (needless checks) | 375 |
-| False negatives (missed failures) | 12 |
-| True positives | 363 |
-| Recall | 0.968 |
-| Precision | 0.492 |
-| ROC AUC | 0.9953 |
-| PR AUC | 0.9339 |
+| **Total cost** | **10,660** |
+| False positives (needless checks) | 416 |
+| False negatives (missed failures) | 13 |
+| True positives | 362 |
+| Recall | 0.9653 |
+| Precision | 0.4653 |
+| ROC AUC | 0.9952 |
+| PR AUC | 0.9286 |
 
 ### What each change is worth
 
@@ -127,26 +129,31 @@ Every row is the same pipeline with one thing changed, scored on the test set.
 
 | Configuration | Cost | False positives | False negatives |
 |---|---|---|---|
-| **Shipped** (imputed, no weighting, tuned threshold) | **9,750** | 375 | 12 |
-| Imputed, class weighting, tuned threshold | 9,590 | 459 | 10 |
-| NaN kept, no weighting, tuned threshold | 10,470 | 447 | 12 |
-| NaN kept, class weighting, tuned threshold | 11,050 | 455 | 13 |
+| **Shipped** (NaN kept, no weighting, tuned threshold) | **10,660** | 416 | 13 |
+| Imputed, class weighting, tuned threshold | 9,880 | 438 | 11 |
+| NaN kept, class weighting, tuned threshold | 10,800 | 380 | 14 |
+| Imputed, no weighting, tuned threshold | 12,050 | 305 | 18 |
 | Logistic regression, tuned threshold | 15,330 | 533 | 20 |
-| **Shipped model at the default threshold 0.5** | **39,640** | 14 | 79 |
+| **Shipped model at the default threshold 0.5** | **40,650** | 15 | 81 |
 
-Two rows carry the whole module.
+Two rows carry the whole module, and they are not the ones a leaderboard would
+look at.
 
-**The threshold is worth 29,890 cost, a factor of four.** The same model,
-the same probabilities, one decision: 0.5 catches 296 of 375 failures, and the
-tuned threshold catches 363. Nothing else in this project comes close to that
-return for that little work, and it is invisible to accuracy, which is 99.4% at
-either threshold.
+**The threshold is worth 29,990 cost, a factor of 3.8.** The same model, the same
+probabilities, one decision: 0.5 catches 294 of 375 failures, the tuned threshold
+catches 362. Nothing else in this project comes close to that return for that
+little work, and it is invisible to accuracy, which is above 99 percent at either
+threshold.
 
-**The honest protocol cost 160.** The configuration that scores best on the test
-set is not the one that won on out-of-fold data: imputed-with-weighting reaches
-9,590 against the shipped 9,750. Picking it would mean choosing on the test set,
-which is how a number stops meaning anything. The gap is recorded rather than
-harvested.
+**Everything structural is worth nothing measurable.** The four candidates span
+9,880 to 12,050 on the test set and 4.0 percent on out-of-fold cost, and they
+rank differently on every seed. Reporting one of them as a finding would have
+been reporting a coin flip.
+
+**The honest protocol cost 780.** The configuration that scores best on the test
+set, imputed with class weighting at 9,880, is not the one that won on out-of-fold
+data. Picking it would mean choosing on the test set, which is how a number stops
+meaning anything. The gap is recorded rather than harvested.
 
 ### Against the published challenge results
 
@@ -155,24 +162,22 @@ same test set with this same metric.
 
 | | Cost | False positives | False negatives |
 |---|---|---|---|
-| **This model** | **9,750** | 375 | 12 |
 | Challenge 1st | 9,920 | 542 | 9 |
 | Challenge 2nd | 10,900 | 490 | 12 |
+| **This model** | **10,660** | 416 | 13 |
 | Challenge 3rd | 11,480 | 398 | 15 |
 
-**Read this carefully rather than as a win.** The metric and the test set are the
-same, so the numbers are comparable. Three things make the comparison weaker than
-it looks: the dataset has been public and studied for a decade, so a 2016
-competition result is not a current state of the art; the four candidates were
-within 4.7% of each other on out-of-fold cost, so the margin over the runner-up
-configuration is inside the noise of the selection; and the competitors were
-working blind against a live leaderboard. The defensible claim is that a
-carefully thresholded gradient-boosting baseline lands in the same range as the
-2016 winners, not that it beats them.
+A carefully thresholded gradient-boosting baseline lands between second and third
+place on a ten-year-old public benchmark. That is the right size of claim. It is
+worth noting what the first version of this card said instead: the single-seed
+selection happened to pick a configuration scoring 9,750, which is below the
+challenge winner, and it would have been written up as beating them. The number
+was real; the procedure that produced it was one coin flip, and the same coin
+lands on 12,050 for a different seed.
 
 ## 6. Limitations
 
-1. **Precision is 0.49.** Half of the flagged trucks are fine. That is not a
+1. **Precision is 0.47.** More than half of the flagged trucks are fine. That is not a
    defect, it is what the cost metric asks for: at fifty to one, buying one
    caught failure with fifty needless checks still pays. It does mean the
    workshop sees roughly twice the work the failures alone would justify, and an
@@ -181,7 +186,8 @@ carefully thresholded gradient-boosting baseline lands in the same range as the
 2. **The features are anonymised, so nothing here is diagnosable.** The model
    says a truck is likely to have an APS fault and cannot say which part or why.
    No feature importance in this module means anything a mechanic can act on.
-3. **The threshold is tuned to one cost ratio and one prevalence.** 10 to 500 is
+3. **The threshold is tuned to one cost ratio and one prevalence**, and it is the
+   only thing here that a measurement supports. 10 to 500 is
    the challenge's ratio, not a measured Arkon figure, and the test prevalence
    (2.34%) is higher than the training prevalence (1.67%). A different fleet
    mix moves the optimum, and nothing in the pipeline detects that it has moved.
@@ -206,9 +212,9 @@ model. This one uses the predicted failure probability directly.
 
 | Priority | Band | Test count | What the operator does |
 |---|---|---|---|
-| P1 | probability >= 0.90 | 236 | Hold the truck, book the workshop before the next run |
-| P2 | 0.50 to 0.90 | 74 | Book an APS check within the shift |
-| P3 | decision threshold (0.0034) to 0.50 | 428 | Add an APS check to the next planned service slot |
+| P1 | probability >= 0.90 | 240 | Hold the truck, book the workshop before the next run |
+| P2 | 0.50 to 0.90 | 69 | Book an APS check within the shift |
+| P3 | decision threshold (0.0024) to 0.50 | 469 | Add an APS check to the next planned service slot |
 | P4 | below the threshold | not published | Nothing. No event is emitted |
 
 **P1 is justified by what the system does, not by the number.** The air pressure
@@ -216,13 +222,13 @@ system drives braking and gear changes on a heavy truck, so a confident
 prediction is safety-relevant, which is the charter's own P1 definition.
 
 **The bands are confidence bands, not distances from the threshold**, because the
-threshold sits at 0.0034 and almost every flag is precautionary. A flag at 0.004
+threshold sits at 0.0024 and almost every flag is precautionary. A flag at 0.003
 and a flag at 0.99 are the same decision and a very different conversation, and
 giving both a P1 would spend the fifteen-minute P1 window on precautionary
 checks.
 
 **Below the threshold, nothing is published.** CMAPSS emits one event per engine,
-P4 included, because 707 engines is a fleet an operator watches. Here 15,262 of
+P4 included, because 707 engines is a fleet an operator watches. Here 15,222 of
 16,000 records are below the threshold, and publishing them as P4 would bury the
 incident store to say nothing. The denominator is printed on every adapter run.
 
@@ -240,6 +246,8 @@ python events/validate_event.py events/out/scania_events.jsonl
 
 Reads the raw files from `data/02_scania/raw`, writes the model, the
 preprocessing, the test predictions and the metrics JSON. Deterministic: fixed
-seed, fixed folds, no sampling. The script re-runs the candidate selection and
-the whole ablation of section 5 on every execution, so the claims above stay
-checkable rather than becoming folklore.
+seeds, fixed folds, no sampling. The script re-runs the three-seed candidate
+selection and the whole ablation of section 5 on every execution, so the claims
+above stay checkable rather than becoming folklore. The selection is the slow
+part, sixty model fits, and it is deliberately not cached: a cached selection is
+how a stale winner survives a change to the data.
