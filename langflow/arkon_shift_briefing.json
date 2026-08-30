@@ -273,13 +273,9 @@
         },
         "dragging": false,
         "id": "ChatInput-brf01",
-        "measured": {
-          "height": 207,
-          "width": 320
-        },
         "position": {
-          "x": -1200,
-          "y": 200
+          "x": -1400,
+          "y": 0
         },
         "selected": false,
         "type": "genericNode"
@@ -930,13 +926,9 @@
         },
         "dragging": false,
         "id": "Agent-brf01",
-        "measured": {
-          "height": 431,
-          "width": 320
-        },
         "position": {
-          "x": -820,
-          "y": 200
+          "x": -950,
+          "y": 0
         },
         "selected": false,
         "type": "genericNode"
@@ -1357,13 +1349,9 @@
         },
         "dragging": false,
         "id": "APIRequest-brf01",
-        "measured": {
-          "width": 320,
-          "height": 300
-        },
         "position": {
-          "x": -820,
-          "y": 560
+          "x": -950,
+          "y": 620
         },
         "selected": false,
         "type": "genericNode"
@@ -1669,13 +1657,9 @@
         },
         "dragging": false,
         "id": "ChatOutput-brf01",
-        "measured": {
-          "height": 52,
-          "width": 192
-        },
         "position": {
-          "x": -440,
-          "y": 200
+          "x": -450,
+          "y": 0
         },
         "selected": true,
         "type": "genericNode"
@@ -1774,7 +1758,7 @@
     "viewport": {
       "x": 0,
       "y": 0,
-      "zoom": 1
+      "zoom": 0.7
     }
   }
 }

@@ -64,6 +64,36 @@ that conflates them will invent a status for one of them.
 | `arkon_quality_assistant.json` | The main canvas, importable into Langflow |
 | `arkon_shift_briefing.json` | The shift handover sub-flow, called through Run Flow and runnable on its own endpoint |
 
+## How the flow JSON is generated
+
+The canvas is not hand-edited. A Langflow flow is a ReactFlow graph whose edge
+handles are JSON strings with every double quote replaced by U+0153, and getting
+that wrong produces an edge that is present in the file but does not render or
+execute. `build/lfbuild.py` owns that encoding; everything else builds on it.
+
+The scripts run in order, each taking the previous one's output as its input,
+which is how "one canvas refined across sprints" stays reproducible rather than
+being a claim:
+
+```bash
+python langflow/build/build_arkon_flow.py      # Sprint 1, from the course LS2 seed
+python langflow/build/build_sprint2_flow.py    # Sprint 2, adds routing and the live lookup
+python langflow/build/build_sprint3_flow.py <briefing-flow-id>
+python langflow/build/layout_flow.py           # positions, run last
+```
+
+`layout_flow.py` must run last: the sprint scripts place each node as they add
+it and do not know what the canvas ends up looking like. It also refuses to
+finish silently, printing any pair of nodes whose boxes overlap.
+
+`build/lf_api.py` and `build/lf_v2.py` drive a running Langflow from the NAS.
+The second one exists because a canvas holding a Human Input node cannot be run
+through the v1 API at all. Both read the superuser credentials from the compose
+`.env` on the NAS, so no secret travels with the repository.
+
+Prompts are not stored in these scripts. They are read out of the vault build
+artifacts at generation time, so the documents and the canvas cannot drift.
+
 ## Deploying it
 
 Import through the Langflow UI, or push it over the API. The API route needs the

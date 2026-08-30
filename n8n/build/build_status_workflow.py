@@ -1,0 +1,409 @@
+"""Build the Arkon Incident Status API n8n workflow JSON.
+
+The workflow is written from a script rather than by hand so the two Code-node
+bodies stay readable and quoting stays under control.
+"""
+
+import json
+import pathlib
+
+OUT = pathlib.Path(
+    r"D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai\n8n\incident_status_api_v1.json"
+)
+
+STORE_PATH = "/data/arkon/incidents.jsonl"
+
+PARSE_QUERY = r"""// Arkon Incident Status API - request parsing and validation.
+// Every query parameter is optional; the contract is documented in n8n/README.md.
+// Invalid input is rejected here so the agent gets a precise reason instead of
+// an empty result it might read as "no incident exists".
+const PRIORITIES = ["P1", "P2", "P3", "P4"];
+const LIFECYCLE = ["new", "acknowledged", "in_containment", "resolved", "closed", "false_positive"];
+const MAX_LIMIT = 50;
+const DEFAULT_LIMIT = 5;
+
+const params = $input.first().json.query ?? {};
+const errors = [];
+
+const raw = (key) => {
+  const value = params[key];
+  if (value === undefined || value === null) return null;
+  const text = String(Array.isArray(value) ? value[0] : value).trim();
+  return text === "" ? null : text;
+};
+
+// incident_id: accepts ARK-INC-00014, ark-inc-14, or a bare number
+let incidentId = raw("incident_id");
+if (incidentId !== null) {
+  const digits = incidentId.replace(/[^0-9]/g, "");
+  if (!/^(ARK-INC-)?[0-9]+$/i.test(incidentId) || digits === "") {
+    errors.push("incident_id must look like ARK-INC-00014 or be a plain number");
+    incidentId = null;
+  } else {
+    incidentId = "ARK-INC-" + digits.padStart(5, "0");
+  }
+}
+
+// unit: matched against the unit token of event.evidence.record_id (FD001-Unit-092).
+// Take the last hyphen-separated token first: a full record id carries digits in
+// its subset prefix too, and reading them all would turn FD001-Unit-092 into 1092.
+let unit = raw("unit");
+if (unit !== null) {
+  const token = unit.split("-").pop().trim();
+  const digits = token.replace(/[^0-9]/g, "");
+  unit = digits === "" ? token.toUpperCase() : String(parseInt(digits, 10));
+}
+
+// priority: one or more of P1..P4, comma separated
+let priority = [];
+const priorityRaw = raw("priority");
+if (priorityRaw !== null) {
+  priority = priorityRaw.split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
+  const unknown = priority.filter((p) => !PRIORITIES.includes(p));
+  if (unknown.length) {
+    errors.push("priority must be one of " + PRIORITIES.join(", ") + "; got " + unknown.join(", "));
+    priority = [];
+  }
+}
+
+// status: a value from the charter 7.2 incident lifecycle
+let status = raw("status");
+if (status !== null) {
+  status = status.toLowerCase();
+  if (!LIFECYCLE.includes(status)) {
+    errors.push("status must be one of " + LIFECYCLE.join(", "));
+    status = null;
+  }
+}
+
+let limit = DEFAULT_LIMIT;
+const limitRaw = raw("limit");
+if (limitRaw !== null) {
+  if (!/^[0-9]+$/.test(limitRaw)) {
+    errors.push("limit must be a whole number");
+  } else {
+    limit = parseInt(limitRaw, 10);
+    if (limit < 1 || limit > MAX_LIMIT) {
+      errors.push("limit must be between 1 and " + MAX_LIMIT);
+      limit = DEFAULT_LIMIT;
+    }
+  }
+}
+
+// Test affordance only: lets the agent's failure path be demonstrated on demand
+// without unpublishing the workflow. A production deployment removes it or puts
+// it behind an operator role.
+const simulateFailure = ["1", "true", "yes"].includes((raw("simulate_failure") ?? "").toLowerCase());
+
+return [
+  {
+    json: {
+      valid: errors.length === 0,
+      errors,
+      simulate_failure: simulateFailure,
+      query: { incident_id: incidentId, unit, priority, status, limit },
+    },
+  },
+];
+"""
+
+FILTER_INCIDENTS = r"""// Arkon Incident Status API - answer the query from the JSONL incident store.
+// Response times come from charter 7.1, the status vocabulary from charter 7.2.
+const ACK_WINDOW_MINUTES = { P1: 15, P2: 60 };
+const OPEN_STATUSES = ["new", "acknowledged", "in_containment"];
+
+const request = $("Parse Query").first().json;
+const filters = request.query;
+const storeText = $input.first().json.store_text ?? "";
+const now = new Date();
+
+const lines = storeText.split("\n").map((line) => line.trim()).filter(Boolean);
+const incidents = [];
+let unreadableLines = 0;
+for (const line of lines) {
+  try {
+    incidents.push(JSON.parse(line));
+  } catch (error) {
+    unreadableLines += 1;
+  }
+}
+
+const unitToken = (incident) => {
+  const recordId = incident.event?.evidence?.record_id ?? "";
+  return String(recordId).split("-").pop() ?? "";
+};
+
+const ageMinutes = (incident) => {
+  const created = Date.parse(incident.created_at ?? "");
+  return Number.isNaN(created) ? null : Math.round((now.getTime() - created) / 60000);
+};
+
+const isOverdue = (incident) => {
+  const window = ACK_WINDOW_MINUTES[String(incident.priority ?? "").toUpperCase()];
+  if (window === undefined) return false;
+  if (String(incident.status ?? "").toLowerCase() !== "new") return false;
+  const age = ageMinutes(incident);
+  return age !== null && age > window;
+};
+
+const matches = (incident) => {
+  if (filters.incident_id && incident.incident_id !== filters.incident_id) return false;
+  if (filters.status && String(incident.status ?? "").toLowerCase() !== filters.status) return false;
+  if (filters.priority.length && !filters.priority.includes(String(incident.priority ?? "").toUpperCase())) {
+    return false;
+  }
+  if (filters.unit) {
+    const token = unitToken(incident);
+    const tokenDigits = token.replace(/[^0-9]/g, "");
+    const filterDigits = String(filters.unit).replace(/[^0-9]/g, "");
+    if (tokenDigits !== "" && filterDigits !== "") {
+      if (parseInt(tokenDigits, 10) !== parseInt(filterDigits, 10)) return false;
+    } else if (token.toUpperCase() !== String(filters.unit).toUpperCase()) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const project = (incident) => ({
+  incident_id: incident.incident_id,
+  created_at: incident.created_at,
+  age_minutes: ageMinutes(incident),
+  status: incident.status,
+  priority: incident.priority,
+  unit: unitToken(incident),
+  summary: incident.summary,
+  recommended_action: incident.recommended_action,
+  acknowledge_due_minutes: ACK_WINDOW_MINUTES[String(incident.priority ?? "").toUpperCase()] ?? null,
+  overdue: isOverdue(incident),
+  source_module: incident.source_module,
+  business_domain: incident.business_domain,
+  assigned_to: incident.assigned_to,
+  assigned_role: incident.assigned_role,
+  escalation_contact: incident.escalation_contact,
+  event_id: incident.event?.event_id ?? null,
+  risk_score: incident.event?.risk_score ?? null,
+  predicted_rul: incident.event?.evidence?.prediction ?? null,
+  priority_threshold: incident.event?.evidence?.threshold ?? null,
+  model_version: incident.event?.evidence?.model_version ?? null,
+  data_origin: incident.event?.context_origin ?? null,
+  operational_context_origin: incident.event?.operational_context?.context_origin ?? null,
+});
+
+const byPriority = {};
+for (const incident of incidents) {
+  const key = String(incident.priority ?? "unknown").toUpperCase();
+  byPriority[key] = (byPriority[key] ?? 0) + 1;
+}
+
+const hits = incidents
+  .filter(matches)
+  .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")));
+const page = hits.slice(0, filters.limit).map(project);
+
+return [
+  {
+    json: {
+      status: hits.length ? "ok" : "no_match",
+      message: hits.length
+        ? hits.length + " incident(s) match the query, " + page.length + " returned."
+        : "No incident in the store matches the query.",
+      as_of: now.toISOString(),
+      query: filters,
+      store: {
+        path: "__STORE_PATH__",
+        total_incidents: incidents.length,
+        unreadable_lines: unreadableLines,
+        incidents_by_priority: byPriority,
+        open_incidents: incidents.filter((i) => OPEN_STATUSES.includes(String(i.status ?? "").toLowerCase())).length,
+        overdue_incidents: incidents.filter(isOverdue).length,
+      },
+      match_count: hits.length,
+      returned: page.length,
+      incidents: page,
+    },
+  },
+];
+""".replace("__STORE_PATH__", STORE_PATH)
+
+
+def if_node(node_id, name, position, left_value):
+    return {
+        "id": node_id,
+        "name": name,
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": position,
+        "parameters": {
+            "conditions": {
+                "options": {
+                    "caseSensitive": True,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 1,
+                },
+                "conditions": [
+                    {
+                        "id": node_id,
+                        "leftValue": left_value,
+                        "rightValue": True,
+                        "operator": {
+                            "type": "boolean",
+                            "operation": "true",
+                            "singleValue": True,
+                        },
+                    }
+                ],
+                "combinator": "and",
+            },
+            "options": {},
+        },
+    }
+
+
+def respond_node(node_id, name, position, body_expression, response_code=None):
+    options = {} if response_code is None else {"responseCode": response_code}
+    return {
+        "id": node_id,
+        "name": name,
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": position,
+        "parameters": {
+            "respondWith": "json",
+            "responseBody": body_expression,
+            "options": options,
+        },
+    }
+
+
+workflow = {
+    "id": "arkonStatusApi1",
+    "name": "Arkon Incident Status API v1",
+    "nodes": [
+        {
+            "id": "a1000000-0000-4000-8000-000000000001",
+            "name": "Status Request",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [-1328, 240],
+            "webhookId": "arkon-incident-status",
+            "parameters": {
+                "httpMethod": "GET",
+                "path": "arkon-incident-status",
+                "responseMode": "responseNode",
+                "options": {},
+            },
+        },
+        {
+            "id": "a1000000-0000-4000-8000-000000000002",
+            "name": "Parse Query",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [-1104, 240],
+            "parameters": {"jsCode": PARSE_QUERY},
+        },
+        if_node(
+            "a1000000-0000-4000-8000-000000000003",
+            "Valid Request?",
+            [-880, 240],
+            "={{ $json.valid }}",
+        ),
+        respond_node(
+            "a1000000-0000-4000-8000-000000000004",
+            "Respond Bad Request",
+            [-656, 416],
+            '={{ JSON.stringify({status: "rejected", errors: $json.errors}) }}',
+            400,
+        ),
+        if_node(
+            "a1000000-0000-4000-8000-000000000005",
+            "Simulated Failure?",
+            [-656, 160],
+            "={{ $json.simulate_failure }}",
+        ),
+        respond_node(
+            "a1000000-0000-4000-8000-000000000006",
+            "Respond Unavailable",
+            [-432, -16],
+            '={{ JSON.stringify({status: "unavailable", message: "Incident store lookup failed (simulated failure requested by the caller)."}) }}',
+            503,
+        ),
+        {
+            "id": "a1000000-0000-4000-8000-000000000007",
+            "name": "Read Incident Store",
+            "type": "n8n-nodes-base.readWriteFile",
+            "typeVersion": 1.1,
+            "position": [-432, 224],
+            "onError": "continueErrorOutput",
+            "parameters": {
+                "operation": "read",
+                "fileSelector": STORE_PATH,
+                "options": {},
+            },
+        },
+        respond_node(
+            "a1000000-0000-4000-8000-000000000008",
+            "Respond Store Unavailable",
+            [-208, 416],
+            '={{ JSON.stringify({status: "unavailable", message: "The incident store could not be read."}) }}',
+            503,
+        ),
+        {
+            "id": "a1000000-0000-4000-8000-000000000009",
+            "name": "Extract Store Text",
+            "type": "n8n-nodes-base.extractFromFile",
+            "typeVersion": 1.1,
+            "position": [-208, 224],
+            "parameters": {
+                "operation": "text",
+                "binaryPropertyName": "data",
+                "destinationKey": "store_text",
+                "options": {},
+            },
+        },
+        {
+            "id": "a1000000-0000-4000-8000-00000000000a",
+            "name": "Filter Incidents",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [16, 224],
+            "parameters": {"jsCode": FILTER_INCIDENTS},
+        },
+        respond_node(
+            "a1000000-0000-4000-8000-00000000000b",
+            "Respond Status",
+            [240, 224],
+            "={{ JSON.stringify($json) }}",
+        ),
+    ],
+    "connections": {
+        "Status Request": {"main": [[{"node": "Parse Query", "type": "main", "index": 0}]]},
+        "Parse Query": {"main": [[{"node": "Valid Request?", "type": "main", "index": 0}]]},
+        "Valid Request?": {
+            "main": [
+                [{"node": "Simulated Failure?", "type": "main", "index": 0}],
+                [{"node": "Respond Bad Request", "type": "main", "index": 0}],
+            ]
+        },
+        "Simulated Failure?": {
+            "main": [
+                [{"node": "Respond Unavailable", "type": "main", "index": 0}],
+                [{"node": "Read Incident Store", "type": "main", "index": 0}],
+            ]
+        },
+        "Read Incident Store": {
+            "main": [
+                [{"node": "Extract Store Text", "type": "main", "index": 0}],
+                [{"node": "Respond Store Unavailable", "type": "main", "index": 0}],
+            ]
+        },
+        "Extract Store Text": {"main": [[{"node": "Filter Incidents", "type": "main", "index": 0}]]},
+        "Filter Incidents": {"main": [[{"node": "Respond Status", "type": "main", "index": 0}]]},
+    },
+    "settings": {"executionOrder": "v1", "binaryMode": "separate", "availableInMCP": False},
+    "pinData": {},
+}
+
+OUT.write_text(json.dumps(workflow, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+print("written", OUT, OUT.stat().st_size, "bytes")
