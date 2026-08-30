@@ -13,8 +13,8 @@ This is also the graded artifact of the MSIT Term 12 course 2B project. The
 course build record, prompts and test evidence live in the vault at
 `020 Projects/AI_Agents_2B_Meridian/build/`.
 
-**Status: deployed 2026-08-30**, endpoint `arkon-quality-assistant`. Sprints 1 and
-2 complete and validated. The document store is not built yet; see Known gaps.
+**Status: deployed 2026-08-30**, endpoint `arkon-quality-assistant`. Sprints 1 to
+3 complete and validated. The document store is not built yet; see Known gaps.
 
 ## Flow
 
@@ -25,12 +25,30 @@ Intent Router  (Smart Router, LLM categorisation)
    |-- Quality procedure  -> Procedure Specialist  -> Chat Output
    |-- Incident status    -> Incident Specialist   -> Chat Output
    |                            ^ API Request (tool mode) -> incident status API
-   |-- Escalation request -> Escalation Specialist -> Chat Output
+   |                            ^ Run Flow (tool mode)    -> Arkon_Shift_Briefing
+   |-- Escalation request -> Human Input (Approve / Reject)
+   |                            |-- Approve -> Escalation Specialist -> Chat Output
+   |                            |                 ^ API Request -> escalation record API
+   |                            `-- Reject  -> Escalation Declined   -> Chat Output
    `-- Out of scope       -------------------------> Chat Output
 ```
 
 The out-of-scope branch carries a fixed Route Message on the router, so it
 reaches its output with no agent in between and no second model call.
+
+The approval gate is the only thing standing between a request and the single
+write the assistant can perform. Nothing reaches
+`POST /webhook/arkon-escalation` unless a human picked Approve, and an approval
+is not an authorisation to do something the system cannot do: an approved
+"acknowledge this incident" is still refused, because there is no write path for
+it.
+
+**A canvas with a Human Input node cannot be run through `/api/v1/run` at all**,
+including on branches that never reach the gate. Use
+`POST /api/v2/workflows` with `mode: background`, watch
+`/api/v2/workflows/pending?flow_id=...` for the approval request, and resume with
+`POST /api/v2/workflows/{job_id}/resume`. That breaks every existing v1 caller
+the moment the gate is added, which is worth knowing before adding one.
 
 The incident specialist reaches the n8n incident status API at
 `http://n8n.arkon.internal:5678/webhook/arkon-incident-status` and reports only
@@ -43,7 +61,8 @@ that conflates them will invent a status for one of them.
 
 | File | Purpose |
 |---|---|
-| `arkon_quality_assistant.json` | The flow, importable into Langflow |
+| `arkon_quality_assistant.json` | The main canvas, importable into Langflow |
+| `arkon_shift_briefing.json` | The shift handover sub-flow, called through Run Flow and runnable on its own endpoint |
 
 ## Deploying it
 
@@ -85,10 +104,25 @@ where moving files on a NAS is not an option, the status API takes
   models. Once retrieval is in, the procedural facts come out of the prompt and
   the same test questions must still be answered correctly; that is the only way
   to show retrieval is working rather than the model reciting its instructions.
-- **Read-only.** The assistant cannot acknowledge, escalate or close anything,
-  because the Steering Cell has no write path for those states in version 1. The
-  escalation branch names who can act instead.
+- **One write, and only one.** After a human approves at the gate, the assistant
+  can record an escalation. It cannot acknowledge, close or resolve an incident,
+  because the Steering Cell has no write path for those states in version 1, and
+  it declines those requests even when the gate approved them.
 - **No authentication in front of it.** Langflow enforces login, but the flow
   endpoint is reachable by anyone holding an API key on the LAN or the Tailscale
   network. Anything beyond a demo needs a real identity in front of the operator
   interface.
+- **The approval is not verifiable by the endpoint.** The gate is enforced on the
+  canvas; the escalation API records the `approved_by` value it is sent and
+  cannot check it. In production the gate would hand the agent a signed,
+  single-use token.
+- **An unanswered approval expires silently.** The Human Input timeout is one
+  hour and the fallback output is off, so a request nobody answers is not routed
+  anywhere. The fix is a fallback branch that tells the Quality Manager; it is
+  not built because it cannot be tested without waiting out the window, and an
+  untested branch on the path that pages a human is worse than a named gap.
+- **The briefing sub-flow gets paraphrased.** Reached through the incident
+  specialist, its fixed four-block output is restated in the agent's own words,
+  which duplicates it and has already turned an age into an overdue figure. The
+  fix is to give the briefing its own router branch so it reaches its output
+  without passing through anything that rewords.

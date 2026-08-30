@@ -1,0 +1,375 @@
+{
+  "id": "arkonEscalate01",
+  "name": "Arkon Escalation Record v1",
+  "nodes": [
+    {
+      "id": "b1000000-0000-4000-8000-000000000001",
+      "name": "Escalation Intake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1328,
+        240
+      ],
+      "webhookId": "arkon-escalation-intake",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "arkon-escalation",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000002",
+      "name": "Validate Escalation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        240
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Escalation Record - request validation.\n// The escalation is a write, so the contract is checked before the store is even\n// read: a malformed request must not consume an escalation id.\nconst MAX_REASON = 500;\nconst MIN_REASON = 5;\n\n// Parameters may arrive in the JSON body or in the query string. Both are\n// supported for one reason: Langflow's API Request component can hand a model\n// the URL and nothing else, so an agent-composed body is not possible. The\n// method stays POST, set on the canvas rather than by the model, so the verb\n// still says that this call changes something.\nconst incoming = $input.first().json;\nconst body = { ...(incoming.query ?? {}), ...(incoming.body ?? {}) };\nconst errors = [];\n\nconst text = (value) => (value === undefined || value === null ? \"\" : String(value).trim());\n\nlet incidentId = text(body.incident_id);\nif (!incidentId) {\n  errors.push(\"incident_id is required\");\n} else {\n  const digits = incidentId.replace(/[^0-9]/g, \"\");\n  if (!/^(ARK-INC-)?[0-9]+$/i.test(incidentId) || digits === \"\") {\n    errors.push(\"incident_id must look like ARK-INC-00014 or be a plain number\");\n  } else {\n    incidentId = \"ARK-INC-\" + digits.padStart(5, \"0\");\n  }\n}\n\nconst reason = text(body.reason);\nif (reason.length < MIN_REASON) {\n  errors.push(\"reason is required and must be at least \" + MIN_REASON + \" characters\");\n} else if (reason.length > MAX_REASON) {\n  errors.push(\"reason must be at most \" + MAX_REASON + \" characters\");\n}\n\nconst requestedBy = text(body.requested_by) || \"arkon-quality-assistant\";\nconst approvedBy = text(body.approved_by) || \"human approval gate\";\n\nreturn [\n  {\n    json: {\n      valid: errors.length === 0,\n      errors,\n      request: {\n        incident_id: incidentId,\n        reason: reason.slice(0, MAX_REASON),\n        requested_by: requestedBy.slice(0, 120),\n        approved_by: approvedBy.slice(0, 120),\n      },\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000003",
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "b1000000-0000-4000-8000-000000000003",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000004",
+      "name": "Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -656,
+        416
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"rejected\", errors: $json.errors}) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000005",
+      "name": "Read Incident Store",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -656,
+        160
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "/data/arkon/incidents.jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000006",
+      "name": "Respond Store Unavailable",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        -16
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"unavailable\", message: \"The incident store could not be read, so the escalation was not recorded.\"}) }}",
+        "options": {
+          "responseCode": 503
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000007",
+      "name": "Extract Store Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        224
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "store_text",
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000008",
+      "name": "Build Escalation Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        224
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Escalation Record - confirm the incident exists, then build the record.\n// An escalation against an incident that is not in the store is refused: it would\n// be an audit entry pointing at nothing.\nconst request = $(\"Validate Escalation\").first().json.request;\nconst storeText = $input.first().json.store_text ?? \"\";\n\nconst incidents = [];\nfor (const line of storeText.split(\"\\n\").map((l) => l.trim()).filter(Boolean)) {\n  try {\n    incidents.push(JSON.parse(line));\n  } catch (error) {\n    // A damaged line is not an escalation failure; the status API reports the count.\n  }\n}\n\nconst incident = incidents.find((item) => item.incident_id === request.incident_id) ?? null;\nif (!incident) {\n  return [{ json: { found: false, incident_id: request.incident_id } }];\n}\n\n// Escalation ids come from workflow static data, the same mechanism the intake\n// workflow uses for incident ids. Static data persists for production executions\n// of a published workflow, not for editor test runs.\nconst state = $getWorkflowStaticData(\"global\");\nstate.nextEscalationId = (state.nextEscalationId ?? 0) + 1;\nconst escalationId = \"ARK-ESC-\" + String(state.nextEscalationId).padStart(5, \"0\");\n\nconst record = {\n  escalation_id: escalationId,\n  created_at: new Date().toISOString(),\n  incident_id: incident.incident_id,\n  incident_priority: incident.priority,\n  incident_status_at_escalation: incident.status,\n  incident_summary: incident.summary,\n  reason: request.reason,\n  requested_by: request.requested_by,\n  approved_by: request.approved_by,\n  notification_channel: \"none\",\n  context_origin: \"simulated\",\n};\n\nreturn [\n  {\n    json: {\n      found: true,\n      escalation: record,\n      escalation_jsonl: JSON.stringify(record) + \"\\n\",\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000009",
+      "name": "Incident Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        16,
+        224
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "b1000000-0000-4000-8000-000000000009",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-00000000000a",
+      "name": "Respond Unknown Incident",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        400
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"rejected\", errors: [\"no incident \" + $json.incident_id + \" in the store, so no escalation was recorded\"]}) }}",
+        "options": {
+          "responseCode": 404
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-00000000000b",
+      "name": "Build Escalation Line",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        160
+      ],
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "escalation_jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-00000000000c",
+      "name": "Append Escalation Record",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        160
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "/data/arkon/escalations.jsonl",
+        "options": {
+          "append": true
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-00000000000d",
+      "name": "Respond Recorded",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        160
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"escalation_recorded\", escalation_id: $('Build Escalation Record').item.json.escalation.escalation_id, incident_id: $('Build Escalation Record').item.json.escalation.incident_id, recorded_at: $('Build Escalation Record').item.json.escalation.created_at, notification_channel: \"none\"}) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Escalation Intake": {
+      "main": [
+        [
+          {
+            "node": "Validate Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Escalation": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Read Incident Store",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Incident Store": {
+      "main": [
+        [
+          {
+            "node": "Extract Store Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Store Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Store Text": {
+      "main": [
+        [
+          {
+            "node": "Build Escalation Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Escalation Record": {
+      "main": [
+        [
+          {
+            "node": "Incident Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incident Found?": {
+      "main": [
+        [
+          {
+            "node": "Build Escalation Line",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Unknown Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Escalation Line": {
+      "main": [
+        [
+          {
+            "node": "Append Escalation Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Escalation Record": {
+      "main": [
+        [
+          {
+            "node": "Respond Recorded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {}
+}

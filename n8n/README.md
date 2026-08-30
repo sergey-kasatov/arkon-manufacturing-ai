@@ -10,6 +10,7 @@ instance on the NAS (pinned image, see the vault runbook
 |---|---|---|---|
 | `quality_steering_cell_v1.json` | write | `POST /webhook/arkon-event` | 2026-08-30 |
 | `incident_status_api_v1.json` | read | `GET /webhook/arkon-incident-status` | 2026-08-30 |
+| `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30 |
 
 ## Event intake (write path)
 
@@ -268,3 +269,57 @@ private IP ranges by default and needs
 - No authentication. The endpoint sits on the LAN and the Tailscale network
   only. Anything beyond the demo needs at least a header credential, and that is
   a stated item in the readiness account.
+
+## Escalation record (write path, guarded)
+
+Third workflow, `escalation_record_v1.json`, built 2026-08-30, workflow id
+`arkonEscalate01`. It records that a human approved the escalation of an existing
+incident. It is the action the Langflow assistant's approval gate guards, and it
+is the only write the assistant can perform.
+
+```text
+POST /webhook/arkon-escalation
+  -> Validate the request               (400, one reason per bad parameter)
+  -> Read /data/arkon/incidents.jsonl   (503 on an unreadable store)
+  -> Incident exists?                   (404 if not; nothing is recorded)
+  -> Append the escalation record       (200 with the new ARK-ESC id)
+```
+
+| Parameter | Required | Notes |
+|---|---|---|
+| `incident_id` | yes | `ARK-INC-00014`, or a plain number |
+| `reason` | yes | 5 to 500 characters |
+| `requested_by` | no | defaults to `arkon-quality-assistant` |
+| `approved_by` | no | defaults to `human approval gate` |
+
+Parameters are read from the JSON body **or the query string**, and that is not
+a convenience. Langflow's API Request component, in tool mode, exposes only the
+URL to the model: its `body` field is not tool-mode capable, and `curl_input` is
+parsed at design time by `update_build_config` while `make_api_request` reads
+`url_input`, `method`, `headers` and `body` from the component and never looks at
+it. So an agent cannot compose a request body at all. Turning this endpoint into
+a GET would also have solved it and was rejected, because a GET that writes an
+audit record lies about what it does. The method stays POST, fixed on the canvas
+where the model cannot change it.
+
+The escalation record captures the incident's priority, status and summary at the
+moment of escalation, so the audit entry still reads correctly after the incident
+moves on. Escalation ids come from workflow static data, the same mechanism the
+intake workflow uses, so the same publish-before-you-test rule applies. Ids
+`ARK-ESC-00001` to `00004` were consumed by the contract test and by the
+query-string check on 2026-08-30; the store was emptied afterwards, so the log
+starts at `00005`.
+
+### Known boundaries of the escalation record
+
+- **It notifies nobody.** `notification_channel` is always `none`. The Telegram
+  card to the Quality Manager is the obvious next step and is deliberately not
+  wired: a test run of an approval gate should not put messages in front of a
+  real person.
+- **It cannot verify the approval.** The endpoint records the `approved_by` value
+  its caller sends. The gate is enforced on the Langflow canvas, not on the wire.
+  In production the gate would hand the agent a signed, single-use token that this
+  endpoint checks.
+- **It does not change the incident.** The incident's own lifecycle transition
+  belongs with the move to a queryable store, per charter 7.2 and 7.5.
+
