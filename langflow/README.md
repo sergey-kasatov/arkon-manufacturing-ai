@@ -27,7 +27,7 @@ Intent Router  (Smart Router, LLM categorisation)
    |                            ^ Qdrant (tool mode) -> arkon-knowledge
    |-- Incident status    -> Incident Specialist   -> Chat Output
    |                            ^ API Request (tool mode) -> incident status API
-   |                            ^ Run Flow (tool mode)    -> Arkon_Shift_Briefing
+   |-- Shift briefing     -> Run Flow -> Arkon_Shift_Briefing -> Chat Output
    |-- Escalation request -> Human Input (Approve / Reject)
    |                            |-- Approve -> Escalation Specialist -> Chat Output
    |                            |                 ^ API Request -> escalation record API
@@ -37,6 +37,14 @@ Intent Router  (Smart Router, LLM categorisation)
 
 The out-of-scope branch carries a fixed Route Message on the router, so it
 reaches its output with no agent in between and no second model call.
+
+The shift briefing branch has the same shape for a different reason. Its
+sub-flow produces a fixed four-block format read at speed at shift change, and
+reaching it as a tool of the incident specialist meant the format landed inside
+an agent whose job is to answer in its own words: the operator got the briefing
+twice, and the paraphrase relabelled an incident's age as an overdue figure. A
+component whose value is its exact output must not be reached through something
+that rewords.
 
 The approval gate is the only thing standing between a request and the single
 write the assistant can perform. Nothing reaches
@@ -86,6 +94,7 @@ python langflow/build/build_sprint2_flow.py    # Sprint 2, adds routing and the 
 python langflow/build/build_sprint3_flow.py <briefing-flow-id>
 python langflow/build/build_ingest_flow.py --deploy   # the document store, uploads and ingests
 python langflow/build/build_retrieval.py       # the store as the procedure specialist's tool
+python langflow/build/build_sprint4_flow.py <briefing-flow-id>   # the briefing gets its own branch
 python langflow/build/layout_flow.py           # positions, run last
 ```
 
@@ -202,8 +211,17 @@ it is why the store was worth building beyond the course asking for it.
   anywhere. The fix is a fallback branch that tells the Quality Manager; it is
   not built because it cannot be tested without waiting out the window, and an
   untested branch on the path that pages a human is worse than a named gap.
-- **The briefing sub-flow gets paraphrased.** Reached through the incident
-  specialist, its fixed four-block output is restated in the agent's own words,
-  which duplicates it and has already turned an age into an overdue figure. The
-  fix is to give the briefing its own router branch so it reaches its output
-  without passing through anything that rewords.
+- **An underspecified question is answered as an off-topic one.** "And what
+  about that one?" with no antecedent goes to the out-of-scope branch, because
+  the router has no category for a message it cannot place. Nothing is invented,
+  which is the behaviour that matters, but the operator is told the wrong reason.
+  The fix is a sixth route or the router's Else output; it changes the
+  classification surface for all five existing routes, so it wants time to
+  re-validate.
+- **Two paragraphs of the procedure prompt describe the deployment, not the
+  quality system.** The simulated-context rule and the version-1 write boundary
+  are in the prompt rather than the document store, because both have to hold
+  when retrieval returns a document that reads as though they do not - the
+  charter describes acknowledge and close buttons on the alert card that are not
+  wired. Both paragraphs go stale the day the lifecycle write path lands, and
+  nothing enforces that they are removed.

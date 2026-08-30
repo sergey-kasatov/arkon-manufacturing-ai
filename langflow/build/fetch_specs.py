@@ -40,6 +40,11 @@ COMPONENTS = {
 # the posted source, which is also how the UI does it.
 CUSTOM = {"openrouterembeddings": REPO / "langflow" / "components" / "openrouter_embeddings.py"}
 
+# A Run Flow node outside tool mode grows inputs and outputs named after the
+# sub-flow's own vertices. Langflow computes them; guessing the convention is how
+# an edge ends up present in the file and dead on the canvas.
+DERIVED = {"runflow_briefing": ("runflow", "Arkon_Shift_Briefing", "063c6445-ef32-49e5-93a9-dc7764a40a48")}
+
 
 def ssh(command, stdin=None):
     result = subprocess.run(
@@ -63,6 +68,35 @@ def fetch_custom(slug, source):
     write(slug, payload["data"], payload["type"])
 
 
+def fetch_derived(slug, base_slug, flow_name, flow_id):
+    """Ask Langflow to populate a Run Flow node for one sub-flow, as the UI does.
+
+    Picking a flow in the dropdown fires update_build_config, which adds an input
+    per input vertex of the sub-flow and an output per output vertex, named
+    `<vertex-id>~<field>`. Reproducing that naming by hand is how an edge ends up
+    present in the JSON and dead on the canvas.
+    """
+    template = json.loads((HERE / ("spec_%s.json" % base_slug)).read_text(encoding="utf-8"))["spec"]["template"]
+    template["flow_name_selected"].update({
+        "value": flow_name,
+        "options": [flow_name],
+        "options_metadata": [{"id": flow_id}],
+        "selected_metadata": {"id": flow_id},
+    })
+    template["flow_id_selected"]["value"] = flow_id
+    body = {
+        "code": template["code"]["value"],
+        "field": "flow_name_selected",
+        "field_value": flow_name,
+        "template": template,
+        "tool_mode": False,
+    }
+    ssh("cat > /tmp/rf_update.json", stdin=json.dumps(body))
+    answer = json.loads(ssh("%s raw POST /api/v1/custom_component/update /tmp/rf_update.json" % REMOTE))
+    node = answer.get("data", answer)
+    write(slug, node, "RunFlow -> " + flow_name)
+
+
 def write(slug, spec, label):
     path = HERE / ("spec_%s.json" % slug)
     path.write_text(json.dumps({"name": label, "spec": spec}, indent=1, ensure_ascii=False), encoding="utf-8")
@@ -70,11 +104,14 @@ def write(slug, spec, label):
     print("  %-22s %-34s %d fields, %d outputs" % (slug, label, fields, len(spec.get("outputs", []))))
 
 
-wanted = sys.argv[1:] or list(COMPONENTS) + list(CUSTOM)
+wanted = sys.argv[1:] or list(COMPONENTS) + list(CUSTOM) + list(DERIVED)
 for slug in wanted:
     if slug in COMPONENTS:
         fetch_catalog(slug, COMPONENTS[slug])
     elif slug in CUSTOM:
         fetch_custom(slug, CUSTOM[slug])
+    elif slug in DERIVED:
+        fetch_derived(slug, *DERIVED[slug])
     else:
-        raise SystemExit("unknown spec %r, known: %s" % (slug, ", ".join(sorted(set(COMPONENTS) | set(CUSTOM)))))
+        known = sorted(set(COMPONENTS) | set(CUSTOM) | set(DERIVED))
+        raise SystemExit("unknown spec %r, known: %s" % (slug, ", ".join(known)))

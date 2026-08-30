@@ -42,8 +42,13 @@ LAYOUT = {
     "OpenRouterEmbeddings-emb01":                        (-2100, -1300),
     "ext:qdrant:QdrantVectorStoreComponent@official-kb01": (-1650, -750),
 
+    # The shift briefing is its own branch since Sprint 4, not a tool: it goes
+    # router -> sub-flow -> output with no agent in the path, which is what stops
+    # its fixed format being paraphrased.
+    "RunFlow-brf02":       (-1050, 2100),
+    "ChatOutput-brf02":    (-150, 2100),
+
     "APIRequest-inc01":    (-1650, 700),     # tool of the incident specialist
-    "RunFlow-brf01":       (-1650, 1250),    # tool of the incident specialist
     "APIRequest-esc01":    (-1050, 1550),    # tool of the escalation specialist
 }
 
@@ -61,7 +66,7 @@ for node in flow["data"]["nodes"]:
 # empty, even though the tool resolves correctly from flow_id_selected. Filling
 # the list makes the canvas say which flow it calls.
 for node in flow["data"]["nodes"]:
-    if node["id"] == "RunFlow-brf01":
+    if node["id"] == "RunFlow-brf02":
         field = node["data"]["node"]["template"]["flow_name_selected"]
         field["options"] = ["Arkon_Shift_Briefing"]
         field["options_metadata"] = [{"id": BRIEFING_FLOW_ID}]
