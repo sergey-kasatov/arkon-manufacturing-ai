@@ -1,0 +1,353 @@
+{
+  "id": "arkonSlice001",
+  "name": "Arkon Comparison Slice v1",
+  "nodes": [
+    {
+      "id": "b1000000-0000-4000-8000-000000000001",
+      "name": "Slice Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "arkon-slice",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "arkon-slice"
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000002",
+      "name": "Route Intent",
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        300
+      ],
+      "parameters": {
+        "inputText": "={{ $json.body.message }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Quality procedure",
+              "description": "How the Arkon quality process works: priority levels and their response windows, the CMAPSS risk thresholds, who owns which incident, the escalation policy, what the model is and how accurate it is."
+            },
+            {
+              "category": "Incident status",
+              "description": "The current state of incidents in the Steering Cell store: how many are open, at what priority, which are overdue, what one particular incident is doing right now."
+            }
+          ]
+        },
+        "options": {
+          "fallback": "other"
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000003",
+      "name": "Router Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        540
+      ],
+      "parameters": {
+        "model": "google/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "credentials": {
+        "openRouterApi": {
+          "id": "oGwjduJ9ME1l2azw",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000004",
+      "name": "Arkon Knowledge",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        60
+      ],
+      "parameters": {
+        "mode": "load",
+        "qdrantCollection": {
+          "__rl": true,
+          "mode": "id",
+          "value": "arkon-knowledge"
+        },
+        "prompt": "={{ $('Slice Request').item.json.body.message }}",
+        "topK": 4,
+        "includeDocumentMetadata": true,
+        "options": {
+          "contentPayloadKey": "page_content",
+          "metadataPayloadKey": "metadata"
+        }
+      },
+      "credentials": {
+        "qdrantApi": {
+          "id": "arkonQdrantLocal",
+          "name": "Arkon Qdrant (local)"
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000005",
+      "name": "Query Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        300
+      ],
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GTyPBCXuMAicqhEB",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000006",
+      "name": "Collect Passages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -360,
+        60
+      ],
+      "parameters": {
+        "jsCode": "// Collapse the retrieved documents into one prompt context.\n// The vector store in load mode emits one item per document, so a chain placed\n// straight after it would run once per passage and answer four times. This node\n// is what that difference costs; it has no counterpart on the Langflow canvas,\n// where retrieval is a tool of one agent.\nconst question = $('Slice Request').first().json.body.message;\nconst passages = $input.all().map((item, index) => {\n  const document = item.json.document ?? item.json;\n  const text = document.pageContent ?? document.page_content ?? '';\n  const source = document.metadata?.source ?? 'unknown source';\n  return '[' + (index + 1) + '] (' + source + ')\\n' + text;\n});\nreturn [{ json: { question, context: passages.join('\\n\\n'), passage_count: passages.length } }];\n"
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000007",
+      "name": "Answer From Documents",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -120,
+        60
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=You answer questions about the Arkon quality process from the passages below and from nothing else.\n\nRules:\n- If the passages do not settle the question, say so and name what is missing. Do not fill the gap from general quality-management knowledge.\n- Name the document each fact came from, using the source label in brackets.\n- Arkon's operational context is simulated; say so when it matters to the answer.\n\nQuestion: {{ $json.question }}\n\nPassages:\n{{ $json.context }}"
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000008",
+      "name": "Answer Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        300
+      ],
+      "parameters": {
+        "model": "google/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "credentials": {
+        "openRouterApi": {
+          "id": "oGwjduJ9ME1l2azw",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000009",
+      "name": "Respond Procedure",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        140,
+        60
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({route: \"quality_procedure\", answer: $json.text, passages: $('Collect Passages').first().json.passage_count}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000010",
+      "name": "Incident Lookup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -600,
+        540
+      ],
+      "parameters": {
+        "url": "http://n8n.arkon.internal:5678/webhook/arkon-incident-status",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000011",
+      "name": "Respond Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -360,
+        540
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({route: \"incident_status\", upstream_code: $json.statusCode, store: $json.body?.store ?? null, message: $json.body?.message ?? \"the incident status API did not answer\"}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000012",
+      "name": "Respond Other",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -600,
+        780
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({route: \"other\", answer: \"That is outside what this slice answers. It handles two things: how the Arkon quality process works, and what incidents are doing now.\"}) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Slice Request": {
+      "main": [
+        [
+          {
+            "node": "Route Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Intent": {
+      "main": [
+        [
+          {
+            "node": "Arkon Knowledge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Incident Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Other",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Route Intent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Arkon Knowledge",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arkon Knowledge": {
+      "main": [
+        [
+          {
+            "node": "Collect Passages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Passages": {
+      "main": [
+        [
+          {
+            "node": "Answer From Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer From Documents",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer From Documents": {
+      "main": [
+        [
+          {
+            "node": "Respond Procedure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incident Lookup": {
+      "main": [
+        [
+          {
+            "node": "Respond Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

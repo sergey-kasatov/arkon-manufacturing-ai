@@ -11,6 +11,7 @@ instance on the NAS (pinned image, see the vault runbook
 | `quality_steering_cell_v1.json` | write | `POST /webhook/arkon-event` | 2026-08-30 |
 | `incident_status_api_v1.json` | read | `GET /webhook/arkon-incident-status` | 2026-08-30 |
 | `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30 |
+| `comparison_slice_v1.json` | read | `POST /webhook/arkon-slice` | 2026-08-30 |
 
 ## Event intake (write path)
 
@@ -323,3 +324,60 @@ starts at `00005`.
 - **It does not change the incident.** The incident's own lifecycle transition
   belongs with the move to a queryable store, per charter 7.2 and 7.5.
 
+
+## Comparison slice (course artifact, not Arkon infrastructure)
+
+`comparison_slice_v1.json`, workflow id `arkonSlice001`,
+`POST /webhook/arkon-slice`. Twelve nodes: a webhook, a Text Classifier that
+routes by meaning, a Qdrant retrieval over `arkon-knowledge`, one HTTP call to
+the incident status API, and three response nodes.
+
+**It exists for one reason and it is not an Arkon feature.** The MSIT course 2B
+submission has to compare visual agent platforms and defend the one chosen. This
+is the same three capabilities as the Langflow assistant, built once on n8n, so
+the comparison is first-hand. It answers from the same collection and calls the
+same API, which is what makes it a comparison rather than a second demo. It has
+no memory, no approval gate, no sub-flow and no model-composed tool call, and it
+is deliberately not grown. Full account:
+`020 Projects/AI_Agents_2B_Meridian/build/sprint4_comparison_matrix.md` in the
+vault.
+
+Three things it established that are worth keeping whatever happens to the
+course:
+
+- **n8n has a one-node semantic router.** `Text Classifier` takes a language
+  model as a sub-node, N named categories with descriptions, and creates one
+  output branch per category, plus an optional `Other` branch and a multi-class
+  switch. The course's own cross-platform table says n8n has no equivalent of
+  Flowise's Condition Agent; on 2.29.9 that is not true.
+- **A collection written by Langflow is readable from n8n.** The store was
+  embedded with `google/gemini-embedding-001` through OpenRouter and is queried
+  here with the stock Google Gemini embeddings node calling the same model
+  directly. Retrieval returns the right passages. The two routes to one model
+  land in the same vector space.
+- **The content payload key is not the default.** Langflow's Qdrant component
+  stores chunk text under `page_content`; n8n's node defaults to `content` and
+  would retrieve empty passages **without failing**. It is set explicitly in the
+  node's options.
+
+### Rebuilding and deploying it
+
+```bash
+python n8n/build/build_comparison_slice.py
+```
+
+Then, on the NAS: `n8n import:workflow --input=<file>`,
+`n8n publish:workflow --id=arkonSlice001`, and **restart the container** - the
+running process holds its active workflows in memory, so a CLI import does not
+take effect without one. It needs a `qdrantApi` credential named
+`Arkon Qdrant (local)` pointing at `http://qdrant:6333`; it was created with
+`n8n import:credentials`, which writes an encrypted credential with no UI step.
+
+### What was measured
+
+| Check | Result |
+|---|---|
+| Router, 4 questions x 3 repeats | 12 of 12 to the intended branch |
+| Retrieval on a Langflow-built collection | 4 passages, correct answer on P1 and its 15-minute window |
+| Underspecified question | `Other` branch, 3 of 3 |
+| Live lookup | 200, 6 incidents, 3 P1 and 3 P2, matching the store |
