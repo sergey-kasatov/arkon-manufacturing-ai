@@ -44,15 +44,23 @@ if (incidentId !== null) {
   }
 }
 
-// unit: matched against the unit token of event.evidence.record_id (FD001-Unit-092).
-// Take the last hyphen-separated token first: a full record id carries digits in
-// its subset prefix too, and reading them all would turn FD001-Unit-092 into 1092.
+// unit: CMAPSS only. Matched against the unit token of a record id shaped like
+// FD001-Unit-092. Take the last hyphen-separated token first: a full record id
+// carries digits in its subset prefix too, and reading them all would turn
+// FD001-Unit-092 into 1092. A module whose record ids are not engine units is
+// filtered with record_id instead, and a unit query never matches one.
 let unit = raw("unit");
 if (unit !== null) {
   const token = unit.split("-").pop().trim();
   const digits = token.replace(/[^0-9]/g, "");
   unit = digits === "" ? token.toUpperCase() : String(parseInt(digits, 10));
 }
+
+// record_id, source_module, business_domain: contract fields every module has,
+// so these three work whatever produced the incident.
+const recordId = raw("record_id");
+const sourceModule = raw("source_module");
+const businessDomain = raw("business_domain");
 
 // priority: one or more of P1..P4, comma separated
 let priority = [];
@@ -101,7 +109,7 @@ return [
       valid: errors.length === 0,
       errors,
       simulate_failure: simulateFailure,
-      query: { incident_id: incidentId, unit, priority, status, limit },
+      query: { incident_id: incidentId, unit, record_id: recordId, source_module: sourceModule, business_domain: businessDomain, priority, status, limit },
     },
   },
 ];
@@ -128,9 +136,17 @@ for (const line of lines) {
   }
 }
 
+const recordIdOf = (incident) => String(incident.event?.evidence?.record_id ?? "");
+
+// A CMAPSS record id is FD<digits>-Unit-<token>. The prefix is the module
+// marker; the token after it is the unit and is not always numeric, because the
+// attribution test wrote FD001-Unit-ATTRTEST. Only these carry an engine unit;
+// SCANIA-APS-000056 is a service record and has none, and reporting its last
+// token as a "unit" is how a field that reads fine comes to mean nothing.
+const CMAPSS_RECORD = /^FD\d+-Unit-.+$/i;
 const unitToken = (incident) => {
-  const recordId = incident.event?.evidence?.record_id ?? "";
-  return String(recordId).split("-").pop() ?? "";
+  const recordId = recordIdOf(incident);
+  return CMAPSS_RECORD.test(recordId) ? recordId.split("-").pop() : null;
 };
 
 const ageMinutes = (incident) => {
@@ -152,8 +168,21 @@ const matches = (incident) => {
   if (filters.priority.length && !filters.priority.includes(String(incident.priority ?? "").toUpperCase())) {
     return false;
   }
+  if (filters.record_id
+      && recordIdOf(incident).toUpperCase() !== String(filters.record_id).toUpperCase()) {
+    return false;
+  }
+  if (filters.source_module
+      && String(incident.source_module ?? "").toLowerCase() !== String(filters.source_module).toLowerCase()) {
+    return false;
+  }
+  if (filters.business_domain
+      && String(incident.business_domain ?? "").toLowerCase() !== String(filters.business_domain).toLowerCase()) {
+    return false;
+  }
   if (filters.unit) {
     const token = unitToken(incident);
+    if (token === null) return false;
     const tokenDigits = token.replace(/[^0-9]/g, "");
     const filterDigits = String(filters.unit).replace(/[^0-9]/g, "");
     if (tokenDigits !== "" && filterDigits !== "") {
@@ -172,6 +201,7 @@ const project = (incident) => ({
   status: incident.status,
   priority: incident.priority,
   unit: unitToken(incident),
+  record_id: recordIdOf(incident) || null,
   summary: incident.summary,
   recommended_action: incident.recommended_action,
   acknowledge_due_minutes: ACK_WINDOW_MINUTES[String(incident.priority ?? "").toUpperCase()] ?? null,
@@ -183,8 +213,19 @@ const project = (incident) => ({
   escalation_contact: incident.escalation_contact,
   event_id: incident.event?.event_id ?? null,
   risk_score: incident.event?.risk_score ?? null,
-  predicted_rul: incident.event?.evidence?.prediction ?? null,
-  priority_threshold: incident.event?.evidence?.threshold ?? null,
+  // The evidence object as the module published it. Every module fills this and
+  // no consumer has to know which one did.
+  evidence: incident.event?.evidence ?? null,
+  // predicted_rul is a CMAPSS word and only a CMAPSS record has one. It used to
+  // be filled from evidence.prediction whatever the module was, so a Scania
+  // failure probability of 0.0373 was served as a remaining useful life of
+  // 0.0373 cycles, and the assistant read it out as one. Nothing failed.
+  predicted_rul: CMAPSS_RECORD.test(recordIdOf(incident))
+    ? (incident.event?.evidence?.prediction ?? null)
+    : null,
+  priority_threshold: CMAPSS_RECORD.test(recordIdOf(incident))
+    ? (incident.event?.evidence?.threshold ?? null)
+    : null,
   model_version: incident.event?.evidence?.model_version ?? null,
   data_origin: incident.event?.context_origin ?? null,
   operational_context_origin: incident.event?.operational_context?.context_origin ?? null,
