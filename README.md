@@ -27,71 +27,87 @@ Arkon Manufacturing AI Platform
 └── 📊  BI Dashboard      Executive Level        Tableau           KPI Analytics
 ```
 
-### Runtime wiring, as deployed 2026-08-30
+### Runtime wiring, as deployed 2026-08-31
 
 The map above is the capability plan. This is what actually runs, and how the
-pieces reach each other.
+pieces reach each other. Everything below the dashed line is on the NAS; the
+laptop half runs on demand and offline.
 
-```text
-LAPTOP  (offline, run on demand)
+```mermaid
+flowchart LR
+  subgraph LAPTOP["Laptop, offline, on demand"]
+    DATA[("CMAPSS / Scania<br/>Casting images")]
+    MODEL["Model<br/>XGBoost, ResNet-18"]
+    EV["Risk events<br/>events/out/*.jsonl"]
+    DATA --> MODEL --> EV
+  end
 
-  data/01_cmapss
-      |
-      v  notebooks/01_timeseries/cmapss_full_fleet.py
-  XGBoost model, RMSE 11.01, R2 0.932, one prediction per engine
-      |
-      v  event adapter
-  events/out/cmapss_events_full_fleet.jsonl        707 events, 49 P1 / 87 P2
-      |
-      v  n8n/replay_events.py     HTTP POST, one request per event
-=============================================================================
-NAS AK2101, docker network msit-flowise_msit
-=============================================================================
+  subgraph NAS["NAS AK2101, docker network msit"]
+    direction LR
+    W1["(1) POST /webhook/arkon-event<br/>Quality Steering Cell<br/>validate, dedup 24h, record"]
+    W2["(2) GET /webhook/arkon-incident-status<br/>200 ok, 200 no_match,<br/>400 rejected, 503 unavailable"]
+    W3["(3) POST /webhook/arkon-escalation<br/>the only write"]
+    INC[("incidents.jsonl")]
+    ESC[("escalations.jsonl")]
+    QD[("Qdrant<br/>arkon-knowledge<br/>6 documents, 77 chunks")]
+    ASSIST["Arkon Quality Assistant<br/>Langflow, 19 nodes"]
+    TG["Telegram<br/>P1 and P2 only"]
 
-  n8n            container "n8n", port 5678, alias n8n.arkon.internal
-  +------------------------------------------------------------------+
-  | (1) POST /webhook/arkon-event          Quality Steering Cell      |
-  |     validate contract -> dedup 24h -> append incident -> alert?   |
-  |                                                          |        |
-  |                                                          +-----------> Telegram
-  |                                                                   |     P1 and P2 only
-  | (2) GET  /webhook/arkon-incident-status                           |
-  |     read store -> filter -> project -> JSON                       |
-  |     200 ok | 200 no_match | 400 rejected | 503 unavailable        |
-  |                                                                   |
-  | (3) POST /webhook/arkon-escalation                                |
-  |     validate -> does the incident exist? -> append escalation     |
-  +------------------------------------------------------------------+
-       |  (1) writes          |  (2) and (3) read       |  (3) writes
-       v                      v                         v
-   /data/arkon/incidents.jsonl                  /data/arkon/escalations.jsonl
-   host path /volume1/docker/arkon/, bind-mounted into the container
+    W1 -- writes --> INC
+    W1 -- alerts --> TG
+    W2 -- reads --> INC
+    W3 -- appends --> ESC
+    ASSIST -- lookup --> W2
+    ASSIST -- escalate --> W3
+    ASSIST -- retrieval --> QD
+  end
 
-  Langflow       container "langflow", port 7860
-  +------------------------------------------------------------------+
-  | flow: Arkon Quality Assistant                                     |
-  |                                                                   |
-  |   Chat Input -> Intent Router  (LLM classification, 4 routes)     |
-  |        |                                                          |
-  |        +-- Quality procedure  -> Procedure Specialist  -> output  |
-  |        |                                                          |
-  |        +-- Incident status    -> Incident Specialist   -> output  |
-  |        |      tool: API Request ---------------------------> (2)  |
-  |        |      tool: Run Flow --> Arkon_Shift_Briefing             |
-  |        |                                                          |
-  |        +-- Escalation request -> HUMAN APPROVAL GATE              |
-  |        |      Approve -> Escalation Specialist        -> output   |
-  |        |                   tool: API Request ---------------> (3) |
-  |        |      Reject  -> Escalation Declined          -> output   |
-  |        |                                                          |
-  |        +-- Out of scope ------------------------------> output    |
-  |               fixed text on the router, no agent, no model call   |
-  |                                                                   |
-  | flow: Arkon_Shift_Briefing                                        |
-  |   Chat Input -> Briefing Agent -> output                          |
-  |        tool: API Request ------------------------------------> (2)|
-  +------------------------------------------------------------------+
+  EV -- "HTTP POST, one per event" --> W1
 ```
+
+The assistant reaches the incident store only through endpoint 2, so it cannot
+invent a status: it has no other source. Inside the canvas, one classification
+picks one branch and the rest are deactivated.
+
+```mermaid
+flowchart TD
+  IN["Chat Input"] --> R{{"Intent Router<br/>one LLM call, six routes"}}
+
+  R -->|Quality procedure| PS["Procedure Specialist"]
+  PS -.->|tool| QD[("Qdrant<br/>arkon-knowledge")]
+  PS --> O1["Procedure Answer"]
+
+  R -->|Incident status| IS["Incident Specialist"]
+  IS -.->|tool| API2["(2) incident status API"]
+  IS --> O2["Incident Answer"]
+
+  R -->|Shift briefing| SUB["Arkon_Shift_Briefing<br/>sub-flow, no agent on this canvas"]
+  SUB -.->|tool| API2
+  SUB --> O3["Briefing Answer"]
+
+  R -->|Escalation request| GATE{"HUMAN APPROVAL GATE<br/>Approve / Reject"}
+  GATE -->|Approve| ES["Escalation Specialist"]
+  ES -.->|tool| API3["(3) escalation record API"]
+  ES --> O4["Escalation Answer"]
+  GATE -->|Reject| DEC["Escalation Declined"] --> O5["Declined Answer"]
+
+  R -->|Out of scope| O6["Out of Scope Answer"]
+  R -->|Unclear request| O7["Unclear Answer"]
+```
+
+**The last two routes carry a fixed message on the router itself**, so each
+reaches its output with no agent in between and no second model call. They are
+two routes rather than one because the operator is owed the right reason: out of
+scope means the subject is not covered, unclear means it is Arkon work with a
+piece missing, and answering the second as the first teaches people to stop
+asking.
+
+**The briefing has its own branch for a different reason.** Reaching it as a
+tool of the incident specialist put a fixed four-block format inside an agent
+whose job is to answer in its own words: the operator got the briefing twice,
+and the paraphrase relabelled an incident's age as an overdue figure. A
+component whose value is its exact output must not be reached through something
+that rewords.
 
 **Where the two systems meet is one file and three URLs.** n8n owns the incident
 store; Langflow never touches it. The assistant only ever sees what an endpoint
