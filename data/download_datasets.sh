@@ -2,7 +2,7 @@
 # =============================================================================
 # Arkon Manufacturing AI - Dataset Download Script
 # Run this from the project root on your local Mac:
-#   cd /Volumes/NAS_Drive/-LEARNING/--Portfolio/arkon-manufacturing-ai
+#   cd <path>/arkon-manufacturing-ai
 #   chmod +x data/download_datasets.sh
 #   ./data/download_datasets.sh
 #
