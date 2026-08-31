@@ -140,11 +140,26 @@ because of anything the assistant did.
 - [x] Risk-event layer - schema, validator, CMAPSS adapter, 707 validated events across the full fleet (`events/`)
 - [x] n8n Quality Steering Cell - deployed on the NAS and verified end to end: contract validation, 24 h duplicate suppression, JSONL incident store, Telegram cards for P1 and P2 (`n8n/`)
 - [x] Operating documentation - CMAPSS model card and Steering Cell SOP (`docs/`)
+- [x] **Tabular module - Scania APS fault classifier.** XGBoost over 170 anonymised counters, total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure, which lands between second and third of the IDA 2016 challenge on the same test set. The decision threshold is worth a factor of 3.8; every structural choice is inside the noise of the selection (`notebooks/02_ml/scania_aps.py`, `docs/Model_Card_Scania_APS.md`)
+- [x] **CV module - casting defect inspection.** ResNet-18 fine-tuned end to end, 0 defects missed and 7 good parts rejected on 715 test images, ROC AUC 0.9999. Its priority bands run the opposite way to the other modules, and the reason is measured (`notebooks/03_cv/01_casting_defects/casting_cv.py`, `docs/Model_Card_Casting_CV.md`)
+- [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
+- [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of six Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
+- [ ] NLP module - NHTSA complaint classification and field-quality trend detection
 - [ ] Incident lifecycle - acknowledge and close callbacks, escalation timer, queryable store
-- [ ] Grounded assistant - Langflow agent over these documents, calling the steering cell for live incident status
-- [ ] ML model - XGBoost fault classifier (Scania APS)
-- [ ] CV model - binary defect detection CNN (Casting Product)
-- [ ] Streamlit app - unified dashboard
+- [ ] Streamlit app and Tableau views - the operational cockpit and the executive KPI view
+
+### How the course project fits in
+
+Three of the deployed pieces were built for the MSIT Term 12 course 2B project
+and are permanent parts of Arkon anyway: the status API, the escalation write
+path and the assistant itself. Arkon's charter had named the gap they fill before
+the course started. One piece, the twelve-node `n8n/comparison_slice_v1.json`, is
+course-only and would be deleted with it.
+
+The map that explains which is which, and why there are seven deployed pieces
+rather than one, is
+`020 Projects/AI_Agents_2B_Meridian/build/system_map.md` in the vault, shipped
+with the submission as `Arkon_System_Map.pdf`.
 
 ---
 
