@@ -122,6 +122,20 @@ The alert channel is a Telegram bot driven by n8n: an incident card with priorit
 
 The incident record of truth is one SQLite database written by the n8n workflow; its exact mount location is fixed against the NAS compose file at deployment time. **Deviation in v1, 2026-08-30:** the deployed workflow appends to a JSONL file at `/data/arkon/incidents.jsonl` on the NAS instead. The move to a queryable store is scheduled together with the lifecycle transitions of section 7.2, since both are needed by the same consumer, and now targets the n8n Data Table node rather than a separate SQLite file: it is native to the deployed platform and supports insert, get, update and upsert. A read API over the same store was added on 2026-08-30, `GET /webhook/arkon-incident-status`, so the assistant and any other consumer query incidents through one validated contract instead of reaching into the file; it moves to the queryable store with the rest. See `n8n/README.md`. Streamlit reads the store directly and serves as the live operational cockpit. Tableau reads periodic extracts and serves as the executive KPI view: open incidents by priority, response times, and trend Pareto. A live Tableau connection would require a paid Tableau Server; extract refresh is the documented portfolio boundary. **Not in v1, 2026-08-30:** neither the Streamlit cockpit nor the Tableau view is built. Both are Phase 3 items. The operational view that does exist is the conversational one, the Arkon Quality Assistant of `langflow/README.md`, which reads incidents through the status API.
 
+### 7.6 Intake outcomes, and the two that leave no trace
+
+Added 2026-08-31, from reading the deployed workflow's connections rather than its description. Every event that reaches the Steering Cell webhook has exactly three possible outcomes: recorded as an incident, rejected as invalid against the section 6 event contract, or suppressed as a duplicate inside the 24-hour dedup window. **Only the first one is written anywhere.**
+
+Measured on the deployed `Arkon Quality Steering Cell v1`: the `Valid?` false branch goes to `Respond Invalid` and the `Duplicate?` true branch goes to `Respond Duplicate`, and neither reaches `Append Incident Record`. The caller receives an HTTP response naming the reason, and nothing survives it. The incident store therefore holds what got through, and there is no record at all of what did not.
+
+Three consequences, and they are not equally harmless:
+
+- **Suppression cannot be counted.** Dedup is a real decision made on every event, and the charter presents it as a feature, but nobody can answer how many duplicates it absorbed today or whether the 24-hour window is the right one. The evidence for tuning it is discarded by the same run that makes the decision.
+- **A validation regression is indistinguishable from a quiet plant.** If a schema change starts rejecting every event, the incident store simply stops growing. There is no counter that falls, no error that accumulates, and no alert, because an alert requires an incident and no incident is created. This is the failure mode worth naming in a readiness review: the system fails silently in exactly the direction that looks like good news.
+- **The assistant inherits the blind spot.** It reads the incident store through the status API, so its answer to "what is open right now" is complete and its answer to "did anything not get through" cannot exist. Nothing in the assistant is wrong; it cannot see past its source.
+
+**Not fixed in v1, and the reason is a priority call rather than a technical one.** The fix is small in shape: the intake outcome is itself an event, and writing all three outcomes with their reason to one intake log costs one node and one file. It is not done because Phase 1 was closed on 2026-08-30 and the binding deadline belongs to a different piece of work; changing the Phase 1 workflow now buys nothing that is graded and reopens something that was deliberately closed. Recorded here so the gap is inherited knowingly rather than discovered later.
+
 ## 8. Target architecture
 
 ```text
