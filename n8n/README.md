@@ -26,6 +26,43 @@ the `FD<n>-Unit-` marker. Three filters were added at the same time -
 `record_id`, `source_module`, `business_domain` - because every module carries
 those by contract, while `unit` only means something for CMAPSS.
 
+## Workflow ids, and the one that is not readable
+
+Every workflow file carries a fixed `id`, so `n8n import:workflow` updates the
+existing workflow instead of creating another copy. Three of them read like
+names. The fourth does not, and the reason is worth keeping:
+
+| File | id |
+|---|---|
+| `incident_status_api_v1.json` | `arkonStatusApi1` |
+| `escalation_record_v1.json` | `arkonEscalate01` |
+| `comparison_slice_v1.json` | `arkonSlice001` |
+| `quality_steering_cell_v1.json` | **`o0vXtlRWIs9yFrUJ`** |
+
+**The steering cell keeps the id n8n generated for it, because that row is where
+the incident counter lives.** `$getWorkflowStaticData("global")` on this workflow
+holds `counter`, which produces the `ARK-INC-*` numbering, and `seen`, the 24-hour
+duplicate-suppression window. Giving the file a readable id would mean importing
+under a new id, which creates a **new** workflow with empty static data: the next
+incident would be `ARK-INC-00001` against a store that already holds eighteen, and
+the dedup memory would be gone. The n8n CLI has `import`, `export`, `update` and
+`unpublish` but **no delete**, so the old row could not be cleaned up afterwards
+either, and the rename would leave exactly the extra copy the fixed id exists to
+prevent.
+
+So the identity of this workflow is not a string in a file, it is the row that
+holds the counter, and the file points at it. Verified 2026-08-31: imported twice
+in a row, no third workflow appeared, `counter` stayed at 18, and a replayed event
+came back `duplicate_suppressed` with the incident store unchanged at 8 lines.
+
+**One archived duplicate remains and is inert.** `ZdLNgYq3bDTxQswJ`, the first
+import from before the id was fixed: inactive, `isArchived = 1`, no static data,
+and no row in `webhook_entity`, so it cannot fire. Permanently removing it needs
+the UI (Workflows, Archived, delete) or the public API, and no API key exists on
+this instance. It is left rather than deleted through the database, because
+`workflow_entity` is referenced by executions, history and sharing rows and that
+is not a trade worth making for a hidden row.
+
 ## Event intake (write path)
 
 **Status: deployed and verified 2026-08-30** on n8n 2.29.9. Sixteen incidents
