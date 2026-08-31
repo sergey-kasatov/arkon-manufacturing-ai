@@ -45,6 +45,15 @@ the accuracy came from: the raw sensors reach 18.42, and a 20-cycle rolling
 window over each of them is worth 5.32 of the 7 cycles gained. The feature set
 did the work, not the algorithm.
 
+![Training rows per operating regime, by subset](assets/timeseries/cmapss_eda_operating_regimes.png)
+
+What a mixed fleet means in rows. FD001 and FD003 fly one operating regime and
+land entirely in the first bar; FD002 and FD004 spread across all six. A model
+trained on FD001 has never seen five of them, which is why that pipeline's own
+rules did not survive the move: it dropped seven sensors as flat, and only four
+are constant inside every regime. The figure comes from
+`notebooks/01_timeseries/01_cmapss_eda.ipynb`, which runs on all four subsets.
+
 ### Fault classification: the threshold decided it, the structure did not
 
 ![Scania out-of-fold selection and test-set cost](assets/ml/scania_cost_selection.png)
