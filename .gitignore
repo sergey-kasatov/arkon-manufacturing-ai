@@ -8,8 +8,20 @@ data/*
 mlruns/
 mlflow.db
 
-# Trained models and checkpoints
-models/
+# Trained models and checkpoints. Weights are large and regenerable from the
+# training scripts, so they stay out of git.
+models/**
+
+# Exception: the three metrics files. Every model card cites their numbers and
+# every README figure is generated from them by tools/make_result_plots.py, so
+# without them a clone carries a generator with no input. Named one by one and
+# not by pattern - the two small *_meta.json beside the CMAPSS one belong to the
+# FD001-only run that docs/Model_Card_CMAPSS_RUL.md records as superseded.
+!models/checkpoints/
+!models/checkpoints/*/
+!models/checkpoints/casting/casting_cv_meta.json
+!models/checkpoints/cmapss/cmapss_full_fleet_meta.json
+!models/checkpoints/scania/scania_aps_meta.json
 
 # Python
 __pycache__/

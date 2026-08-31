@@ -1,0 +1,172 @@
+{
+  "dataset": "Casting product image data for quality inspection, front view of submersible pump impellers",
+  "architecture": "resnet18, ImageNet weights, whole network fine-tuned",
+  "image_size": 224,
+  "batch_size": 32,
+  "epochs": 6,
+  "best_epoch": 2,
+  "learning_rate": 0.0001,
+  "seed": 42,
+  "classes": {
+    "def_front": 0,
+    "ok_front": 1
+  },
+  "train_images": 5638,
+  "validation_images": 995,
+  "test_images": 715,
+  "augmentation": "horizontal and vertical flip, rotation up to 10 degrees",
+  "threshold_note": "this dataset ships no cost metric; the operating points below are an Arkon assumption about the ratio of a missed defect to a re-inspected good part, chosen on validation and reported on test",
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.06985,
+      "train_accuracy": 0.9734,
+      "val_pr_auc": 0.99897,
+      "seconds": 103.5
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.03216,
+      "train_accuracy": 0.9913,
+      "val_pr_auc": 0.99994,
+      "seconds": 65.4
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.01626,
+      "train_accuracy": 0.9943,
+      "val_pr_auc": 0.99988,
+      "seconds": 65.1
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.01099,
+      "train_accuracy": 0.9963,
+      "val_pr_auc": 0.99988,
+      "seconds": 66.9
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.01197,
+      "train_accuracy": 0.9965,
+      "val_pr_auc": 0.99992,
+      "seconds": 69.2
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.01652,
+      "train_accuracy": 0.9952,
+      "val_pr_auc": 0.99993,
+      "seconds": 67.3
+    }
+  ],
+  "operating_points": {
+    "missed_defect_costs_10x": {
+      "threshold": 0.0637,
+      "accuracy": 0.9902,
+      "precision": 0.9848,
+      "recall": 1.0,
+      "defects_missed": 0,
+      "good_parts_rejected": 7,
+      "defects_caught": 453,
+      "good_parts_passed": 255,
+      "roc_auc": 0.9999,
+      "pr_auc": 1.0
+    },
+    "missed_defect_costs_25x": {
+      "threshold": 0.0637,
+      "accuracy": 0.9902,
+      "precision": 0.9848,
+      "recall": 1.0,
+      "defects_missed": 0,
+      "good_parts_rejected": 7,
+      "defects_caught": 453,
+      "good_parts_passed": 255,
+      "roc_auc": 0.9999,
+      "pr_auc": 1.0
+    },
+    "missed_defect_costs_50x": {
+      "threshold": 0.0637,
+      "accuracy": 0.9902,
+      "precision": 0.9848,
+      "recall": 1.0,
+      "defects_missed": 0,
+      "good_parts_rejected": 7,
+      "defects_caught": 453,
+      "good_parts_passed": 255,
+      "roc_auc": 0.9999,
+      "pr_auc": 1.0
+    }
+  },
+  "at_threshold_0.5": {
+    "threshold": 0.5,
+    "accuracy": 0.9958,
+    "precision": 0.9978,
+    "recall": 0.9956,
+    "defects_missed": 2,
+    "good_parts_rejected": 1,
+    "defects_caught": 451,
+    "good_parts_passed": 261,
+    "roc_auc": 0.9999,
+    "pr_auc": 1.0
+  },
+  "ablation_frozen_backbone": {
+    "best_epoch": 6,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 0.62422,
+        "train_accuracy": 0.6492,
+        "val_pr_auc": 0.89332,
+        "seconds": 50.8
+      },
+      {
+        "epoch": 2,
+        "train_loss": 0.50438,
+        "train_accuracy": 0.7967,
+        "val_pr_auc": 0.95538,
+        "seconds": 51.8
+      },
+      {
+        "epoch": 3,
+        "train_loss": 0.43485,
+        "train_accuracy": 0.8514,
+        "val_pr_auc": 0.97123,
+        "seconds": 52.0
+      },
+      {
+        "epoch": 4,
+        "train_loss": 0.38774,
+        "train_accuracy": 0.8762,
+        "val_pr_auc": 0.97718,
+        "seconds": 55.5
+      },
+      {
+        "epoch": 5,
+        "train_loss": 0.35247,
+        "train_accuracy": 0.8929,
+        "val_pr_auc": 0.98103,
+        "seconds": 51.2
+      },
+      {
+        "epoch": 6,
+        "train_loss": 0.33225,
+        "train_accuracy": 0.8961,
+        "val_pr_auc": 0.98324,
+        "seconds": 51.7
+      }
+    ],
+    "at_threshold_0.5": {
+      "threshold": 0.5,
+      "accuracy": 0.9273,
+      "precision": 0.9368,
+      "recall": 0.9492,
+      "defects_missed": 23,
+      "good_parts_rejected": 29,
+      "defects_caught": 430,
+      "good_parts_passed": 233,
+      "roc_auc": 0.9757,
+      "pr_auc": 0.9879
+    }
+  }
+}

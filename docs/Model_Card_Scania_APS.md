@@ -163,12 +163,18 @@ same test set with this same metric.
 | | Cost | False positives | False negatives |
 |---|---|---|---|
 | Challenge 1st | 9,920 | 542 | 9 |
-| Challenge 2nd | 10,900 | 490 | 12 |
 | **This model** | **10,660** | 416 | 13 |
+| Challenge 2nd | 10,900 | 490 | 12 |
 | Challenge 3rd | 11,480 | 398 | 15 |
 
-A carefully thresholded gradient-boosting baseline lands between second and third
-place on a ten-year-old public benchmark. That is the right size of claim. It is
+A carefully thresholded gradient-boosting baseline lands between first and second
+place on a ten-year-old public benchmark. That is the right size of claim: it is
+one entry against the three that were published, not against the field.
+
+An earlier version of this card sorted that table wrongly and read the result off
+the sort - it placed this model below the 10,900 it beats and said "between second
+and third". Corrected 2026-08-31, when the figure in the README was built from
+the same numbers and the two disagreed. It is
 worth noting what the first version of this card said instead: the single-seed
 selection happened to pick a configuration scoring 9,750, which is below the
 challenge winner, and it would have been written up as beating them. The number

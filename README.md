@@ -8,9 +8,77 @@
 ## Overview
 
 Arkon Manufacturing AI simulates an Industry 4.0 platform that combines
-Predictive Maintenance, Fault Detection, and Visual Quality Control across
-three factory departments - all unified in a single Streamlit application
-with a RAG-powered AI assistant.
+Predictive Maintenance, Fault Detection and Visual Quality Control across three
+factory departments of a fictional heavy manufacturer.
+
+Three models are trained and measured, an n8n steering cell turns their
+predictions into incidents and alerts a human, and a grounded Langflow assistant
+answers questions over the result. The Streamlit cockpit and the Tableau
+executive views are still planned; what is built and what is not is listed
+under [What's Built](#whats-built).
+
+---
+
+## Results
+
+Three modules are trained, measured and documented. Every figure below is
+generated from the metrics file its own training script wrote, by
+`python tools/make_result_plots.py` - no model is loaded and no dataset is read,
+so a clone reproduces the pictures in seconds. Those three metrics files are the
+only thing git keeps under `models/`.
+
+| Module | Headline | Measured on |
+|---|---|---|
+| **Remaining useful life** - NASA CMAPSS | **RMSE 11.01 cycles** on the benchmark task | 707 held-out engines, six operating regimes, two fault modes |
+| **Fault classification** - Scania APS | **Total cost 10,660** on the challenge's own metric, between first and second of its published top three | 16,000 held-out trucks, 170 anonymised counters |
+| **Visual inspection** - casting product | **0 defects missed**, 7 good parts re-inspected, ROC AUC 0.9999 | 715 held-out images |
+
+### Remaining useful life: one model for a mixed fleet
+
+![CMAPSS RMSE per subset, and the feature ablation](assets/timeseries/cmapss_rmse_by_subset.png)
+
+Most published CMAPSS work reports FD001, the easiest subset: one operating
+condition, one fault mode. This is one model over all four. The left panel is
+the point - FD004, with six regimes and two fault modes, costs about 1.8 cycles
+against FD001 rather than needing a model of its own. The right panel says where
+the accuracy came from: the raw sensors reach 18.42, and a 20-cycle rolling
+window over each of them is worth 5.32 of the 7 cycles gained. The feature set
+did the work, not the algorithm.
+
+### Fault classification: the threshold decided it, the structure did not
+
+![Scania out-of-fold selection and test-set cost](assets/ml/scania_cost_selection.png)
+
+The left panel is the finding. Three fold seeds rank the same four candidates
+three different ways, a spread of 4.0 percent, so any single one of them reported
+as a result would have been a coin flip. The choice is the lowest **mean**
+out-of-fold cost, and the test set is scored once. That protocol costs something
+and the cost is recorded: the configuration scoring best on test, 9,880, is not
+the one that won out-of-fold, and the 780 between them is the price of not
+choosing on the test set.
+
+The right panel is what one decision was worth. The same model and the same
+probabilities, read at the default threshold 0.5, cost 40,650 against 10,660 - a
+factor of 3.8, and invisible to accuracy, which is above 99 percent either way.
+
+### Visual inspection: an operating point, not an accuracy
+
+![Casting confusion matrix, and cost by assumed ratio](assets/cv/casting_operating_point.png)
+
+No defect reached the line, and 7 of 262 good parts were re-inspected for it.
+The dataset ships no cost metric, so the ratio of a missed defect to a
+re-inspected good part is an Arkon assumption - which is what makes the right
+panel the honest half. With zero misses the cost does not depend on that
+assumption at all, so 10:1, 25:1 and 50:1 select the same threshold; only below
+about 3:1 would the default 0.5 be cheaper. The assumption is stated, and then
+shown not to matter.
+
+**What these figures are not.** All three are held-out test splits of public
+datasets, scored offline. Nothing here ran on a real production line, and the
+operational context around the numbers is fabricated. Each module's limitations
+are in its model card - [CMAPSS](docs/Model_Card_CMAPSS_RUL.md),
+[Scania](docs/Model_Card_Scania_APS.md), [casting](docs/Model_Card_Casting_CV.md) -
+and are not summarised away here.
 
 ---
 
@@ -30,39 +98,40 @@ Arkon Manufacturing AI Platform
 ### Runtime wiring, as deployed 2026-08-31
 
 The map above is the capability plan. This is what actually runs, and how the
-pieces reach each other. Everything below the dashed line is on the NAS; the
-laptop half runs on demand and offline.
+pieces reach each other. Two things enter the system from outside - a batch of
+risk events scored on the laptop, and an operator asking a question - and both
+land on the NAS, which owns every store.
 
 ```mermaid
-flowchart LR
-  subgraph LAPTOP["Laptop, offline, on demand"]
-    DATA[("CMAPSS / Scania<br/>Casting images")]
-    MODEL["Model<br/>XGBoost, ResNet-18"]
-    EV["Risk events<br/>events/out/*.jsonl"]
-    DATA --> MODEL --> EV
+flowchart TB
+  subgraph LAPTOP["Laptop, offline and on demand"]
+    direction LR
+    DATA[("CMAPSS / Scania<br/>Casting images")] --> MODEL["Model<br/>XGBoost, ResNet-18"] --> EV["Risk events<br/>events/out/*.jsonl"]
   end
 
+  OP(["Operator, in a browser"])
+
   subgraph NAS["NAS AK2101, docker network msit"]
-    direction LR
     W1["(1) POST /webhook/arkon-event<br/>Quality Steering Cell<br/>validate, dedup 24h, record"]
+    ASSIST["Arkon Quality Assistant<br/>Langflow, 19 nodes"]
     W2["(2) GET /webhook/arkon-incident-status<br/>200 ok, 200 no_match,<br/>400 rejected, 503 unavailable"]
     W3["(3) POST /webhook/arkon-escalation<br/>the only write"]
+    QD[("Qdrant<br/>arkon-knowledge<br/>6 documents, 77 chunks")]
     INC[("incidents.jsonl")]
     ESC[("escalations.jsonl")]
-    QD[("Qdrant<br/>arkon-knowledge<br/>6 documents, 77 chunks")]
-    ASSIST["Arkon Quality Assistant<br/>Langflow, 19 nodes"]
     TG["Telegram<br/>P1 and P2 only"]
 
-    W1 -- writes --> INC
     W1 -- alerts --> TG
-    W2 -- reads --> INC
-    W3 -- appends --> ESC
+    W1 -- writes --> INC
+    ASSIST -- retrieval --> QD
     ASSIST -- lookup --> W2
     ASSIST -- escalate --> W3
-    ASSIST -- retrieval --> QD
+    W2 -- reads --> INC
+    W3 -- appends --> ESC
   end
 
   EV -- "HTTP POST, one per event" --> W1
+  OP -- "asks" --> ASSIST
 ```
 
 The assistant reaches the incident store only through endpoint 2, so it cannot
@@ -152,11 +221,11 @@ because of anything the assistant did.
 - [x] Dataset downloads (all 7 datasets)
 - [x] Project Charter - risk events, P1-P4 priorities, steering-cell rules (`docs/Project_Charter.md`)
 - [x] Time Series module - CMAPSS EDA + preprocessing + RUL baseline on FD001 (LR RMSE 20.79, XGBoost RMSE 17.11, MLflow-tracked)
-- [x] Time Series module, full fleet - all four CMAPSS subsets, 709 engines, six operating regimes, two fault modes, with temporal features over a 20-cycle window. XGBoost RMSE 11.01 on the benchmark task, scoring the hardest subset about as well as the easiest (`notebooks/01_timeseries/cmapss_full_fleet.py`, `docs/Model_Card_CMAPSS_RUL.md`)
+- [x] Time Series module, full fleet - all four CMAPSS subsets, 709 training engines, six operating regimes, two fault modes, with temporal features over a 20-cycle window. XGBoost RMSE 11.01 on the benchmark task over 707 held-out engines, scoring the hardest subset about as well as the easiest (`notebooks/01_timeseries/cmapss_full_fleet.py`, `docs/Model_Card_CMAPSS_RUL.md`)
 - [x] Risk-event layer - schema, validator, CMAPSS adapter, 707 validated events across the full fleet (`events/`)
 - [x] n8n Quality Steering Cell - deployed on the NAS and verified end to end: contract validation, 24 h duplicate suppression, JSONL incident store, Telegram cards for P1 and P2 (`n8n/`)
 - [x] Operating documentation - CMAPSS model card and Steering Cell SOP (`docs/`)
-- [x] **Tabular module - Scania APS fault classifier.** XGBoost over 170 anonymised counters, total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure, which lands between second and third of the IDA 2016 challenge on the same test set. The decision threshold is worth a factor of 3.8; every structural choice is inside the noise of the selection (`notebooks/02_ml/scania_aps.py`, `docs/Model_Card_Scania_APS.md`)
+- [x] **Tabular module - Scania APS fault classifier.** XGBoost over 170 anonymised counters, total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure, which lands between first and second of the IDA 2016 challenge's published top three on the same test set. The decision threshold is worth a factor of 3.8; every structural choice is inside the noise of the selection (`notebooks/02_ml/scania_aps.py`, `docs/Model_Card_Scania_APS.md`)
 - [x] **CV module - casting defect inspection.** ResNet-18 fine-tuned end to end, 0 defects missed and 7 good parts rejected on 715 test images, ROC AUC 0.9999. Its priority bands run the opposite way to the other modules, and the reason is measured (`notebooks/03_cv/01_casting_defects/casting_cv.py`, `docs/Model_Card_Casting_CV.md`)
 - [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
 - [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of six Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
@@ -194,11 +263,16 @@ ML          scikit-learn, XGBoost, imbalanced-learn
 Time Series statsmodels
 CV          PyTorch, torchvision, albumentations, OpenCV
 MLOps       MLflow (experiment tracking, model registry)
-App         Streamlit
-LLM / RAG   LangChain, ChromaDB, OpenAI
-BI          Tableau
+Assistant   Langflow 1.11.5, Qdrant, OpenRouter (deployed)
+Automation  n8n (webhooks, incident store, Telegram)
+App         Streamlit (planned)
+BI          Tableau (planned)
 Utilities   pandas, numpy, matplotlib, seaborn, plotly
 ```
+
+The `langchain`, `chromadb` and `openai` pins in `requirements.txt` belong to the
+planned Streamlit app, not to the deployed assistant: that one runs on Langflow
+over Qdrant and reaches n8n over HTTP.
 
 ---
 
@@ -270,6 +344,8 @@ arkon-manufacturing-ai/
 │   ├── timeseries/
 │   ├── ml/
 │   └── cv/
+├── tools/
+│   └── make_result_plots.py    Regenerates the result figures from the metrics files
 ├── data/
 │   ├── 01_cmapss/              NASA CMAPSS txt files
 │   ├── 02_scania/              Scania APS csv files
@@ -277,7 +353,7 @@ arkon-manufacturing-ai/
 │   ├── 04_neu/                 NEU Steel Defect images
 │   ├── 05_mvtec/               MVTec Anomaly Detection images
 │   └── 06_gc10/                GC10-DET Steel Defect images
-├── models/
+├── models/                     Gitignored except the three *_meta.json metrics files
 │   ├── checkpoints/            Training checkpoints (auto-saved, skip retraining)
 │   └── *.pkl / *.pt            Final saved models
 ├── notebooks/

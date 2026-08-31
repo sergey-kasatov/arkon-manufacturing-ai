@@ -1,0 +1,211 @@
+{
+  "dataset": "APS Failure at Scania Trucks, IDA 2016 Industrial Challenge",
+  "train_rows": 60000,
+  "test_rows": 16000,
+  "features": 170,
+  "positives_train": 1000,
+  "positives_test": 375,
+  "missing_cell_fraction": 0.0833,
+  "cost_false_positive": 10,
+  "cost_false_negative": 500,
+  "folds": 5,
+  "selection_seeds": [
+    42,
+    7,
+    2026
+  ],
+  "selection_rule": "lowest MEAN out-of-fold cost over three fold seeds; the test set is scored once. One seed is not enough: three seeds produce three different winners",
+  "candidate_spread": 0.0403,
+  "winner_per_seed": {
+    "42": "imputed_plain",
+    "7": "nan_plain",
+    "2026": "imputed_weighted"
+  },
+  "chosen": "nan_plain",
+  "chosen_threshold": 0.002366,
+  "selection": {
+    "nan_weighted": {
+      "median_imputation": false,
+      "class_weighting": true,
+      "per_seed": [
+        {
+          "fold_seed": 42,
+          "threshold": 0.003567,
+          "out_of_fold_cost": 35940
+        },
+        {
+          "fold_seed": 7,
+          "threshold": 0.00547,
+          "out_of_fold_cost": 37990
+        },
+        {
+          "fold_seed": 2026,
+          "threshold": 0.007271,
+          "out_of_fold_cost": 36560
+        }
+      ],
+      "mean_out_of_fold_cost": 36830.0,
+      "threshold": 0.005436
+    },
+    "nan_plain": {
+      "median_imputation": false,
+      "class_weighting": false,
+      "per_seed": [
+        {
+          "fold_seed": 42,
+          "threshold": 0.001952,
+          "out_of_fold_cost": 35900
+        },
+        {
+          "fold_seed": 7,
+          "threshold": 0.002684,
+          "out_of_fold_cost": 35010
+        },
+        {
+          "fold_seed": 2026,
+          "threshold": 0.002462,
+          "out_of_fold_cost": 35300
+        }
+      ],
+      "mean_out_of_fold_cost": 35403.3,
+      "threshold": 0.002366
+    },
+    "imputed_weighted": {
+      "median_imputation": true,
+      "class_weighting": true,
+      "per_seed": [
+        {
+          "fold_seed": 42,
+          "threshold": 0.004383,
+          "out_of_fold_cost": 37360
+        },
+        {
+          "fold_seed": 7,
+          "threshold": 0.005877,
+          "out_of_fold_cost": 36860
+        },
+        {
+          "fold_seed": 2026,
+          "threshold": 0.005142,
+          "out_of_fold_cost": 35010
+        }
+      ],
+      "mean_out_of_fold_cost": 36410.0,
+      "threshold": 0.005134
+    },
+    "imputed_plain": {
+      "median_imputation": true,
+      "class_weighting": false,
+      "per_seed": [
+        {
+          "fold_seed": 42,
+          "threshold": 0.003369,
+          "out_of_fold_cost": 35670
+        },
+        {
+          "fold_seed": 7,
+          "threshold": 0.00586,
+          "out_of_fold_cost": 35240
+        },
+        {
+          "fold_seed": 2026,
+          "threshold": 0.004975,
+          "out_of_fold_cost": 36700
+        }
+      ],
+      "mean_out_of_fold_cost": 35870.0,
+      "threshold": 0.004735
+    }
+  },
+  "results": {
+    "nan_weighted": {
+      "cost": 10800,
+      "false_positives": 380,
+      "false_negatives": 14,
+      "true_positives": 361,
+      "true_negatives": 15245,
+      "threshold": 0.005436,
+      "roc_auc": 0.9954,
+      "pr_auc": 0.9295,
+      "precision": 0.4872,
+      "recall": 0.9627
+    },
+    "nan_plain": {
+      "cost": 10660,
+      "false_positives": 416,
+      "false_negatives": 13,
+      "true_positives": 362,
+      "true_negatives": 15209,
+      "threshold": 0.002366,
+      "roc_auc": 0.9952,
+      "pr_auc": 0.9286,
+      "precision": 0.4653,
+      "recall": 0.9653
+    },
+    "nan_plain__default_threshold_0.5": {
+      "cost": 40650,
+      "false_positives": 15,
+      "false_negatives": 81,
+      "true_positives": 294,
+      "true_negatives": 15610,
+      "threshold": 0.5,
+      "roc_auc": 0.9952,
+      "pr_auc": 0.9286,
+      "precision": 0.9515,
+      "recall": 0.784
+    },
+    "imputed_weighted": {
+      "cost": 9880,
+      "false_positives": 438,
+      "false_negatives": 11,
+      "true_positives": 364,
+      "true_negatives": 15187,
+      "threshold": 0.005134,
+      "roc_auc": 0.9954,
+      "pr_auc": 0.9346,
+      "precision": 0.4539,
+      "recall": 0.9707
+    },
+    "imputed_plain": {
+      "cost": 12050,
+      "false_positives": 305,
+      "false_negatives": 18,
+      "true_positives": 357,
+      "true_negatives": 15320,
+      "threshold": 0.004735,
+      "roc_auc": 0.9953,
+      "pr_auc": 0.9339,
+      "precision": 0.5393,
+      "recall": 0.952
+    },
+    "logistic_regression": {
+      "cost": 15330,
+      "false_positives": 533,
+      "false_negatives": 20,
+      "true_positives": 355,
+      "true_negatives": 15092,
+      "threshold": 0.310308,
+      "roc_auc": 0.9794,
+      "pr_auc": 0.7981,
+      "precision": 0.3998,
+      "recall": 0.9467
+    }
+  },
+  "xgb_params": {
+    "n_estimators": 600,
+    "max_depth": 6,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42,
+    "n_jobs": -1,
+    "tree_method": "hist",
+    "eval_metric": "aucpr"
+  },
+  "published_reference": {
+    "note": "Top three of the IDA 2016 challenge, from the dataset description",
+    "best_total_cost": 9920,
+    "second": 10900,
+    "third": 11480
+  }
+}
