@@ -8,9 +8,7 @@ it does not change the incident itself.
 import json
 import pathlib
 
-OUT = pathlib.Path(
-    r"D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai\n8n\escalation_record_v1.json"
-)
+OUT = pathlib.Path(__file__).resolve().parent.parent / "escalation_record_v1.json"
 
 INCIDENT_STORE = "/data/arkon/incidents.jsonl"
 ESCALATION_STORE = "/data/arkon/escalations.jsonl"

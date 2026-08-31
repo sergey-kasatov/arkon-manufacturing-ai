@@ -7,9 +7,7 @@ bodies stay readable and quoting stays under control.
 import json
 import pathlib
 
-OUT = pathlib.Path(
-    r"D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai\n8n\incident_status_api_v1.json"
-)
+OUT = pathlib.Path(__file__).resolve().parent.parent / "incident_status_api_v1.json"
 
 STORE_PATH = "/data/arkon/incidents.jsonl"
 

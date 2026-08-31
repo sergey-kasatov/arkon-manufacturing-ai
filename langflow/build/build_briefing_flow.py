@@ -16,19 +16,16 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import lfbuild
+import prompts
 
 SCRATCH = pathlib.Path(__file__).parent
-REPO = pathlib.Path(r"D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai")
+REPO = pathlib.Path(__file__).resolve().parent.parent.parent
 MAIN = REPO / "langflow" / "arkon_quality_assistant.json"
 OUT = REPO / "langflow" / "arkon_shift_briefing.json"
-PROMPTS = pathlib.Path(
-    r"C:\Users\kasser\AI-Brain\020 Projects\AI_Agents_2B_Meridian\build\sprint3_orchestration.md"
-)
+PROMPTS = prompts.PROMPT_DIR
 STATUS_API = "http://n8n.arkon.internal:5678/webhook/arkon-incident-status"
 
-blocks = dict(
-    re.findall(r"### BLOCK: (\w+)\n\n```text\n(.*?)\n```", PROMPTS.read_text(encoding="utf-8"), flags=re.S)
-)
+blocks = prompts.load()
 if "briefing" not in blocks:
     raise SystemExit("briefing block missing from the Sprint 3 artifact")
 

@@ -5,13 +5,15 @@ REM  Target: RTX 3070 (CUDA 12.x)  |  Python 3.12
 REM
 REM  Usage:
 REM    1. Open CMD or PowerShell as normal user (no Admin needed)
-REM    2. cd D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai
+REM    2. cd into the repository
 REM    3. setup_windows_venv.bat
 REM
-REM  Creates venv at: D:\-PROJECTS\--venvs\arkon-manufacturing-ai_win_venv
+REM  Creates the venv two levels above the repository, in a sibling --venvs
+REM  folder, so it is never inside the working tree. Override with ARKON_VENV_DIR.
 REM =============================================================================
 
-SET VENV_DIR=D:\-PROJECTS\--venvs\arkon-manufacturing-ai_win_venv
+IF NOT DEFINED ARKON_VENV_DIR SET ARKON_VENV_DIR=%~dp0..\..\--venvs\arkon-manufacturing-ai_win_venv
+SET VENV_DIR=%ARKON_VENV_DIR%
 SET PYTHON=py -3.12
 
 echo.

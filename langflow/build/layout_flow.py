@@ -12,9 +12,7 @@ a Chat Output 150.
 import json
 import pathlib
 
-FLOW = pathlib.Path(
-    r"D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai\langflow\arkon_quality_assistant.json"
-)
+FLOW = pathlib.Path(__file__).resolve().parent.parent / "arkon_quality_assistant.json"
 BRIEFING_FLOW_ID = "063c6445-ef32-49e5-93a9-dc7764a40a48"
 
 # x, y per node. Columns: input, router, branch heads, escalation pair, outputs.

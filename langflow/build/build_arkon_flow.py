@@ -1,42 +1,44 @@
-"""Build the Sprint 1 Arkon Quality Assistant flow from the course LS2 seed.
+"""Build the first Arkon Quality Assistant canvas from a minimal seed flow.
 
-The instructor's own "LS2 Agent LangFlow Equivalent.json" is used as the
-structural base so the canvas keeps the shape the course teaches: Chat Input ->
-Agent -> Chat Output. Only the fields that carry a decision are changed, and the
-system prompt is read out of the vault artifact so the two cannot drift.
+The seed is a three-node Langflow export, Chat Input -> Agent -> Chat Output.
+Only the fields that carry a decision are changed, and the system prompt comes
+from `langflow/prompts/base.md` so the canvas and the prompt cannot drift.
 
-Runs once. After the flow exists in Langflow, later sprints fetch the live flow,
-modify it, and push it back.
+The seed is not in this repository: point `ARKON_SEED_FLOW` at any Langflow
+export with that shape, or export one from a new Langflow project.
+
+Runs once. After the flow exists in Langflow, the later build scripts fetch the
+live flow, modify it, and push it back.
 """
 
 import json
+import os
 import pathlib
-import re
+import sys
 
-SEED = pathlib.Path(
-    r"N:\-LEARNING\--Masterschool\12.3 Building AI Agents Visual Agent Builders"
-    r" & Platform Landscape\Google Drive\LS2 Agent LangFlow Equivalent.json"
-)
-PROMPT_DOC = pathlib.Path(
-    r"C:\Users\kasser\AI-Brain\020 Projects\AI_Agents_2B_Meridian\build\sprint1_system_prompt.md"
-)
-OUT = pathlib.Path(
-    r"D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai\langflow\arkon_quality_assistant.json"
-)
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import prompts
 
-# Pull the prompt out of the vault artifact, so the flow and the document agree
-prompt_doc = PROMPT_DOC.read_text(encoding="utf-8")
-blocks = re.findall(r"```text\n(.*?)\n```", prompt_doc, flags=re.S)
-if len(blocks) != 1:
-    raise SystemExit(f"expected exactly one text block in the prompt document, found {len(blocks)}")
-system_prompt = blocks[0].strip()
+REPO = pathlib.Path(__file__).resolve().parent.parent.parent
+OUT = REPO / "langflow" / "arkon_quality_assistant.json"
+
+seed_env = os.environ.get("ARKON_SEED_FLOW")
+if not seed_env:
+    raise SystemExit(
+        "set ARKON_SEED_FLOW to a Langflow export with Chat Input -> Agent -> Chat Output"
+    )
+SEED = pathlib.Path(seed_env)
+if not SEED.is_file():
+    raise SystemExit("ARKON_SEED_FLOW does not point at a file: %s" % SEED)
+
+system_prompt = prompts.block("base_system_prompt")
 
 flow = json.loads(SEED.read_text(encoding="utf-8"))
 flow["name"] = "Arkon Quality Assistant"
 flow["description"] = (
-    "MSIT Term 12 course 2B project. Conversational front end for the Arkon Quality "
-    "Steering Cell: quality procedure, incident context and model context for the "
-    "on-shift operator. Sprint 1: base canvas and three-pillar system prompt."
+    "Conversational front end for the Arkon Quality Steering Cell: quality "
+    "procedure, incident context and model context for the on-shift operator. "
+    "First iteration: base canvas and three-pillar system prompt."
 )
 flow["endpoint_name"] = "arkon-quality-assistant"
 flow.pop("id", None)

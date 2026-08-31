@@ -35,13 +35,12 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import lfbuild
+import prompts
 
 HERE = pathlib.Path(__file__).parent
 REPO = HERE.parent.parent
 FLOW = REPO / "langflow" / "arkon_quality_assistant.json"
-PROMPTS = pathlib.Path(
-    r"C:\Users\kasser\AI-Brain\020 Projects\AI_Agents_2B_Meridian\build\sprint4_refinement.md"
-)
+PROMPTS = prompts.PROMPT_DIR
 HOST = "ResSak@AK2101"
 REMOTE = "cd ~/arkon-tmp && python3 lf_api.py"
 
@@ -49,8 +48,7 @@ ROUTE_NAME = "Unclear request"
 
 
 def blocks():
-    text = PROMPTS.read_text(encoding="utf-8")
-    return dict(re.findall(r"### BLOCK: (\w+)\n\n```text\n(.*?)\n```", text, flags=re.S))
+    return prompts.load()
 
 
 def node_by_name(flow, display_name):

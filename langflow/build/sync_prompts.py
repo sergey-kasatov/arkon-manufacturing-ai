@@ -1,12 +1,12 @@
-"""Write the vault prompt blocks into the existing canvas, and change nothing else.
+"""Write the repository prompt blocks into the existing canvas, and change nothing else.
 
 The build claims the documents and the canvas cannot drift, because the sprint
-scripts read the fenced blocks out of the vault build artifacts. That is true at
+scripts read the fenced blocks out of the repository prompt files. That is true at
 build time and only then: editing a prompt afterwards meant re-running the whole
 sprint chain, and the retrieval script is not idempotent, so a re-run would add
 the store nodes a second time.
 
-This script closes that gap. It reads every `### BLOCK: name` from the vault
+This script closes that gap. It reads every `### BLOCK: name` from `langflow/prompts/`
 documents, matches each to the node it belongs to, and rewrites exactly those
 fields in `arkon_quality_assistant.json`. No node is added, removed or moved. It
 prints what changed and refuses to touch a node it cannot find, so a rename in
@@ -20,34 +20,32 @@ Run it from the repository root, then upsert the flow:
 
 import json
 import pathlib
-import re
 import subprocess
 import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import prompts
 
 HERE = pathlib.Path(__file__).parent
 REPO = HERE.parent.parent
 FLOW = REPO / "langflow" / "arkon_quality_assistant.json"
-VAULT = pathlib.Path(r"C:\Users\kasser\AI-Brain\020 Projects\AI_Agents_2B_Meridian\build")
 HOST = "ResSak@AK2101"
 REMOTE = "cd ~/arkon-tmp && python3 lf_api.py"
 
-# block name -> (source document, node display name, template field)
+# block name -> (node display name, template field). The block itself is looked
+# up by name across `langflow/prompts/`, so which file holds it is not encoded
+# here and a block can be moved between files without touching this table.
 BINDINGS = {
-    "procedure_v2": ("document_store.md", "Procedure Specialist", "system_prompt"),
-    "route_incident_v2": ("sprint4_refinement.md", "Intent Router", "routes:Incident status"),
-    "route_briefing": ("sprint4_refinement.md", "Intent Router", "routes:Shift briefing"),
-    "route_unclear": ("sprint4_refinement.md", "Intent Router", "routes:Unclear request"),
-    "router_instructions_v3": ("sprint4_refinement.md", "Intent Router", "custom_prompt"),
+    "procedure_v2": ("Procedure Specialist", "system_prompt"),
+    "route_incident_v2": ("Intent Router", "routes:Incident status"),
+    "route_briefing": ("Intent Router", "routes:Shift briefing"),
+    "route_unclear": ("Intent Router", "routes:Unclear request"),
+    "router_instructions_v3": ("Intent Router", "custom_prompt"),
     # A route can carry a fixed message that reaches its output with no model
     # call. Two of the six do, and they are prompts like any other.
-    "unclear_message": ("sprint4_refinement.md", "Intent Router", "routes:Unclear request:output_value"),
-    "scope_out_message": ("sprint4_refinement.md", "Intent Router", "routes:Out of scope:output_value"),
+    "unclear_message": ("Intent Router", "routes:Unclear request:output_value"),
+    "scope_out_message": ("Intent Router", "routes:Out of scope:output_value"),
 }
-
-
-def read_blocks(name):
-    text = (VAULT / name).read_text(encoding="utf-8")
-    return dict(re.findall(r"### BLOCK: (\w+)\n\n```text\n(.*?)\n```", text, flags=re.S))
 
 
 def node_by_name(flow, display_name):
@@ -59,14 +57,10 @@ def node_by_name(flow, display_name):
 
 def main():
     flow = json.loads(FLOW.read_text(encoding="utf-8"))
-    cache, changed = {}, 0
+    changed = 0
 
-    for block_name, (document, display_name, field) in BINDINGS.items():
-        if document not in cache:
-            cache[document] = read_blocks(document)
-        if block_name not in cache[document]:
-            raise SystemExit("block %r not found in %s" % (block_name, document))
-        wanted = cache[document][block_name].strip()
+    for block_name, (display_name, field) in BINDINGS.items():
+        wanted = prompts.block(block_name)
         node = node_by_name(flow, display_name)
         template = node["data"]["node"]["template"]
 

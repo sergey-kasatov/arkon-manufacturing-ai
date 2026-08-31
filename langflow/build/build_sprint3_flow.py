@@ -12,22 +12,19 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import lfbuild
+import prompts
 
 SCRATCH = pathlib.Path(__file__).parent
-REPO = pathlib.Path(r"D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai")
+REPO = pathlib.Path(__file__).resolve().parent.parent.parent
 FLOW = REPO / "langflow" / "arkon_quality_assistant.json"
-PROMPTS = pathlib.Path(
-    r"C:\Users\kasser\AI-Brain\020 Projects\AI_Agents_2B_Meridian\build\sprint3_orchestration.md"
-)
+PROMPTS = prompts.PROMPT_DIR
 ESCALATION_API = "http://n8n.arkon.internal:5678/webhook/arkon-escalation"
 BRIEFING_FLOW_NAME = "Arkon_Shift_Briefing"
 BRIEFING_FLOW_ID = sys.argv[1] if len(sys.argv) > 1 else None
 if not BRIEFING_FLOW_ID:
     raise SystemExit("pass the Arkon_Shift_Briefing flow id as the first argument")
 
-blocks = dict(
-    re.findall(r"### BLOCK: (\w+)\n\n```text\n(.*?)\n```", PROMPTS.read_text(encoding="utf-8"), flags=re.S)
-)
+blocks = prompts.load()
 for name in ("escalation_v2", "declined"):
     if name not in blocks:
         raise SystemExit("missing prompt block: " + name)
@@ -134,7 +131,7 @@ flow["data"]["edges"] = kept + [
 ]
 
 flow["description"] = (
-    "MSIT Term 12 course 2B project. Conversational front end for the Arkon Quality "
+    "Conversational front end for the Arkon Quality "
     "Steering Cell. Sprint 3: intent routing, a live incident lookup, a human approval "
     "gate in front of the escalation write path, and the shift briefing sub-flow invoked "
     "through Run Flow."

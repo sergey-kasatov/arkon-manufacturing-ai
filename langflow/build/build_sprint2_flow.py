@@ -2,10 +2,9 @@
 
 Takes the Sprint 1 flow and adds intent routing, three specialists and the live
 incident lookup. The Sprint 1 Agent and Chat Output are kept and become the
-procedure branch, so the canvas is the refined original the course asks for
-rather than a rebuild.
+procedure branch, so the canvas is the refined original rather than a rebuild.
 
-Prompts and route descriptions are read from the vault artifact by block name.
+Prompts and route descriptions are read from `langflow/prompts/` by block name.
 """
 
 import json
@@ -15,22 +14,18 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import lfbuild
+import prompts
 
 SCRATCH = pathlib.Path(__file__).parent
-REPO = pathlib.Path(r"D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai")
+REPO = pathlib.Path(__file__).resolve().parent.parent.parent
 FLOW = REPO / "langflow" / "arkon_quality_assistant.json"
-PROMPTS = pathlib.Path(
-    r"C:\Users\kasser\AI-Brain\020 Projects\AI_Agents_2B_Meridian\build"
-    r"\sprint2_prompts_and_routing.md"
-)
+PROMPTS = prompts.PROMPT_DIR
 # A dotted host is mandatory: Langflow's API Request validates with
 # validators.url(), which rejects a bare Docker service name.
 STATUS_API = "http://n8n.arkon.internal:5678/webhook/arkon-incident-status"
 
-# Read the named prompt blocks out of the vault artifact
-blocks = dict(
-    re.findall(r"### BLOCK: (\w+)\n\n```text\n(.*?)\n```", PROMPTS.read_text(encoding="utf-8"), flags=re.S)
-)
+# Read the named prompt blocks out of langflow/prompts/
+blocks = prompts.load()
 expected = {"route_procedure", "route_incident", "route_escalation", "route_out_of_scope",
             "router_instructions", "procedure", "incident", "escalation", "out_of_scope"}
 missing = expected - set(blocks)
@@ -155,7 +150,7 @@ flow["data"]["edges"] = [
 ]
 
 flow["description"] = (
-    "MSIT Term 12 course 2B project. Conversational front end for the Arkon Quality "
+    "Conversational front end for the Arkon Quality "
     "Steering Cell. Sprint 2: intent routing through a Smart Router, three specialists "
     "with non-overlapping prompts, and a live incident lookup against the n8n incident "
     "status API with designed failure behaviour."

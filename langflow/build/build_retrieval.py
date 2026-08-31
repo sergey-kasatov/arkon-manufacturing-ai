@@ -24,16 +24,16 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import lfbuild
+import prompts
 
 HERE = pathlib.Path(__file__).parent
 REPO = HERE.parent.parent
 FLOW = REPO / "langflow" / "arkon_quality_assistant.json"
-PROMPTS = pathlib.Path(
-    r"C:\Users\kasser\AI-Brain\020 Projects\AI_Agents_2B_Meridian\build\document_store.md"
-)
+PROMPTS = prompts.PROMPT_DIR
 COLLECTION = "arkon-knowledge"
 QDRANT_HOST = "qdrant"
-# The course LS6 value. Raise it only on evidence from the validation re-run, so
+# The conventional starting value. Raise it only on evidence from the validation
+# re-run, so
 # that any change is a measured tuning decision rather than a hedge.
 RESULTS = 4
 
@@ -48,9 +48,7 @@ def spec(name):
     return json.loads((HERE / ("spec_%s.json" % name)).read_text(encoding="utf-8"))["spec"]
 
 
-blocks = dict(
-    re.findall(r"### BLOCK: (\w+)\n\n```text\n(.*?)\n```", PROMPTS.read_text(encoding="utf-8"), flags=re.S)
-)
+blocks = prompts.load()
 if "procedure_v2" not in blocks:
     raise SystemExit("prompt block procedure_v2 missing from " + str(PROMPTS))
 
@@ -103,7 +101,7 @@ flow["data"]["edges"] = flow["data"]["edges"] + [
     lfbuild.edge(knowledge, "component_as_tool", procedure, "tools"),
 ]
 flow["description"] = (
-    "MSIT Term 12 course 2B project. Conversational front end for the Arkon Quality "
+    "Conversational front end for the Arkon Quality "
     "Steering Cell: grounded retrieval over the Arkon documents, intent routing, a live "
     "incident lookup, a human approval gate in front of the escalation write path, and "
     "the shift briefing sub-flow invoked through Run Flow."

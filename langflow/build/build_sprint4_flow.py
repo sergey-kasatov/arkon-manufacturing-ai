@@ -9,7 +9,7 @@ between - the same shape the out-of-scope branch already uses.
 
 DEFECT-1 and DEFECT-2 no longer reproduce; both were closed by structural changes
 made in Sprints 2 and 3 for other reasons. Sprint 4 validates them rather than
-re-fixing them. The account is in the vault artifact.
+re-fixing them.
 
 Run after build_retrieval.py and before layout_flow.py:
 
@@ -24,13 +24,12 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import lfbuild
+import prompts
 
 HERE = pathlib.Path(__file__).parent
 REPO = HERE.parent.parent
 FLOW = REPO / "langflow" / "arkon_quality_assistant.json"
-PROMPTS = pathlib.Path(
-    r"C:\Users\kasser\AI-Brain\020 Projects\AI_Agents_2B_Meridian\build\sprint4_refinement.md"
-)
+PROMPTS = prompts.PROMPT_DIR
 BRIEFING_FLOW_NAME = "Arkon_Shift_Briefing"
 BRIEFING_FLOW_ID = sys.argv[1] if len(sys.argv) > 1 else None
 if not BRIEFING_FLOW_ID:
@@ -42,9 +41,7 @@ if not BRIEFING_FLOW_ID:
 BRIEFING_INPUT = "ChatInput-brf01~input_value"
 BRIEFING_OUTPUT = "ChatOutput-brf01~message"
 
-blocks = dict(
-    re.findall(r"### BLOCK: (\w+)\n\n```text\n(.*?)\n```", PROMPTS.read_text(encoding="utf-8"), flags=re.S)
-)
+blocks = prompts.load()
 for name in ("route_briefing", "route_incident_v2", "router_instructions_v2"):
     if name not in blocks:
         raise SystemExit("missing prompt block: " + name)
@@ -113,10 +110,11 @@ flow["data"]["edges"] = flow["data"]["edges"] + [
 ]
 
 flow["description"] = (
-    "MSIT Term 12 course 2B project. Conversational front end for the Arkon Quality "
-    "Steering Cell: grounded retrieval over the Arkon documents, five-way intent "
-    "routing, a live incident lookup, a human approval gate in front of the escalation "
-    "write path, and the shift briefing sub-flow on its own branch."
+    "Conversational front end for the Arkon Quality "
+    "Steering Cell: grounded retrieval over the Arkon documents, LLM intent "
+    "routing to a specialist per question type, a live incident lookup, a human "
+    "approval gate in front of the escalation write path, and the shift briefing "
+    "sub-flow on its own branch."
 )
 
 FLOW.write_text(json.dumps(flow, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
