@@ -166,7 +166,7 @@
             "edited": false,
             "metadata": {
               "module": "custom_components.openrouter_embeddings",
-              "code_hash": "9675c9d91d84",
+              "code_hash": "1c3f6dd7cfb2",
               "dependencies": {
                 "total_dependencies": 2,
                 "dependencies": [
