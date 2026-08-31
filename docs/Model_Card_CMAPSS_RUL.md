@@ -9,8 +9,10 @@ event adapter.
   preprocessing in `data/01_cmapss/processed/preprocessing_full_fleet.pkl`,
   metrics in `models/checkpoints/cmapss/cmapss_full_fleet_meta.json`
 - **Training code:** `notebooks/01_timeseries/cmapss_full_fleet.py`
-- **Supersedes:** the FD001-only baseline in `notebooks/01_timeseries/03_cmapss_modeling.ipynb`,
-  which is kept as the comparison point
+- **Supersedes:** the FD001-only baseline of 2026-08-11, RMSE 17.11 against this
+  model's 11.01, whose metrics are kept at
+  `models/checkpoints/cmapss/cmapss_xgb_v1_meta.json`. The notebooks that produced
+  it were rebuilt on the full fleet on 2026-08-31 and now reproduce this model
 
 ---
 
