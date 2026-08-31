@@ -5,16 +5,15 @@ an on-shift operator actually asks: how the quality rules work, what an incident
 is doing right now, and who owns an action the assistant itself must not take.
 
 Process owner: `docs/Project_Charter.md` sections 7 and 8, and
-`docs/Steering_Cell_SOP.md`. Runs on the self-hosted Langflow instance on the NAS
-(pinned `langflowai/langflow:1.11.5`, see the vault runbook
-`100 Personal/Langflow_NAS_Runbook.md`).
+`docs/Steering_Cell_SOP.md`. Runs on a self-hosted Langflow instance, pinned to
+`langflowai/langflow:1.11.5`.
 
-This is also the graded artifact of the MSIT Term 12 course 2B project. The
-course build record, prompts and test evidence live in the vault at
-`020 Projects/AI_Agents_2B_Meridian/build/`.
+The prompts the canvas carries live in `langflow/prompts/` as named `### BLOCK:`
+sections, and `build/sync_prompts.py` writes them into the flow, so the two
+cannot drift.
 
-**Status: deployed 2026-08-30**, endpoint `arkon-quality-assistant`. Sprints 1 to
-5 complete and validated: 19 nodes, six routes, a document store the procedure
+**Status: deployed 2026-08-30**, endpoint `arkon-quality-assistant`. Five build
+iterations complete and validated: 19 nodes, six routes, a document store the procedure
 specialist answers from and names its source, a live lookup, a human approval
 gate over the one write, and a shift-briefing sub-flow.
 
@@ -100,13 +99,13 @@ being a claim:
 
 ```bash
 python langflow/build/fetch_specs.py           # component templates from the running instance
-python langflow/build/build_arkon_flow.py      # Sprint 1, from the course LS2 seed
-python langflow/build/build_sprint2_flow.py    # Sprint 2, adds routing and the live lookup
+python langflow/build/build_arkon_flow.py      # first canvas, seed via ARKON_SEED_FLOW
+python langflow/build/build_sprint2_flow.py    # adds routing and the live lookup
 python langflow/build/build_sprint3_flow.py <briefing-flow-id>
 python langflow/build/build_ingest_flow.py --deploy   # the document store, uploads and ingests
 python langflow/build/build_retrieval.py       # the store as the procedure specialist's tool
 python langflow/build/build_sprint4_flow.py <briefing-flow-id>   # the briefing gets its own branch
-python langflow/build/build_sprint5_flow.py    # Sprint 5, the sixth route for a message it cannot place
+python langflow/build/build_sprint5_flow.py    # the sixth route, for a message it cannot place
 python langflow/build/layout_flow.py           # positions, run last
 ```
 
@@ -133,8 +132,9 @@ The second one exists because a canvas holding a Human Input node cannot be run
 through the v1 API at all. Both read the superuser credentials from the compose
 `.env` on the NAS, so no secret travels with the repository.
 
-Prompts are not stored in these scripts. They are read out of the vault build
-artifacts at generation time, so the documents and the canvas cannot drift.
+Prompts are not stored in these scripts. They are read out of `langflow/prompts/`
+by block name at generation time, so the prompt files and the canvas cannot
+drift.
 
 `build/sync_prompts.py` keeps that true after generation time. It rewrites only
 the bound prompt fields on an existing canvas, adds nothing, and refuses a node
@@ -146,7 +146,7 @@ add the store nodes again.
 
 Import through the Langflow UI, or push it over the API. The API route needs the
 login bearer token for `/api/v1/flows/` and a separate API key for
-`/api/v1/run/`; both are covered in the vault runbook.
+`/api/v1/run/`. `build/lf_api.py` handles both.
 
 Two host settings are required, and both are already in the compose files on the
 NAS. Neither is optional and neither is obvious from an error message:
@@ -225,8 +225,7 @@ were then added by dropping them in, and the assistant answers about both, cites
 them by name, and explains why their priority mappings differ from CMAPSS, with
 nothing on the canvas changed. Fixing a prompt without rebuilding the canvas is
 what `build/sync_prompts.py` is for. That is what turns a single-module assistant
-into the platform's assistant, and it is why the store was worth building beyond
-the course asking for it.
+into the platform's assistant, and it is why the store was worth building at all.
 
 **What the second module cost in total: one API projection.** The intake
 workflow validated a `scania_aps` event and created an incident with no change

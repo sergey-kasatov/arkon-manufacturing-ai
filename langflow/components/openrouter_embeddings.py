@@ -4,7 +4,7 @@ Langflow cannot embed through OpenRouter with any component it ships, and the
 reason is worth stating because it is not visible from any error message.
 
 OpenRouter serves 33 embedding models, including google/gemini-embedding-001 at
-the 3072 dimensions the course prescribes, and the key is already configured in
+3072 dimensions, and the key is already configured in
 Langflow. What is missing is a component that can talk to them:
 
 - The generic "Embedding Model" component reaches providers through

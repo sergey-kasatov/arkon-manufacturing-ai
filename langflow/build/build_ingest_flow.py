@@ -1,9 +1,11 @@
 """Build the Arkon knowledge ingestion flow.
 
-Four Arkon documents into the Qdrant collection `arkon-knowledge`, one lane per
+The Arkon documents into the Qdrant collection `arkon-knowledge`, one lane per
 document, each lane stamping its own `source` value onto every chunk it produces.
+The set is `DOCUMENTS` below and nothing else counts them, because a count
+written into prose is a claim that ages.
 
-The shape follows the course LS6 RAG Data Flow - read, split, embed, store, with
+The shape is the standard RAG ingestion flow - read, split, embed, store, with
 the store's own search output wired to a Chat Output - with two changes, both
 forced by what the components actually do:
 
@@ -45,7 +47,8 @@ COLLECTION = "arkon-knowledge"
 # guard that blocked the n8n call.
 QDRANT_HOST = "qdrant"
 QDRANT_PORT = 6333
-# Course LS6 values, kept deliberately: 1000 characters with a 200 overlap.
+# Kept deliberately at the conventional starting values: 1000 characters with a
+# 200 overlap. Any change belongs in the validation record with its evidence.
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
@@ -198,7 +201,7 @@ def build(stored_paths):
         splitter = lfbuild.node_from_spec(
             spec("splittext"), "SplitText-doc%d" % index, (-1160, top),
             # clean_output keeps only the text and drops the source Message's own
-            # fields, which is the opposite of the LS6 default and is required
+            # fields, which is the opposite of the component default and is required
             # rather than tidy. A File node's Raw Content output is a Message, so
             # without it every chunk inherits run_id, flow_id, timestamp, a column
             # literally named None (which crashes the store's id hashing on
@@ -228,11 +231,11 @@ def build(stored_paths):
         "name": FLOW_NAME,
         "endpoint_name": ENDPOINT,
         "description": (
-            "Ingestion side of the Arkon document store. Reads the four Arkon source "
+            "Ingestion side of the Arkon document store. Reads the Arkon source "
             "documents, splits them at %d characters with a %d overlap, stamps each chunk "
             "with the name of the document it came from, and writes them to the Qdrant "
-            "collection %s. Course 2B LS6 shape; the embedding component is custom because "
-            "no shipped one can reach OpenRouter." % (CHUNK_SIZE, CHUNK_OVERLAP, COLLECTION)
+            "collection %s. The embedding component is custom because no shipped one can "
+            "reach OpenRouter." % (CHUNK_SIZE, CHUNK_OVERLAP, COLLECTION)
         ),
         "is_component": False,
         "locked": False,

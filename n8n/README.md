@@ -2,9 +2,8 @@
 
 Operational layer of the Arkon platform: one workflow writes incidents and
 alerts, a second one answers questions about them. Process owner:
-`docs/Project_Charter.md` sections 7 and 8. Both run on the self-hosted n8n
-instance on the NAS (pinned image, see the vault runbook
-`100 Personal/n8n_NAS_Runbook.md`).
+`docs/Project_Charter.md` sections 7 and 8. Both run on a self-hosted n8n
+instance, pinned to `n8nio/n8n:2.29.9`.
 
 | Workflow | Direction | Endpoint | Deployed |
 |---|---|---|---|
@@ -104,9 +103,11 @@ Events come from `events/out/cmapss_events_full_fleet.jsonl` (707 events: 49 P1,
 is what the first deployment was verified against; it comes from the superseded
 FD001-only model and should not be used for new demos.
 
-### Deployment steps (interactive, with Sergey)
+### Deployment steps (interactive)
 
-1. **Telegram bot** (Sergey himself): create a bot via BotFather, note the
+Two of these need a human at a keyboard and cannot be scripted from here.
+
+1. **Telegram bot** (manual): create a bot via BotFather, note the
    token; create a group for alerts, add the bot to it, and read the chat id
    from `https://api.telegram.org/bot<TOKEN>/getUpdates`. The token is entered
    only in the n8n credentials UI, never stored in this repo. Name the
@@ -139,8 +140,9 @@ Re-running the same events within 24 h must answer `duplicate_suppressed` and
 must not create new ids.
 
 An empty 200 response body means the workflow failed after the webhook was
-answered. Read the execution in the n8n UI, or see the note on reading the n8n
-database in the vault runbook.
+answered. Read the execution in the n8n UI. Reading the SQLite database directly means
+copying `database.sqlite-wal` too, since n8n runs it in WAL mode and the main
+file alone can be a month stale.
 
 ### n8n 2.0 traps met during this deployment
 
@@ -375,31 +377,29 @@ starts at `00005`.
   belongs with the move to a queryable store, per charter 7.2 and 7.5.
 
 
-## Comparison slice (course artifact, not Arkon infrastructure)
+## Comparison slice (evaluation artifact, not Arkon infrastructure)
 
 `comparison_slice_v1.json`, workflow id `arkonSlice001`,
 `POST /webhook/arkon-slice`. Twelve nodes: a webhook, a Text Classifier that
 routes by meaning, a Qdrant retrieval over `arkon-knowledge`, one HTTP call to
 the incident status API, and three response nodes.
 
-**It exists for one reason and it is not an Arkon feature.** The MSIT course 2B
-submission has to compare visual agent platforms and defend the one chosen. This
-is the same three capabilities as the Langflow assistant, built once on n8n, so
-the comparison is first-hand. It answers from the same collection and calls the
+**It exists for one reason and it is not an Arkon feature.** Choosing a visual
+agent platform means defending the choice, and a defence read off vendor pages is
+worth nothing. This is the same three capabilities as the Langflow assistant,
+built once on n8n, so the comparison is first-hand. It answers from the same collection and calls the
 same API, which is what makes it a comparison rather than a second demo. It has
 no memory, no approval gate, no sub-flow and no model-composed tool call, and it
-is deliberately not grown. Full account:
-`020 Projects/AI_Agents_2B_Meridian/build/sprint4_comparison_matrix.md` in the
-vault.
+is deliberately not grown.
 
 Three things it established that are worth keeping whatever happens to the
-course:
+slice:
 
 - **n8n has a one-node semantic router.** `Text Classifier` takes a language
   model as a sub-node, N named categories with descriptions, and creates one
   output branch per category, plus an optional `Other` branch and a multi-class
-  switch. The course's own cross-platform table says n8n has no equivalent of
-  Flowise's Condition Agent; on 2.29.9 that is not true.
+  switch. The published platform comparison this slice was built to test says n8n
+  has no equivalent of Flowise's Condition Agent; on 2.29.9 that is not true.
 - **A collection written by Langflow is readable from n8n.** The store was
   embedded with `google/gemini-embedding-001` through OpenRouter and is queried
   here with the stock Google Gemini embeddings node calling the same model

@@ -1,9 +1,8 @@
 """Export the prompts that are actually on the deployed canvas.
 
-The submission asks for "the final system prompt", and the build's prompts live
-in four vault documents, one per sprint, that the build scripts read fenced
-blocks out of. Assembling that by hand would produce a document that agrees with
-the canvas on the day it is written and drifts afterwards.
+A written record of "the final system prompt" assembled by hand agrees with the
+canvas on the day it is written and drifts afterwards. The prompt files under
+`langflow/prompts/` are the build input, not proof of what is deployed.
 
 So this reads the flow JSON instead: every route description, every specialist
 system prompt and every fixed reply, in canvas order. What it prints is what is

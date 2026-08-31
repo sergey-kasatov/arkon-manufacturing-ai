@@ -23,7 +23,7 @@ WORKFLOW_ID = "arkonSlice001"
 WEBHOOK_PATH = "arkon-slice"
 COLLECTION = "arkon-knowledge"
 STATUS_API = "http://n8n.arkon.internal:5678/webhook/arkon-incident-status"
-# The same model the Langflow canvas and the course LS6 flow use, so the
+# The same model the Langflow canvas and the ingestion flow use, so the
 # comparison is like for like.
 CHAT_MODEL = "google/gemini-3.1-flash-lite"
 # The collection was embedded through OpenRouter with google/gemini-embedding-001.
@@ -105,7 +105,7 @@ def build():
 
         # The whole reason the slice exists. One node, one output branch per
         # category, an explicit Other branch: a Condition Agent equivalent,
-        # which the course's own cross-platform table says n8n does not have.
+        # which the published platform comparison says n8n does not have.
         node(2, "Route Intent", "@n8n/n8n-nodes-langchain.textClassifier", 1.1, (-880, 300), {
             "inputText": "={{ $json.body.message }}",
             "categories": {"categories": [

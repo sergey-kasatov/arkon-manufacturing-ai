@@ -148,18 +148,14 @@ because of anything the assistant did.
 - [ ] Incident lifecycle - acknowledge and close callbacks, escalation timer, queryable store
 - [ ] Streamlit app and Tableau views - the operational cockpit and the executive KPI view
 
-### How the course project fits in
+### One deployed piece that is not an Arkon feature
 
-Three of the deployed pieces were built for the MSIT Term 12 course 2B project
-and are permanent parts of Arkon anyway: the status API, the escalation write
-path and the assistant itself. Arkon's charter had named the gap they fill before
-the course started. One piece, the twelve-node `n8n/comparison_slice_v1.json`, is
-course-only and would be deleted with it.
-
-The map that explains which is which, and why there are seven deployed pieces
-rather than one, is
-`020 Projects/AI_Agents_2B_Meridian/build/system_map.md` in the vault, shipped
-with the submission as `Arkon_System_Map.pdf`.
+Seven pieces are deployed: three Langflow flows and four n8n workflows. Six of
+them run the plant. The exception is the twelve-node
+`n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
+rather than to serve an operator, and could be deleted without loss. It is kept
+because the claim it settles is documented in `n8n/README.md` and the evidence is
+worth more than the twelve nodes cost.
 
 ---
 
@@ -194,7 +190,7 @@ Utilities   pandas, numpy, matplotlib, seaborn, plotly
 
 **Windows (RTX GPU):**
 ```powershell
-cd D:\-PROJECTS\--Portfolio\arkon-manufacturing-ai
+cd path\to\arkon-manufacturing-ai
 .\setup_windows_venv.bat
 python verify_setup.py
 python -m ipykernel install --user --name arkon-win --display-name "Arkon AI (Win+CUDA)"
