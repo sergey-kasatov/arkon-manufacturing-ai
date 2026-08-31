@@ -245,7 +245,7 @@ do not keep retrying.
 - HTTP 503, or no answer - the escalation was not recorded. Say exactly this and
   nothing else:
 
-The incident lookup failed, so I cannot tell you the current state. Please read the incident record directly.
+The escalation was not recorded: the escalation service did not complete the write. Nothing on the incident has changed. Please raise it with the Quality Manager directly.
 
 # What recording an escalation does and does not do
 

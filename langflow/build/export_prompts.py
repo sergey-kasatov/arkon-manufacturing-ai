@@ -48,7 +48,11 @@ def main():
             continue
         out.append("## Intent router: the classification surface")
         out.append("")
-        out.append("Five routes. A message is classified into exactly one. The descriptions are")
+        # Counted, not written. This line said "Five routes" while the canvas
+        # carried six, in a document whose own claim is that it cannot disagree
+        # with what runs.
+        out.append("%d routes. A message is classified into exactly one. The descriptions are"
+                   % len(routes))
         out.append("the whole of the routing logic; there is no rule anywhere else.")
         out.append("")
         for route in routes:

@@ -36,8 +36,18 @@ REMOTE = "cd ~/arkon-tmp && python3 lf_api.py"
 # up by name across `langflow/prompts/`, so which file holds it is not encoded
 # here and a block can be moved between files without touching this table.
 BINDINGS = {
+    # The four agents. Every one of them carries a system prompt that this
+    # script is the only supported way to change.
     "procedure_v2": ("Procedure Specialist", "system_prompt"),
+    "incident": ("Incident Specialist", "system_prompt"),
+    "escalation_v2": ("Escalation Specialist", "system_prompt"),
+    "declined": ("Escalation Declined", "system_prompt"),
+    # All six route descriptions, so the router's own definition of a route
+    # cannot drift from the document either.
+    "route_procedure": ("Intent Router", "routes:Quality procedure"),
     "route_incident_v2": ("Intent Router", "routes:Incident status"),
+    "route_escalation": ("Intent Router", "routes:Escalation request"),
+    "route_out_of_scope": ("Intent Router", "routes:Out of scope"),
     "route_briefing": ("Intent Router", "routes:Shift briefing"),
     "route_unclear": ("Intent Router", "routes:Unclear request"),
     "router_instructions_v3": ("Intent Router", "custom_prompt"),
@@ -46,6 +56,14 @@ BINDINGS = {
     "unclear_message": ("Intent Router", "routes:Unclear request:output_value"),
     "scope_out_message": ("Intent Router", "routes:Out of scope:output_value"),
 }
+
+# Every prompt field on the canvas is listed above. That matters more than it
+# looks: this table is the whole scope of the "no drift" claim, and until
+# 2026-08-31 it held seven of the fourteen. The missing seven were not reported
+# as unsynced, because a block the table never mentions is a block the script
+# never looks at - so "the local flow already matches the documents" was a
+# statement about the listed fields and nothing more. Add the binding whenever a
+# prompt field is added to the canvas.
 
 
 def node_by_name(flow, display_name):
