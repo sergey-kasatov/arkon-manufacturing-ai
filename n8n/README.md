@@ -363,6 +363,56 @@ intake workflow uses, so the same publish-before-you-test rule applies. Ids
 query-string check on 2026-08-30; the store was emptied afterwards, so the log
 starts at `00005`.
 
+### The simulate_failure affordance, and why it arrived late
+
+`simulate_failure=1` (also `true`, `yes`) returns the 503 path without opening
+the store and without consuming an escalation id. It is read after validation and
+before anything else, so a malformed request still gets its 400: the parameter
+buys a failure, not a way past the contract. Same parameter, same accepted values
+and same response shape as the status API, on purpose - two failure switches with
+two spellings would be a third thing to remember.
+
+It was added on 2026-08-31, and the reason is worth keeping. The status API had
+this affordance from the start, so its 503 branch was exercised in the Sprint 2
+validation. **The escalation endpoint did not, so its 503 branch could only be
+reached by moving the incident store aside on the NAS - and therefore nobody
+reached it.** The agent prompt for that branch had been dictating the status
+API's sentence, telling the operator that a *lookup* had failed on the one path
+where a *write* silently does not happen. It survived because the path was
+untestable, not because it was subtle. The untestable path is the one that rots.
+
+```bash
+python n8n/escalation_probe.py
+```
+
+Thirteen cases, and every one of them is a case that must not reach the store:
+the three spellings of the simulated failure, validation beating it, the
+malformed forms, id normalisation checked against an absent incident, and the
+unknown-incident refusal. The suite asserts that no answer ever carries an
+`escalation_id`, so it is safe to re-run. The success path is deliberately absent:
+it appends a record and consumes an id, and a test that changes the thing it
+measures is not worth keeping. That path belongs to a human at the approval gate,
+which is also the only way it is reached in normal use.
+
+### Re-importing this workflow can reset the escalation counter
+
+`n8n import:workflow` rewrites the whole workflow row, and the escalation ids
+live in that row's `staticData`. Import the tracked file as-is and the counter
+goes back to zero, so the next escalation is `ARK-ESC-00001` against a store that
+already contains one. Read the live value first and carry it into the document
+being imported:
+
+```bash
+docker exec n8n n8n export:workflow --id=arkonEscalate01 --output=/tmp/exp.json
+```
+
+Take `staticData` from that export, put it on the patched workflow JSON, and
+import the result. Do not put the counter in the tracked file: it is runtime
+state, and a file that carries it would silently rewind the counter on every
+future deploy. Verified on 2026-08-31: carried forward as
+`{"global": {"nextEscalationId": 12}}`, and the next real escalation came out as
+`ARK-ESC-00013`.
+
 ### Known boundaries of the escalation record
 
 - **It notifies nobody.** `notification_channel` is always `none`. The Telegram

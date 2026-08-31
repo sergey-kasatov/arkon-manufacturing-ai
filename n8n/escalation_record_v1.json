@@ -29,7 +29,7 @@
         240
       ],
       "parameters": {
-        "jsCode": "// Arkon Escalation Record - request validation.\n// The escalation is a write, so the contract is checked before the store is even\n// read: a malformed request must not consume an escalation id.\nconst MAX_REASON = 500;\nconst MIN_REASON = 5;\n\n// Parameters may arrive in the JSON body or in the query string. Both are\n// supported for one reason: Langflow's API Request component can hand a model\n// the URL and nothing else, so an agent-composed body is not possible. The\n// method stays POST, set on the canvas rather than by the model, so the verb\n// still says that this call changes something.\nconst incoming = $input.first().json;\nconst body = { ...(incoming.query ?? {}), ...(incoming.body ?? {}) };\nconst errors = [];\n\nconst text = (value) => (value === undefined || value === null ? \"\" : String(value).trim());\n\nlet incidentId = text(body.incident_id);\nif (!incidentId) {\n  errors.push(\"incident_id is required\");\n} else {\n  const digits = incidentId.replace(/[^0-9]/g, \"\");\n  if (!/^(ARK-INC-)?[0-9]+$/i.test(incidentId) || digits === \"\") {\n    errors.push(\"incident_id must look like ARK-INC-00014 or be a plain number\");\n  } else {\n    incidentId = \"ARK-INC-\" + digits.padStart(5, \"0\");\n  }\n}\n\nconst reason = text(body.reason);\nif (reason.length < MIN_REASON) {\n  errors.push(\"reason is required and must be at least \" + MIN_REASON + \" characters\");\n} else if (reason.length > MAX_REASON) {\n  errors.push(\"reason must be at most \" + MAX_REASON + \" characters\");\n}\n\nconst requestedBy = text(body.requested_by) || \"arkon-quality-assistant\";\nconst approvedBy = text(body.approved_by) || \"human approval gate\";\n\nreturn [\n  {\n    json: {\n      valid: errors.length === 0,\n      errors,\n      request: {\n        incident_id: incidentId,\n        reason: reason.slice(0, MAX_REASON),\n        requested_by: requestedBy.slice(0, 120),\n        approved_by: approvedBy.slice(0, 120),\n      },\n    },\n  },\n];\n"
+        "jsCode": "// Arkon Escalation Record - request validation.\n// The escalation is a write, so the contract is checked before the store is even\n// read: a malformed request must not consume an escalation id.\nconst MAX_REASON = 500;\nconst MIN_REASON = 5;\n\n// Parameters may arrive in the JSON body or in the query string. Both are\n// supported for one reason: Langflow's API Request component can hand a model\n// the URL and nothing else, so an agent-composed body is not possible. The\n// method stays POST, set on the canvas rather than by the model, so the verb\n// still says that this call changes something.\nconst incoming = $input.first().json;\nconst body = { ...(incoming.query ?? {}), ...(incoming.body ?? {}) };\nconst errors = [];\n\nconst text = (value) => (value === undefined || value === null ? \"\" : String(value).trim());\n\nlet incidentId = text(body.incident_id);\nif (!incidentId) {\n  errors.push(\"incident_id is required\");\n} else {\n  const digits = incidentId.replace(/[^0-9]/g, \"\");\n  if (!/^(ARK-INC-)?[0-9]+$/i.test(incidentId) || digits === \"\") {\n    errors.push(\"incident_id must look like ARK-INC-00014 or be a plain number\");\n  } else {\n    incidentId = \"ARK-INC-\" + digits.padStart(5, \"0\");\n  }\n}\n\nconst reason = text(body.reason);\nif (reason.length < MIN_REASON) {\n  errors.push(\"reason is required and must be at least \" + MIN_REASON + \" characters\");\n} else if (reason.length > MAX_REASON) {\n  errors.push(\"reason must be at most \" + MAX_REASON + \" characters\");\n}\n\nconst requestedBy = text(body.requested_by) || \"arkon-quality-assistant\";\nconst approvedBy = text(body.approved_by) || \"human approval gate\";\n\n// Test affordance only, and the same one the incident status API carries: it\n// lets the assistant's 503 branch be demonstrated on demand without moving the\n// store aside. It is read after validation and before anything is opened, so a\n// malformed request still gets its 400 and no escalation id is consumed. A\n// production deployment removes it or puts it behind an operator role.\nconst simulateFailure = [\"1\", \"true\", \"yes\"].includes(text(body.simulate_failure).toLowerCase());\n\nreturn [\n  {\n    json: {\n      valid: errors.length === 0,\n      errors,\n      simulate_failure: simulateFailure,\n      request: {\n        incident_id: incidentId,\n        reason: reason.slice(0, MAX_REASON),\n        requested_by: requestedBy.slice(0, 120),\n        approved_by: approvedBy.slice(0, 120),\n      },\n    },\n  },\n];\n"
       }
     },
     {
@@ -84,12 +84,63 @@
       }
     },
     {
+      "id": "b1000000-0000-4000-8000-00000000000e",
+      "name": "Simulated Failure?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "b1000000-0000-4000-8000-00000000000f",
+              "leftValue": "={{ $json.simulate_failure }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000010",
+      "name": "Respond Simulated Unavailable",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        -160
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"unavailable\", message: \"The escalation was not recorded (simulated failure requested by the caller).\"}) }}",
+        "options": {
+          "responseCode": 503
+        }
+      }
+    },
+    {
       "id": "b1000000-0000-4000-8000-000000000005",
       "name": "Read Incident Store",
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        -656,
+        -432,
         160
       ],
       "onError": "continueErrorOutput",
@@ -105,7 +156,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -432,
+        -208,
         -16
       ],
       "parameters": {
@@ -122,7 +173,7 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1.1,
       "position": [
-        -432,
+        -208,
         224
       ],
       "parameters": {
@@ -138,7 +189,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -208,
+        16,
         224
       ],
       "parameters": {
@@ -151,7 +202,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        16,
+        240,
         224
       ],
       "parameters": {
@@ -185,7 +236,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        240,
+        464,
         400
       ],
       "parameters": {
@@ -202,7 +253,7 @@
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
       "position": [
-        240,
+        464,
         160
       ],
       "parameters": {
@@ -217,7 +268,7 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        464,
+        688,
         160
       ],
       "parameters": {
@@ -234,7 +285,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        688,
+        912,
         160
       ],
       "parameters": {
@@ -271,7 +322,7 @@
       "main": [
         [
           {
-            "node": "Read Incident Store",
+            "node": "Simulated Failure?",
             "type": "main",
             "index": 0
           }
@@ -359,6 +410,24 @@
         [
           {
             "node": "Respond Recorded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulated Failure?": {
+      "main": [
+        [
+          {
+            "node": "Respond Simulated Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Incident Store",
             "type": "main",
             "index": 0
           }
