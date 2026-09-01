@@ -236,13 +236,22 @@ claim, and it now has one measurement behind it instead of none.
 
 ## Known gaps
 
-- **The document store holds six documents and is not coverage.** Charter, SOP,
-  the three model cards and the event contract, 77 chunks as of 2026-08-30. The
-  validation questions span all of them and one is deliberately unanswerable,
+- **The document store holds seven documents and is not coverage.** Charter, SOP,
+  the four model cards and the event contract. The chunk count is deliberately not
+  repeated here: it changes on every re-ingest and
+  `GET /collections/arkon-knowledge` is the only place that knows it. The
+  validation questions span the documents and one is deliberately unanswerable,
   which shows retrieval works and shows the refusal path holds. It does not show
-  the store answers everything an operator will ask. A question outside those six
-  documents gets the fallback sentence, which is the correct behaviour and still
-  a gap in the knowledge base.
+  the store answers everything an operator will ask. A question outside those
+  seven documents gets the fallback sentence, which is the correct behaviour and
+  still a gap in the knowledge base.
+- **The model cards now dominate the store by volume.** Measured on the live
+  collection on 2026-09-01 after the NEU ingest: 124 chunks over the seven
+  documents, of which the four model cards are 80, or 65 per cent. Charter,
+  SOP and event contract together are the other 44. Retrieval on a question
+  spanning two documents was last measured before the NEU card existed and has
+  not been repeated since, so the effect of that shift is an open risk rather
+  than a finding.
 - **Re-ingestion is idempotent only while the documents are unchanged.** Point ids
   are a hash of chunk text plus metadata, so an edited document leaves its old
   chunks behind as orphans. Editing a source document means dropping the

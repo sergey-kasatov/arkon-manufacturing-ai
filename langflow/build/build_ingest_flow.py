@@ -62,6 +62,9 @@ DOCUMENTS = [
     # editing a prompt.
     ("docs/Model_Card_Scania_APS.md", "Scania_APS_Model_Card.md", "Scania APS Model Card"),
     ("docs/Model_Card_Casting_CV.md", "Casting_Defect_Model_Card.md", "Casting Defect Model Card"),
+    # Phase 2, added 2026-09-01. Fourth module, second in the visual_inspection
+    # domain, and the seventh document in the store.
+    ("docs/Model_Card_NEU_Surface.md", "NEU_Surface_Model_Card.md", "NEU Surface Defect Model Card"),
     ("events/README.md", "Arkon_Event_Contract.md", "Arkon Event Contract"),
 ]
 
@@ -271,6 +274,14 @@ if __name__ == "__main__":
             ]
         if not paths:
             raise SystemExit("no stored paths yet: run once with --deploy")
+        # build() zips DOCUMENTS against these paths, and zip stops at the shorter
+        # one. Adding a document and building without --deploy therefore used to
+        # write a flow silently missing its lane: no error, no warning, and an
+        # ingest that loads one document fewer than the list says.
+        if len(paths) != len(DOCUMENTS):
+            raise SystemExit(
+                "%d documents but %d stored paths. The new one has never been uploaded; "
+                "run with --deploy." % (len(DOCUMENTS), len(paths)))
 
     flow = build(paths)
     clashes = overlapping(flow["data"]["nodes"])

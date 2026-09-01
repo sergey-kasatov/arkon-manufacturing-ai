@@ -11,6 +11,7 @@ Cell. Contract owner: `docs/Project_Charter.md` sections 6 and 7.
 | `make_events_cmapss.py` | CMAPSS adapter: test predictions to events JSONL |
 | `make_events_scania.py` | Scania APS adapter: the same, for the tabular module |
 | `make_events_casting.py` | Casting defect adapter: the same, for the vision module |
+| `make_events_neu.py` | NEU steel surface adapter: the same, for the defect-type module |
 | `out/` | Generated event batches (demo input for the n8n workflow) |
 
 ## Usage
@@ -19,9 +20,11 @@ Cell. Contract owner: `docs/Project_Charter.md` sections 6 and 7.
 python events/make_events_cmapss.py
 python events/make_events_scania.py
 python events/make_events_casting.py
+python events/make_events_neu.py
 python events/validate_event.py events/out/cmapss_events_full_fleet.jsonl
 python events/validate_event.py events/out/scania_events.jsonl
 python events/validate_event.py events/out/casting_events.jsonl
+python events/validate_event.py events/out/neu_events.jsonl
 ```
 
 ## CMAPSS priority mapping (charter 7.1)
@@ -68,6 +71,42 @@ No P1 because no single part on an inspection line is a fifteen-minute
 emergency. The signal that would justify one is a defect **rate**, which is a
 batch-level event, and it is not built because this dataset carries no honest
 baseline rate: its test split is 63 percent defective by curation.
+
+## NEU steel surface priority mapping (charter 7.1)
+
+Model confidence, the largest of six softmax outputs: `>= 0.90 -> P3`, below it
+-> `P2`. No P1 and no P4. Risk score is the confidence itself.
+
+**Every classified surface produces an event.** Casting and Scania publish only
+what they flag, because a pass is the normal case. NEU-DET has no good-surface
+class: all six of its classes are defects, so there is no pass to leave
+unpublished, and this adapter behaves like the CMAPSS one instead.
+
+**Priority comes from confidence and never from the defect class.** Ranking these
+six defects by severity would need metallurgical judgement this project does not
+have. The defect type rides in `risk_type`, which is the predicted class rather
+than a fixed string, and the evidence object carries the whole six-way probability
+vector so a consumer can see the runner-up. This is the first module whose
+`risk_type` varies between its own events.
+
+**The band edge is declared, not calibrated, and the events say so.** Every event
+carries `evidence.threshold_basis`, which reads `declared` here. The intended rule
+was to take the lowest confidence at which the accepted predictions on the
+selection set are right at least 99 per cent of the time; the model classified all
+216 selection images correctly, so every threshold met the target and the rule
+returned 0.0, which would leave the P2 band permanently empty. 0.90 is an Arkon
+assumption in the same sense as casting's cost ratios. The adapter reads it from
+the metrics file rather than defining it, so the two cannot drift apart. Reasoning
+in `docs/Model_Card_NEU_Surface.md` section 5.
+
+**This is the second module in the `visual_inspection` domain.** No contract change
+was needed for that: the domain was already in the enum, already in `roster.json`
+and already in the assistant's assignment rules. What did change is the
+`source_module` enum, which gained `neu_surface` in both
+`arkon_event_schema.json` and `validate_event.py`. A consequence worth knowing: an
+incident query filtered by `business_domain=visual_inspection` now returns two
+modules, so that field has stopped being a one-to-one proxy for a module.
+Filtering by `source_module` still separates them.
 
 ## Data integrity
 

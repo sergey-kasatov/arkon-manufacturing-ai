@@ -4,7 +4,7 @@ One figure per module, each built from the metrics JSON that its model card
 cites, so a figure and the card it illustrates cannot drift apart. No model is
 loaded, no dataset is read and no GPU is used: everything drawn here was already
 measured by the training scripts and written to
-`models/checkpoints/<module>/*_meta.json`. Those three files are the only ones
+`models/checkpoints/<module>/*_meta.json`. Those four files are the only ones
 git keeps under `models/`, for exactly this reason.
 
 What each figure is for:
@@ -17,6 +17,9 @@ What each figure is for:
            the same threshold.
   CMAPSS   the hardest subset scores about as well as the easiest, and the whole
            gain sits in the temporal features.
+  NEU      what the headline is worth. A perfect score on a benchmark where an
+           untrained nearest-neighbour classifier already reaches 0.975 is a
+           statement about the dataset before it is one about the model.
 
 Deliberately not imported: `notebooks/utils/arkon_utils.save_figure`. That module
 imports joblib at module level and carries the training-time helpers with it;
@@ -353,11 +356,77 @@ def cmapss_figure(meta):
                 "models/checkpoints/cmapss/cmapss_full_fleet_meta.json")
 
 
+# NEU: the score is real, and most of it was there before training
+def neu_figure(meta):
+    difficulty = meta["benchmark_difficulty"]
+    operating = meta["operating_point"]
+    ladder = [
+        ("chance\nsix balanced classes", difficulty["chance"], NEUTRAL),
+        ("two pixel statistics\nlogistic regression", difficulty["two_feature_pixel_baseline"], NEUTRAL),
+        ("frozen backbone\nonly the last layer fitted", meta["ablation_frozen_backbone"]["test_accuracy"], NEUTRAL),
+        ("1-nearest-neighbour\nuntrained ImageNet features", difficulty["one_nearest_neighbour_on_imagenet_features"], ALERT),
+        ("fine-tuned end to end\nthe shipped module", meta["test_performance"]["accuracy"], ACCENT),
+    ]
+
+    fig, (left, right) = plt.subplots(1, 2, figsize=(13.5, 4.9),
+                                      gridspec_kw={"width_ratios": [1.55, 1]})
+
+    labels = [label for label, _, _ in ladder]
+    values = [value for _, value, _ in ladder]
+    colours = [colour for _, _, colour in ladder]
+    bars = left.barh(range(len(ladder)), values, color=colours, height=0.62)
+    for i, (bar, value) in enumerate(zip(bars, values)):
+        left.text(value + 0.012, bar.get_y() + bar.get_height() / 2, "%.4f" % value,
+                  va="center", fontsize=10.5, color=INK)
+    left.set_yticks(range(len(ladder)))
+    left.set_yticklabels(labels, fontsize=9.5)
+    left.invert_yaxis()
+    left.set_xlim(0, 1.14)
+    left.set_xlabel("accuracy on the %d held-out images" % meta["test_images"])
+    left.set_title("Most of this task was solved before any training\n"
+                   "every row scored on the same folder", loc="left")
+    tidy(left, grid_axis="x")
+
+    # The point of the panel is how little headroom is left above the untrained
+    # classifier, so mark that level across every row rather than annotating a gap
+    # too narrow to draw.
+    untrained = difficulty["one_nearest_neighbour_on_imagenet_features"]
+    shipped = meta["test_performance"]["accuracy"]
+    left.axvline(untrained, color=ALERT, linestyle=":", linewidth=1.4, zorder=0)
+    left.text(untrained - 0.02, -0.62,
+              "no training at all reaches here;\nfine-tuning adds the last %.4f"
+              % (shipped - untrained),
+              ha="right", va="top", fontsize=9.5, color=ALERT)
+
+    sent = operating["test_images_sent_to_a_person"]
+    logged = meta["test_images"] - sent
+    wedges = right.barh([1, 0], [logged, sent], color=[ACCENT, ALERT], height=0.5)
+    for bar, value, tag in zip(wedges, (logged, sent), ("P3", "P2")):
+        right.text(value + 6, bar.get_y() + bar.get_height() / 2, "%s   %d" % (tag, value),
+                   va="center", fontsize=11, color=INK)
+    right.set_yticks([0, 1])
+    right.set_yticklabels(["below the band edge\na person classifies it",
+                           "at or above it\nlogged against the coil"], fontsize=9.5)
+    right.set_xlim(0, meta["test_images"] * 1.12)
+    right.set_xlabel("events published, one per classified surface")
+    basis = "declared, not calibrated" if operating["rule_degenerated"] else "calibrated on the selection set"
+    right.set_title("What the module sends an operator\nband edge %.2f, %s"
+                    % (operating["confidence_threshold"], basis), loc="left")
+    tidy(right, grid_axis="x")
+
+    fig.suptitle("NEU steel surface defects: six classes, %d held-out images"
+                 % meta["test_images"], fontsize=15, x=0.045, ha="left", y=1.0)
+    fig.tight_layout()
+    return save(fig, "neu_benchmark_ladder", "cv",
+                "models/checkpoints/neu/neu_cv_meta.json")
+
+
 def main():
     print("Reading metrics from %s" % CKPT_DIR.relative_to(PROJECT_ROOT))
     scania_figure(load("scania", "scania_aps_meta.json"))
     casting_figure(load("casting", "casting_cv_meta.json"))
     cmapss_figure(load("cmapss", "cmapss_full_fleet_meta.json"))
+    neu_figure(load("neu", "neu_cv_meta.json"))
 
 
 if __name__ == "__main__":

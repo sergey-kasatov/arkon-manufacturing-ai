@@ -1,0 +1,326 @@
+{
+  "dataset": "NEU-DET surface defect database, hot-rolled steel strip, six defect classes",
+  "architecture": "resnet18, ImageNet weights, whole network fine-tuned",
+  "task": "six-class classification",
+  "image_size": 224,
+  "batch_size": 32,
+  "epochs": 12,
+  "best_epoch": 3,
+  "learning_rate": 0.0001,
+  "seed": 42,
+  "classes": {
+    "crazing": 0,
+    "inclusion": 1,
+    "patches": 2,
+    "pitted_surface": 3,
+    "rolled-in_scale": 4,
+    "scratches": 5
+  },
+  "split_note": "the dataset ships train/ and validation/ and no test folder. The train folder is cut 85/15 stratified for fitting and selection; the shipped validation/ folder is held out and scored once as the test set.",
+  "fitting_images": 1224,
+  "selection_images": 216,
+  "test_images": 360,
+  "test_folder_source": "the folder the dataset ships as validation/",
+  "augmentation": "horizontal and vertical flip, rotation up to 10 degrees; a quarter turn is excluded because it inverts the texture direction the classes separate on",
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.31096,
+      "train_accuracy": 0.9101,
+      "selection_macro_f1": 0.99537,
+      "selection_accuracy": 0.9954,
+      "seconds": 8.9
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.05564,
+      "train_accuracy": 0.9828,
+      "selection_macro_f1": 0.9861,
+      "selection_accuracy": 0.9861,
+      "seconds": 8.8
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.03969,
+      "train_accuracy": 0.991,
+      "selection_macro_f1": 1.0,
+      "selection_accuracy": 1.0,
+      "seconds": 8.5
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.01684,
+      "train_accuracy": 0.9951,
+      "selection_macro_f1": 1.0,
+      "selection_accuracy": 1.0,
+      "seconds": 8.3
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.01188,
+      "train_accuracy": 0.9975,
+      "selection_macro_f1": 0.99537,
+      "selection_accuracy": 0.9954,
+      "seconds": 8.2
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.01805,
+      "train_accuracy": 0.9951,
+      "selection_macro_f1": 0.99537,
+      "selection_accuracy": 0.9954,
+      "seconds": 8.5
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.01474,
+      "train_accuracy": 0.9975,
+      "selection_macro_f1": 0.99537,
+      "selection_accuracy": 0.9954,
+      "seconds": 8.4
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.03909,
+      "train_accuracy": 0.9926,
+      "selection_macro_f1": 0.95356,
+      "selection_accuracy": 0.9537,
+      "seconds": 8.6
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.03269,
+      "train_accuracy": 0.9877,
+      "selection_macro_f1": 0.99537,
+      "selection_accuracy": 0.9954,
+      "seconds": 8.4
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.00895,
+      "train_accuracy": 0.9984,
+      "selection_macro_f1": 0.99537,
+      "selection_accuracy": 0.9954,
+      "seconds": 8.5
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.02171,
+      "train_accuracy": 0.9975,
+      "selection_macro_f1": 0.99537,
+      "selection_accuracy": 0.9954,
+      "seconds": 8.3
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.0112,
+      "train_accuracy": 0.9975,
+      "selection_macro_f1": 1.0,
+      "selection_accuracy": 1.0,
+      "seconds": 8.4
+    }
+  ],
+  "benchmark_difficulty": {
+    "note": "measured before training on the same held-out folder, so the fine-tuned result can be read against it rather than against chance",
+    "one_nearest_neighbour_on_imagenet_features": 0.975,
+    "two_feature_pixel_baseline": 0.4861,
+    "chance": 0.1667,
+    "max_cosine_similarity_test_to_fitting": 0.9823,
+    "median_cosine_similarity_test_to_fitting": 0.9378,
+    "median_cosine_similarity_test_to_test": 0.9428
+  },
+  "operating_point": {
+    "rule": "the lowest confidence at which the accepted predictions on the selection set are right at least 99% of the time",
+    "rule_degenerated": true,
+    "basis": "declared, not calibrated: the selection set could not calibrate one because the model classified all of it correctly",
+    "threshold_the_rule_returned": 0.0,
+    "confidence_threshold": 0.9,
+    "selection_coverage": 1.0,
+    "selection_band_accuracy": 1.0,
+    "test_coverage": 0.9917,
+    "test_band_accuracy": 1.0,
+    "test_images_sent_to_a_person": 3
+  },
+  "test_performance": {
+    "measured_on": "the folder the dataset ships as validation/, 360 images, scored once",
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "errors": 0,
+    "per_class_f1": {
+      "crazing": 1.0,
+      "inclusion": 1.0,
+      "patches": 1.0,
+      "pitted_surface": 1.0,
+      "rolled-in_scale": 1.0,
+      "scratches": 1.0
+    },
+    "confusion_matrix": [
+      [
+        60,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        60,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        60,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        60,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        60,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        60
+      ]
+    ]
+  },
+  "label_ceiling": {
+    "mixed_class_images_in_test": 23,
+    "errors_on_them": 0,
+    "errors_on_single_class_images": 0,
+    "predicted_class_present_in_boxes": 0
+  },
+  "ablation_frozen_backbone": {
+    "best_epoch": 12,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 1.86729,
+        "train_accuracy": 0.1822,
+        "selection_macro_f1": 0.21512,
+        "selection_accuracy": 0.2731,
+        "seconds": 5.5
+      },
+      {
+        "epoch": 2,
+        "train_loss": 1.62529,
+        "train_accuracy": 0.3619,
+        "selection_macro_f1": 0.53621,
+        "selection_accuracy": 0.5694,
+        "seconds": 5.4
+      },
+      {
+        "epoch": 3,
+        "train_loss": 1.41452,
+        "train_accuracy": 0.5882,
+        "selection_macro_f1": 0.63463,
+        "selection_accuracy": 0.6435,
+        "seconds": 5.6
+      },
+      {
+        "epoch": 4,
+        "train_loss": 1.24812,
+        "train_accuracy": 0.7353,
+        "selection_macro_f1": 0.7825,
+        "selection_accuracy": 0.7824,
+        "seconds": 5.3
+      },
+      {
+        "epoch": 5,
+        "train_loss": 1.09918,
+        "train_accuracy": 0.8186,
+        "selection_macro_f1": 0.85404,
+        "selection_accuracy": 0.8519,
+        "seconds": 5.5
+      },
+      {
+        "epoch": 6,
+        "train_loss": 0.98128,
+        "train_accuracy": 0.8578,
+        "selection_macro_f1": 0.88501,
+        "selection_accuracy": 0.8843,
+        "seconds": 5.5
+      },
+      {
+        "epoch": 7,
+        "train_loss": 0.88236,
+        "train_accuracy": 0.8864,
+        "selection_macro_f1": 0.89352,
+        "selection_accuracy": 0.8935,
+        "seconds": 5.4
+      },
+      {
+        "epoch": 8,
+        "train_loss": 0.80119,
+        "train_accuracy": 0.8946,
+        "selection_macro_f1": 0.92553,
+        "selection_accuracy": 0.9259,
+        "seconds": 6.1
+      },
+      {
+        "epoch": 9,
+        "train_loss": 0.71695,
+        "train_accuracy": 0.9257,
+        "selection_macro_f1": 0.9213,
+        "selection_accuracy": 0.9213,
+        "seconds": 5.6
+      },
+      {
+        "epoch": 10,
+        "train_loss": 0.65356,
+        "train_accuracy": 0.9289,
+        "selection_macro_f1": 0.94437,
+        "selection_accuracy": 0.9444,
+        "seconds": 5.6
+      },
+      {
+        "epoch": 11,
+        "train_loss": 0.61889,
+        "train_accuracy": 0.9363,
+        "selection_macro_f1": 0.94434,
+        "selection_accuracy": 0.9444,
+        "seconds": 5.9
+      },
+      {
+        "epoch": 12,
+        "train_loss": 0.57321,
+        "train_accuracy": 0.9289,
+        "selection_macro_f1": 0.95809,
+        "selection_accuracy": 0.9583,
+        "seconds": 5.4
+      }
+    ],
+    "test_accuracy": 0.8639,
+    "test_macro_f1": 0.8586,
+    "test_errors": 49
+  },
+  "reproduction": {
+    "note": "the fine-tuned arm refitted from the same seed in the same session",
+    "values_compared": 7,
+    "values_moved": 1,
+    "test_images_predicted_differently": 0,
+    "run_2_confidence_threshold": 0.9,
+    "run_2_test_accuracy": 1.0
+  }
+}

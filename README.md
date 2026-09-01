@@ -21,17 +21,18 @@ under [What's Built](#whats-built).
 
 ## Results
 
-Three modules are trained, measured and documented. Every figure below is
-generated from the metrics file its own training script wrote, by
+Four modules are trained, measured and documented. Every figure below is
+generated from the metrics file its own training run wrote, by
 `python tools/make_result_plots.py` - no model is loaded and no dataset is read,
-so a clone reproduces the pictures in seconds. Those three metrics files are the
-only thing git keeps under `models/`.
+so a clone reproduces the pictures in seconds. Those metrics files are the only
+thing git keeps under `models/`.
 
 | Module | Headline | Measured on |
 |---|---|---|
 | **Remaining useful life** - NASA CMAPSS | **RMSE 11.01 cycles** on the benchmark task | 707 held-out engines, six operating regimes, two fault modes |
 | **Fault classification** - Scania APS | **Total cost 10,660** on the challenge's own metric, between first and second of its published top three | 16,000 held-out trucks, 170 anonymised counters |
 | **Visual inspection** - casting product | **0 defects missed**, 7 good parts re-inspected, ROC AUC 0.9999 | 715 held-out images |
+| **Defect classification** - NEU steel surface | **1.0000 accuracy** over six defect types, against 0.9750 for a nearest-neighbour classifier that does no training at all | 360 held-out images |
 
 ### Remaining useful life: one model for a mixed fleet
 
@@ -128,12 +129,43 @@ scores pile up at both ends with only 25 of 715 anywhere between, leaving the co
 curve no well-determined minimum to find. `docs/Model_Card_Casting_CV.md` carries
 the four-run table.
 
-**What these figures are not.** All three are held-out test splits of public
+### Defect types on steel: a perfect score, and why that is the wrong headline
+
+![What the NEU classifier is worth against classifiers that do no training](assets/cv/neu_benchmark_ladder.png)
+
+The fourth module names which of six defect types is on a hot-rolled steel
+surface, and it gets all 360 held-out images right. **The left panel is why that
+number is reported with a qualification attached.** A 1-nearest-neighbour
+classifier over ImageNet features that were never trained on steel already reaches
+0.9750 on the same folder. Fine-tuning adds the last 0.0250. NEU-DET six-class
+classification is close to saturated, so a perfect score is evidence about the
+benchmark before it is evidence about the model.
+
+The dataset ships no test folder, only `train/` and `validation/`. This module
+therefore splits the train folder for its own model selection and holds the shipped
+`validation/` folder back entirely, scoring it once, and every number above says
+which folder produced it. The split was checked for the leak casting turned out to
+have: no image crosses it on file bytes, on decoded pixels, or on feature
+similarity, and the control settles it, since a test image sits as close to the
+rest of the test folder as it does to the training set.
+
+Two things the notebooks found that the score does not show. **6.8 per cent of the
+images carry a second defect class that the folder label discards** - scratches
+with inclusion, pitted surface with patches - so a single-label classifier cannot
+be right about both, and that is a ceiling on any model of this shape. And **the
+confidence band could not be calibrated at all**: the intended rule was the lowest
+confidence at which the accepted predictions are right 99 per cent of the time, but
+the model classified all 216 selection images correctly, so every threshold met the
+target and the rule returned zero. The band edge in the right panel is declared as
+an Arkon assumption, the way casting's cost ratios are, and
+`docs/Model_Card_NEU_Surface.md` says so rather than presenting it as measured.
+
+**What these figures are not.** All four are held-out test splits of public
 datasets, scored offline. Nothing here ran on a real production line, and the
 operational context around the numbers is fabricated. Each module's limitations
 are in its model card - [CMAPSS](docs/Model_Card_CMAPSS_RUL.md),
-[Scania](docs/Model_Card_Scania_APS.md), [casting](docs/Model_Card_Casting_CV.md) -
-and are not summarised away here.
+[Scania](docs/Model_Card_Scania_APS.md), [casting](docs/Model_Card_Casting_CV.md),
+[NEU](docs/Model_Card_NEU_Surface.md) - and are not summarised away here.
 
 ---
 
@@ -145,7 +177,7 @@ Arkon Manufacturing AI Platform
 ├── ⏱️  Time Series      Engine Testing Dept.   NASA CMAPSS       RUL Prediction
 ├── 🔧  ML Classification Truck Fleet Dept.      Scania APS        Fault Detection
 ├── 🔍  CV Binary         Foundry Dept.          Casting Product   Defect Detection
-├── 🔬  CV Multi-class    Rolling Mill Dept.     NEU Surface       Defect Type (v1.5)
+├── 🔬  CV Multi-class    Rolling Mill Dept.     NEU Surface       Defect Type
 ├── 🤖  LLM / RAG         All Departments        -                 AI Chatbot
 └── 📊  BI Dashboard      Executive Level        Tableau           KPI Analytics
 ```
@@ -260,7 +292,7 @@ because of anything the assistant did.
 | Time Series | [NASA CMAPSS Turbofan Engine Degradation](https://www.kaggle.com/datasets/behrad3d/nasa-cmaps) | NASA Prognostics CoE / Kaggle mirror | CC0 1.0 | ~3 MB | RUL regression |
 | ML | [APS Failure at Scania Trucks](https://archive.ics.uci.edu/dataset/421/aps+failure+at+scania+trucks) | Scania CV AB via UCI ML Repository | CC BY 4.0 | ~54 MB | Binary classification |
 | CV | [Casting Product Quality Control](https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product) | Kaggle | CC BY-NC 4.0 | ~100 MB | Binary image classification |
-| CV (planned) | [NEU Surface Defect Database](http://faculty.neu.edu.cn/songkechen/zh_CN/zdylm/263270/list/index.htm) | Northeastern University, China | Academic use | ~30 MB | 6-class classification |
+| CV | [NEU-DET Surface Defect Database](http://faculty.neu.edu.cn/songkechen/zh_CN/zdylm/263270/list/index.htm) | Northeastern University, China | Academic use | ~35 MB | 6-class classification (ships detection boxes too) |
 | CV (planned) | [MVTec Anomaly Detection](https://www.mvtec.com/company/research/datasets/mvtec-ad) | MVTec Software GmbH | Research only | ~4.9 GB | Anomaly detection |
 | CV (planned) | [GC10-DET Surface Defects](https://github.com/lvxiaoming2019/GC10-DET-Metallic-Surface-Defect-Datasets) | Academic | Academic use | ~1 GB | Object detection |
 
@@ -277,13 +309,14 @@ because of anything the assistant did.
 - [x] Project Charter - risk events, P1-P4 priorities, steering-cell rules (`docs/Project_Charter.md`)
 - [x] Time Series module, first pass - CMAPSS on FD001 alone, one subset of four (LR RMSE 20.79, XGBoost RMSE 17.11). Superseded by the full-fleet model below; its metrics are kept at `models/checkpoints/cmapss/cmapss_xgb_v1_meta.json` and the notebooks that produced it were rebuilt on the fleet on 2026-08-31
 - [x] Time Series module, full fleet - all four CMAPSS subsets, 709 training engines, six operating regimes, two fault modes, with temporal features over a 20-cycle window. XGBoost RMSE 11.01 on the benchmark task over 707 held-out engines, scoring the hardest subset about as well as the easiest (`notebooks/01_timeseries/cmapss_full_fleet.py`, `docs/Model_Card_CMAPSS_RUL.md`). Also built as a notebook trio that reproduces the deployed model without importing from the training script: nine measurements compared, none moved
-- [x] Risk-event layer - schema, validator, CMAPSS adapter, 707 validated events across the full fleet (`events/`)
+- [x] Risk-event layer - schema, validator and four adapters, one per trained module, all publishing the same contract (`events/`)
 - [x] n8n Quality Steering Cell - deployed on the NAS and verified end to end: contract validation, 24 h duplicate suppression, JSONL incident store, Telegram cards for P1 and P2 (`n8n/`)
 - [x] Operating documentation - CMAPSS model card and Steering Cell SOP (`docs/`)
 - [x] **Tabular module - Scania APS fault classifier.** XGBoost over 170 anonymised counters, total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure, which lands between first and second of the IDA 2016 challenge's published top three on the same test set. The decision threshold is worth a factor of 3.8; every structural choice is inside the noise of the selection (`notebooks/02_ml/scania_aps.py`, `docs/Model_Card_Scania_APS.md`). Rebuilt as a notebook pair on 2026-09-01, which reproduces the deployed model exactly - 22 measurements compared, none moved - and adds the one measurement the script never ran: the textbook pipeline of median imputation, MinMax scaling and SMOTE costs 11,820 against 10,660, and the threshold grid it uses starts above the optimum of both pipelines
 - [x] **CV module - casting defect inspection.** ResNet-18 fine-tuned end to end, 0 defects missed and 7 good parts rejected on 715 test images, ROC AUC 0.9999. Its priority bands run the opposite way to the other modules, and the reason is measured (`notebooks/03_cv/01_casting_defects/casting_cv.py`, `docs/Model_Card_Casting_CV.md`). Rebuilt as a notebook trio on 2026-09-01, which found two things the script never checked. **The published train and test folders share 64 byte-identical images, all of them good parts**, 55 of which were fitted on: recall is untouched because no defect is duplicated, and the false-alarm rate on genuinely unseen good parts is 3.03 percent against the 2.67 percent reported. **And the experiment does not reproduce itself** - four runs from the same seed on the same machine put the operating point anywhere from 0.0436 to 0.2203, the missed defects from 0 to 2 and the good parts rejected from 2 to 11, while the frozen-backbone ablation, which trains no convolution, comes back bit-identical every time. The instability is cuDNN's convolution backward pass reaching a decision threshold that is chosen on a cost curve with no well-determined minimum
+- [x] **CV module - NEU steel surface defect types.** ResNet-18 fine-tuned end to end over six defect classes, built from scratch as a notebook trio on 2026-09-01 with no training script behind it (`notebooks/03_cv/02_neu_steel_defects/`, `docs/Model_Card_NEU_Surface.md`). **1.0000 accuracy on 360 held-out images, and the notebook is what qualifies it**: a 1-nearest-neighbour classifier over un-finetuned ImageNet features already reaches 0.9750 on the same folder, so the benchmark is close to saturated and a perfect score is evidence about the dataset before it is evidence about the model. The dataset ships no test folder, so the shipped `validation/` folder is held out and scored once, and every number says which folder produced it. Two further findings: **6.8 per cent of the images carry a second defect class the folder label discards**, which is a ceiling on any single-label model, and **the confidence band could not be calibrated at all** because the model classified all 216 selection images correctly, so its band edge is declared as an Arkon assumption rather than measured. Unlike casting the split is clean - no image crosses it on either byte equality or feature similarity, with the control measured
 - [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
-- [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of six Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
+- [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of seven Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
 - [ ] NLP module - NHTSA complaint classification and field-quality trend detection
 - [ ] Incident lifecycle - acknowledge and close callbacks, escalation timer, queryable store
 - [ ] Streamlit app and Tableau views - the operational cockpit and the executive KPI view
@@ -303,7 +336,6 @@ worth more than the twelve nodes cost.
 
 | Module | Dataset | Task | Prerequisite |
 |--------|---------|------|-------------|
-| CV Multi-class | NEU Surface Defect | 6 defect type classification | Current CV skills |
 | CV Anomaly Detection | MVTec AD | Unsupervised anomaly detection | Autoencoders |
 | CV Object Detection | GC10-DET | Bounding box defect localization | YOLO / detection models |
 | BI Dashboard | All modules | Executive KPI analytics | Tableau |
@@ -374,16 +406,19 @@ Then open **http://localhost:5000** in your browser.
 
 **Experiment structure:**
 
-| Experiment | Module | Runs |
+| Experiment | Module | Runs in `mlflow.db` |
 |---|---|---|
-| `arkon-timeseries-cmapss` | Engine Testing | baseline_linear_regression, xgboost_v1 |
-| `arkon-ml-scania` | Truck Fleet | baseline_logistic_regression, xgboost_v1 |
-| `arkon-cv-casting` | Foundry | resnet18_v1 |
-| `arkon-cv-neu` | Rolling Mill | resnet18_v1 |
-| `arkon-cv-mvtec` | QC Anomaly | patchcore_lite_v1 |
-| `arkon-cv-gc10` | Stamping | resnet18_weighted_v1 |
+| `arkon-timeseries-cmapss` | Engine Testing | baseline_linear_regression, xgboost_full_fleet_notebook x3, xgboost_v1 |
+| `arkon-ml-scania` | Truck Fleet | scania_aps_notebook x2 |
+| `arkon-cv-casting` | Foundry | casting_cv_notebook x3 |
+| `arkon-cv-neu` | Rolling Mill | neu_resnet18_v1 x6 |
+| `arkon-cv-mvtec` | QC Anomaly | not created; the module is not built |
+| `arkon-cv-gc10` | Stamping | not created; the module is not built |
 
-Each run logs: hyperparameters, metrics per epoch, training time, and the saved model artifact.
+Each run logs: hyperparameters, metrics per epoch, training time, and the metrics file.
+The table above is read from `mlflow.db` rather than maintained by hand: an earlier
+version of it named runs that no experiment contained and two experiments that had
+never been created.
 
 ---
 

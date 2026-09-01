@@ -26,7 +26,7 @@ The project demonstrates the following capabilities in one coherent system:
 |---|---|---|
 | Time series machine learning | NASA CMAPSS | Remaining useful life and maintenance priority |
 | Tabular machine learning | Scania APS | Probability of a component-related service issue |
-| Computer vision | Casting Defect or NEU Surface Defect | Inspection result and defect category |
+| Computer vision | Casting Defect and NEU Surface Defect | Inspection result (casting) and defect category (NEU) |
 | NLP and LLM | NHTSA Consumer Complaints | Field-quality component trend and complaint triage |
 | Automation | n8n | Incident routing, alerting, approval, and audit trail |
 | Decision communication | Streamlit and Tableau | Operational cockpit and executive quality view |
@@ -41,7 +41,7 @@ The initial MVP uses one working model from each core capability:
 - NHTSA Consumer Complaints 2020-2024 as the NLP field-quality module.
 - One n8n workflow that receives a validated Arkon risk event and creates an incident with an alert.
 
-MVTec, NEU, GC10, advanced detection models, RAG, and additional n8n workflows are roadmap items. They are not prerequisites for the MVP.
+MVTec, GC10, advanced detection models and additional n8n workflows are roadmap items. They are not prerequisites for the MVP. NEU was one of them and landed on 2026-09-01 as the second computer-vision module (`docs/Model_Card_NEU_Surface.md`); RAG landed earlier as the grounded assistant.
 
 ## 5. Data boundaries and integrity
 
@@ -221,10 +221,12 @@ The figures below were read from `docs/Model_Card_CMAPSS_RUL.md` and counted in 
 
 **One Phase 3 item was brought forward and is also done.** The grounded assistant of section 9 was built on Langflow on 2026-08-30, against this documentation and the deployed workflow, and it closes the last open MVP criterion of section 10. Its precondition was the one Phase 3 states - documentation, model cards and incident records first - and that precondition was met before it was built. Two further n8n endpoints came with it: `GET /webhook/arkon-incident-status` and `POST /webhook/arkon-escalation`. See `langflow/README.md` and `n8n/README.md`.
 
-**Phase 2 is two thirds done, 2026-08-30.** Two more modules publish the section 6 event contract and both were pushed through the deployed Steering Cell rather than only written.
+**Phase 2 is three of four modules done, 2026-09-01.** Three more modules publish the section 6 event contract; the first two were pushed through the deployed Steering Cell rather than only written.
 
 - **Scania APS classification** (`docs/Model_Card_Scania_APS.md`). Total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure: 416 false positives, 13 missed, recall 0.965, ROC AUC 0.995, which lands between first and second of the 2016 challenge's published top three on the same test set. It closes a gap the CMAPSS card names and does not fix, its limitation 5: RMSE punishes both error directions equally while the business does not. Here the asymmetry is the metric, and the decision threshold is worth a factor of 3.8 while every structural choice sits inside the noise of the selection: three fold seeds produced three different winners. One event created `ARK-INC-00017`.
 - **Casting Defect visual inspection** (`docs/Model_Card_Casting_CV.md`). 715 test images, 0 defects missed and 7 good parts rejected, ROC AUC 0.9999. Two qualifications from the 2026-09-01 notebook rebuild, both in the model card. The published test folder shares 64 byte-identical images with the training folder, all of them good parts, so the recall claim is clean and the false-alarm claim is measured on a partly seen set: 3.03 percent on genuinely unseen good parts against 2.67 (limitation 8). And the operating point is not reproducible - four runs from one seed span 0.0436 to 0.2203, 0 to 2 missed defects and 2 to 11 rejected good parts - so the 0 above is one draw rather than a guarantee (limitation 6). Its priority bands run the opposite way to the other two modules: banding by confidence produced 447 P1 events out of one batch, so a confident defect is P3 routine scrap and the uncertain band, where the model is a coin flip and the line actually stops, is P2. One event created `ARK-INC-00018`.
+- **NEU steel surface defect classification** (`docs/Model_Card_NEU_Surface.md`). Six defect types on hot-rolled strip, 1.0000 accuracy and macro F1 on 360 held-out images. **The number is qualified in the card and should not be quoted without its qualification**: a 1-nearest-neighbour classifier over un-finetuned ImageNet features reaches 0.9750 on the same folder, so this benchmark is close to saturated. The dataset ships no test folder, so the folder it calls `validation/` is held out and scored once, and every reported number names the folder it came from. Two structural findings: 6.8 per cent of images carry a second defect class the folder label discards, a ceiling on any single-label model; and the confidence band could not be calibrated because the model classified all 216 selection images correctly, so its band edge is declared as an Arkon assumption under section 7.1 rather than measured. It is the second module in the `visual_inspection` domain, which needed no contract change, and the first whose `risk_type` varies between its own events. 360 events published, 3 P2 and 357 P3.
+
 
 **What the second and third modules cost the platform: one API projection.** The intake workflow validated both events and created both incidents with no change at all, because it validates a contract rather than a domain. The status API needed a real fix, and it was not the cosmetic one it had been recorded as: it projected `evidence.prediction` as `predicted_rul` for every module, so a Scania failure probability of 0.0373 was served as a remaining useful life of 0.0373 cycles and the assistant reported it as one. Nothing failed anywhere in the chain. The projection now returns the evidence object as published. Detail in `n8n/README.md` and `langflow/README.md`.
 
