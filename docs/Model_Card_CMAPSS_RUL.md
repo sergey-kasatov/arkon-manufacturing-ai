@@ -4,11 +4,25 @@ Module 01 of the Arkon platform. Predicts the remaining useful life (RUL) of a
 turbofan engine in cycles, and feeds the Quality Steering Cell through the risk
 event adapter.
 
-- **Version:** full-fleet v1, trained 2026-08-30
+- **Version:** full-fleet v1, trained 2026-08-30 by the script. Re-derived from
+  the raw files by the notebooks twice, and the two runs prove different things:
+  - **2026-08-31, the notebook against the script.** All nine headline
+    measurements identical. Regenerating the metrics file moved 21 of its 255
+    stored values, every one inside `linear_regression` and every one in the last
+    digit, largest relative difference 1.1e-15; no XGBoost value and no ablation
+    value moved. That is agreement between two independent implementations.
+  - **2026-09-01, the notebook against itself.** Nothing moved at all: 255 of 255
+    values identical, the prediction table identical by hash, and both result
+    figures identical byte for byte. That is determinism, which is the weaker
+    claim and the one a reader can check without the script.
 - **Artifacts:** `models/checkpoints/cmapss/cmapss_xgboost_full_fleet.pkl`,
   preprocessing in `data/01_cmapss/processed/preprocessing_full_fleet.pkl`,
   metrics in `models/checkpoints/cmapss/cmapss_full_fleet_meta.json`
-- **Training code:** `notebooks/01_timeseries/cmapss_full_fleet.py`
+- **Training code:** `notebooks/01_timeseries/cmapss_full_fleet.py`, and the
+  notebook trio `01_cmapss_eda.ipynb`, `02_cmapss_preprocessing.ipynb` and
+  `03_cmapss_modeling.ipynb` in the same folder, which build the same experiment
+  without importing anything from the script and compare their result against
+  this card's numbers on every run
 - **Supersedes:** the FD001-only baseline of 2026-08-11, RMSE 17.11 against this
   model's 11.01, whose metrics are kept at
   `models/checkpoints/cmapss/cmapss_xgb_v1_meta.json`. The notebooks that produced
@@ -183,3 +197,21 @@ Reads the raw files from `data/01_cmapss/raw/CMaps`, writes processed data,
 models, and the metrics JSON. Deterministic: fixed random seed, no sampling.
 The script also re-runs the ablation in section 5 on every execution, so the
 claim above stays checkable rather than becoming folklore.
+
+The notebook trio is the second route to the same numbers, and the one to read
+rather than run:
+
+```bash
+jupyter nbconvert --to notebook --execute --inplace notebooks/01_timeseries/01_cmapss_eda.ipynb
+jupyter nbconvert --to notebook --execute --inplace notebooks/01_timeseries/02_cmapss_preprocessing.ipynb
+jupyter nbconvert --to notebook --execute --inplace notebooks/01_timeseries/03_cmapss_modeling.ipynb
+```
+
+They define the columns, the loading, the operating regimes and the temporal
+features themselves rather than importing them from `cmapss_full_fleet.py`, so
+their agreement with this card is a reproduction and not a tautology. Two cells
+carry that agreement instead of asserting it: notebook 02 section 10 compares the
+kept sensors, the regimes and the feature columns against
+`preprocessing_full_fleet.pkl`, and notebook 03 section 11 reads the metrics file
+before anything is trained and prints a line-by-line comparison at the end - nine
+measurements, largest absolute difference 0.000.
