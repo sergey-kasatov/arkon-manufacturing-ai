@@ -103,6 +103,31 @@ assumption at all, so 10:1, 25:1 and 50:1 select the same threshold; only below
 about 3:1 would the default 0.5 be cheaper. The assumption is stated, and then
 shown not to matter.
 
+### The same module, checked rather than trusted
+
+![64 test images are byte-identical copies of training images](assets/cv/casting_eda_duplicates.png)
+
+Rebuilding this module as notebooks turned up something the training script never
+checked: **the published train and test folders are not disjoint.** 64 of the 715
+test images are byte-identical copies of images in the train folder, 55 of them on
+the training side of the split and therefore fitted on.
+
+The leak is one-sided, which is what makes it worth stating precisely rather than
+either hiding or overstating. Every one of the 64 is a good part and not one is a
+defect, so the recall claim above is measured on defects the model has never seen
+and is untouched. The false-alarm count is not: scoring the same predictions over
+only the 198 good parts that appear nowhere in the train folder gives 6 rejected
+rather than 7, 3.03 per cent against 2.67.
+
+**And the operating point is not reproducible.** Three runs of the identical
+experiment from the identical seed put the threshold between 0.0436 and 0.2203 and
+the missed defects between 0 and 2, while the frozen-backbone ablation came back
+bit-identical every time. That pair locates the movement in the convolution
+backward pass rather than in the code, and it reaches the decision because the
+scores pile up at both ends with only 25 of 715 anywhere between, leaving the cost
+curve no well-determined minimum to find. `docs/Model_Card_Casting_CV.md` carries
+the four-run table.
+
 **What these figures are not.** All three are held-out test splits of public
 datasets, scored offline. Nothing here ran on a real production line, and the
 operational context around the numbers is fabricated. Each module's limitations
