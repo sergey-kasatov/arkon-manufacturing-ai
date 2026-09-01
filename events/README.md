@@ -46,8 +46,8 @@ P1 would spend the fifteen-minute P1 window on precautionary checks.
 
 **Records below the threshold produce no event at all.** CMAPSS publishes one
 event per engine, P4 included, because 707 engines is a fleet an operator
-watches. The Scania test set is 16,000 service records of which 738 are flagged;
-publishing 15,262 P4 events would bury the store to say nothing. The denominator
+watches. The Scania test set is 16,000 service records of which 778 are flagged;
+publishing 15,222 P4 events would bury the store to say nothing. The denominator
 is printed on every run and recorded in the model card.
 
 ## Casting defect priority mapping (charter 7.1)

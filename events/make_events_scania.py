@@ -1,6 +1,7 @@
 """Convert Scania APS predictions into Arkon risk events.
 
-Reads the prediction table produced by notebooks/02_ml/scania_aps.py, maps the
+Reads the prediction table produced by notebooks/02_ml/scania_aps.py, or by
+notebooks/02_ml/03_scania_modeling.ipynb, which reproduces it exactly. Maps the
 predicted failure probability to a priority, attaches simulated operational
 context (fixed seed, labelled), validates every event, and writes JSONL for the
 n8n Quality Steering Cell. The same shape as events/make_events_cmapss.py, and
@@ -13,7 +14,7 @@ details.
 **Only flagged records produce an event.** CMAPSS publishes one event per engine
 because the fleet is 707 engines and the operator watches all of them, so a P4
 "nothing to do" event is a dashboard row worth having. Here the test set is
-16,000 service records and 738 are flagged. Publishing 15,262 P4 events would
+16,000 service records and 778 are flagged. Publishing 15,222 P4 events would
 bury the incident store to say nothing. The denominator is not lost: it is
 printed on every run and recorded in the model card.
 
