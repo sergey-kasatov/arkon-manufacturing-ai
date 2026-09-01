@@ -191,6 +191,54 @@
       "recall": 0.9467
     }
   },
+  "textbook_pipeline": {
+    "description": "median imputation, MinMax scaling, SMOTE to a 50-50 split, the same hyperparameters, threshold from the 0.10 to 0.89 grid",
+    "smote_train_rows": 118000,
+    "results": {
+      "grid_tuned_on_the_test_set": {
+        "cost": 19830,
+        "false_positives": 133,
+        "false_negatives": 37,
+        "true_positives": 338,
+        "true_negatives": 15492,
+        "threshold": 0.1,
+        "roc_auc": 0.9953,
+        "pr_auc": 0.9227,
+        "precision": 0.7176,
+        "recall": 0.9013
+      },
+      "grid_tuned_out_of_fold": {
+        "cost": 19830,
+        "false_positives": 133,
+        "false_negatives": 37,
+        "true_positives": 338,
+        "true_negatives": 15492,
+        "threshold": 0.1,
+        "roc_auc": 0.9953,
+        "pr_auc": 0.9227,
+        "precision": 0.7176,
+        "recall": 0.9013
+      },
+      "exact_tuned_out_of_fold": {
+        "cost": 11820,
+        "false_positives": 332,
+        "false_negatives": 17,
+        "true_positives": 358,
+        "true_negatives": 15293,
+        "threshold": 0.011177,
+        "roc_auc": 0.9953,
+        "pr_auc": 0.9227,
+        "precision": 0.5188,
+        "recall": 0.9547
+      }
+    }
+  },
+  "priority_bands": {
+    "P1": 240,
+    "P2": 69,
+    "P3": 469,
+    "P4": 15222
+  },
   "xgb_params": {
     "n_estimators": 600,
     "max_depth": 6,
@@ -202,6 +250,7 @@
     "tree_method": "hist",
     "eval_metric": "aucpr"
   },
+  "produced_by": "notebooks/02_ml/03_scania_modeling.ipynb",
   "published_reference": {
     "note": "Top three of the IDA 2016 challenge, from the dataset description",
     "best_total_cost": 9920,

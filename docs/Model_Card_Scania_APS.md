@@ -4,11 +4,15 @@ Module 02 of the Arkon platform. Decides whether a heavy truck's service issue
 belongs to the air pressure system, and feeds the Quality Steering Cell through
 the risk event adapter.
 
-- **Version:** v1, trained 2026-08-30
+- **Version:** v1, trained 2026-08-30. Re-derived from the raw files by the
+  notebooks on 2026-09-01 and unchanged: 22 measurements compared, none moved.
 - **Artifacts:** `models/checkpoints/scania/scania_xgboost_v1.pkl`,
   preprocessing in `data/02_scania/processed/preprocessing_scania.pkl`,
   metrics in `models/checkpoints/scania/scania_aps_meta.json`
-- **Training code:** `notebooks/02_ml/scania_aps.py`
+- **Training code:** `notebooks/02_ml/scania_aps.py`, and the notebook pair
+  `notebooks/02_ml/02_scania_preprocessing.ipynb` and `03_scania_modeling.ipynb`,
+  which build the same experiment without importing anything from the script and
+  compare their result against this card's numbers on every run
 - **Event adapter:** `events/make_events_scania.py`
 
 ---
@@ -155,6 +159,44 @@ set, imputed with class weighting at 9,880, is not the one that won on out-of-fo
 data. Picking it would mean choosing on the test set, which is how a number stops
 meaning anything. The gap is recorded rather than harvested.
 
+### What the textbook pipeline costs
+
+The four candidates above vary two things. They do not test the recipe most
+write-ups apply to an imbalanced tabular problem, because the shipped pipeline
+simply does not use it: drop the columns that are mostly missing, impute the
+rest, scale to [0, 1], resample to a 50-50 split with SMOTE, and read the
+threshold off a grid. That recipe is now measured rather than skipped, with the
+same hyperparameters and on the same test set, so the only thing that varies is
+the pipeline. **It costs 11,820 against the shipped 10,660**, and the table below
+is where that comes from. It is measured in
+`notebooks/02_ml/02_scania_preprocessing.ipynb` section 9 and
+`03_scania_modeling.ipynb` section 10.
+
+| Configuration | Threshold | Cost | False positives | False negatives |
+|---|---|---|---|---|
+| **Shipped** (nothing imputed, scaled or resampled) | 0.0024 | **10,660** | 416 | 13 |
+| Textbook pipeline, threshold searched exactly out of fold | 0.0112 | 11,820 | 332 | 17 |
+| Textbook pipeline, threshold from the grid, out of fold | 0.1000 | 19,830 | 133 | 37 |
+| Textbook pipeline, threshold from the grid, tuned on the test set | 0.1000 | 19,830 | 133 | 37 |
+
+**The whole recipe costs 1,160 and buys nothing.** An imputer, a scaler and
+58,000 synthetic training rows produce a model that is worse than leaving the
+data alone, on a metric it was tuned for. The out-of-fold estimate refits the
+imputer, the scaler and SMOTE inside each of five folds, so no synthetic row is
+ever built from a row it is later scored on.
+
+**The grid floor is above the optimum for both pipelines, and that was not
+obvious.** Training on a 50 per cent failure rate does move the operating point
+up, from 0.0024 to 0.0112, but that is a factor of 4.7 where reaching 0.10 would
+take a factor of 42. So the grid's best cut is pinned at its own floor and costs
+8,010 more than an exact search over the same probabilities. A grid that starts
+at 0.10 cannot express this problem's answer under either pipeline.
+
+**Tuning that grid on the test set gives the same answer as tuning it honestly,
+and that is luck rather than a defence.** Both are pinned at the floor, so the
+dishonest protocol happened to cost nothing here. It is reported because the
+earlier version of these notebooks used it, not because it is safe.
+
 ### Against the published challenge results
 
 The dataset description lists the top three of the IDA 2016 challenge on this
@@ -257,3 +299,18 @@ selection and the whole ablation of section 5 on every execution, so the claims
 above stay checkable rather than becoming folklore. The selection is the slow
 part, sixty model fits, and it is deliberately not cached: a cached selection is
 how a stale winner survives a change to the data.
+
+The notebook pair is the second route to the same artifacts, and the one to read
+rather than run:
+
+```bash
+jupyter nbconvert --to notebook --execute --inplace notebooks/02_ml/02_scania_preprocessing.ipynb
+jupyter nbconvert --to notebook --execute --inplace notebooks/02_ml/03_scania_modeling.ipynb
+```
+
+They build the experiment from the raw files without importing anything from
+`scania_aps.py`, so their agreement with this card is a reproduction and not a
+tautology. Notebook 03 reads the metrics file before it trains anything and
+prints a line-by-line comparison against it at the end. On 2026-09-01 that
+comparison was 22 values, none moved, largest absolute difference 0. Notebook 03
+takes about half an hour, and the selection is 25 minutes of it.
