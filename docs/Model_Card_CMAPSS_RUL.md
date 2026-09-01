@@ -130,15 +130,32 @@ project. That is the whole argument for treating the module as a time series: a
 model that sees one snapshot at a time can only infer elapsed time from the raw
 cycle counter, and a degradation trajectory is not visible in a single row.
 
-**Everything else, measured on the FD001 test set at identical hyperparameters:**
+**Everything else. These rows are not all measured on the same thing, so the basis
+is written per row rather than promised once in a caption:**
 
-| Change | RMSE gain |
-|---|---|
-| Adding temporal features | **5.32** |
-| Adding the cycle counter | 1.67 |
-| Training on all four subsets instead of FD001 | 0.77 |
-| Larger model (600 trees / depth 8 instead of 300 / 6) | ~0.1 |
-| Adding sensors s6, s10, s16 | ~0.02 |
+| Change | RMSE gain | Measured on |
+|---|---|---|
+| Adding temporal features | **5.32** | benchmark task, 707 engines, whole fleet |
+| Adding the cycle counter | 1.67 | benchmark task, 707 engines, whole fleet |
+| Training on all four subsets instead of FD001 | 0.92 | benchmark task, 100 FD001 engines |
+| the same change, every test row | 0.77 | 13,096 FD001 rows |
+| Larger model (600 trees / depth 8 instead of 300 / 6) | ~0.1 | not measured by this pipeline |
+| Adding sensors s6, s10, s16 | ~0.02 | not measured by this pipeline |
+
+**The bases differ because one of them has to.** The feature ablation retrains on
+the same fleet each time, so it can be scored on all 707 test engines. The data
+ablation cannot: its FD001-only arm has never seen FD002, FD003 or FD004, and the
+only test set both arms can fairly be shown is FD001. So the first two rows and
+the third are separated by a genuine constraint, not by carelessness, and the
+ratio between them is not a like-for-like ratio however it is written.
+
+The last two rows are older figures from the FD001-era experiments. Nothing in
+`cmapss_full_fleet_meta.json` measures them: the file records the shipped
+hyperparameters and the reduced ones the ablation uses, but never scores one
+against the other, and s6, s10 and s16 are kept by this pipeline rather than
+added to it. They are marked with a tilde and kept because they are the right
+order of magnitude for what a reader would otherwise assume, not because this
+model card can produce them.
 
 Two things in that table are worth reading carefully.
 
@@ -147,7 +164,9 @@ First, the earlier pipeline dropped `cycle` along with the engine identifier
 
 Second, the value of the extra data **depends on the features**. With snapshot
 features only, adding FD002, FD003 and FD004 was worth 0.17 RMSE on FD001. With
-temporal features it is worth 0.77, four and a half times more. More operating
+temporal features it is worth 0.77, four and a half times more. Both are across
+every FD001 test row, which is the fourth row of the table above and not the
+third, so the two are comparable with each other. More operating
 regimes and fault modes help a model that learns trajectories, and barely help a
 model that learns levels. The intuitive claim that "more data made it better" is
 true only in the second setup, which is why both numbers are recorded here.
