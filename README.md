@@ -70,6 +70,27 @@ The right panel is what one decision was worth. The same model and the same
 probabilities, read at the default threshold 0.5, cost 40,650 against 10,660 - a
 factor of 3.8, and invisible to accuracy, which is above 99 percent either way.
 
+![Cost against threshold for the shipped and the textbook pipeline](assets/ml/scania_model_textbook_pipeline.png)
+
+The standard recipe for an imbalanced tabular problem is to impute the missing
+values, scale them, resample the classes with SMOTE and read the threshold off a
+grid. Measured against the shipped pipeline on the same test set with the same
+hyperparameters, it costs **11,820 against 10,660** - an imputer, a scaler and
+58,000 synthetic training rows for a result worse than leaving the data alone.
+
+The grey band is the second finding, and it is not the obvious one. It marks what
+a threshold grid running from 0.10 can reach, and **both curves bottom out to the
+left of it.** Resampling does move the operating point up, from 0.0024 to 0.0112,
+but that is a factor of 4.7 where reaching the grid's floor would take 42. So the
+grid is pinned at its own lowest step and costs 19,830. On this dataset the
+threshold is the whole model, and a grid that starts at 0.10 cannot express it
+under either pipeline.
+
+This figure is drawn by `notebooks/02_ml/03_scania_modeling.ipynb`, which
+reproduces the deployed model and then measures the alternative beside it. The one
+above it is drawn by `tools/make_result_plots.py` from the metrics file alone, so
+it rebuilds without the dataset.
+
 ### Visual inspection: an operating point, not an accuracy
 
 ![Casting confusion matrix, and cost by assumed ratio](assets/cv/casting_operating_point.png)
