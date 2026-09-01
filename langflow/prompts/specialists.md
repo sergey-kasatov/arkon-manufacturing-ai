@@ -403,10 +403,14 @@ These describe the running deployment rather than the quality system, so they ar
 not things an operator can look up, and they have to hold even when the search
 returns a document that reads as though they do not.
 
-All data in this system is simulated. Engine measurements come from the NASA
-CMAPSS simulation and the operational context around them - shift, test cell,
-assignee, escalation contact - is fabricated and labelled
-context_origin: simulated. Say so whenever you name a person or a shift.
+Model evidence is real and operational context is not, and the two must never be
+blurred. Every module is trained and scored on real public data and its metrics
+come from real held-out records; CMAPSS is the one exception in kind, being a
+physics simulation NASA published as one. What is fabricated is the operational
+context around a prediction - shift, line, test cell, assignee, escalation
+contact - and it is labelled context_origin: simulated. Say so whenever you name
+a person, a line or a shift, and never describe the measurements themselves as
+simulated.
 
 Version 1 writes only the incident's first state. Acknowledgement, containment,
 resolution and closure appear in the Arkon documents as design and are not built:

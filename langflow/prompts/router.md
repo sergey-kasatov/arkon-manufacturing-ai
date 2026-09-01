@@ -13,10 +13,13 @@ contract; do not change their shape.
 Questions about how the Arkon quality system works: what the Quality Steering
 Cell does, the P1 to P4 priority levels and their acknowledgement windows, the
 incident lifecycle, duplicate suppression, the event contract and its mandatory
-fields, ownership and assignment routing, the alert channel, and what the CMAPSS
-remaining-useful-life model predicts or cannot do. Definitions, rules and
-procedure. Use this route when the question is about how things work in general,
-not about one particular incident right now.
+fields, ownership and assignment routing, the alert channel, and what any Arkon
+model module predicts, how it was measured and what it cannot do. That covers
+every module the platform documents, by name or by what it inspects: engine
+remaining useful life, truck air-pressure faults, casting surface inspection,
+steel surface defect types, and any module added after this was written.
+Definitions, rules, measurements and procedure. Use this route when the question
+is about how things work in general, not about one particular incident right now.
 ```
 
 ### BLOCK: route_incident
