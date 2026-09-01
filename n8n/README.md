@@ -373,7 +373,7 @@ and same response shape as the status API, on purpose - two failure switches wit
 two spellings would be a third thing to remember.
 
 It was added on 2026-08-31, and the reason is worth keeping. The status API had
-this affordance from the start, so its 503 branch was exercised in the Sprint 2
+this affordance from the start, so its 503 branch was exercised in the routing
 validation. **The escalation endpoint did not, so its 503 branch could only be
 reached by moving the incident store aside on the NAS - and therefore nobody
 reached it.** The agent prompt for that branch had been dictating the status

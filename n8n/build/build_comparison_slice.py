@@ -1,6 +1,6 @@
 """Build the n8n comparison slice: trigger, semantic routing, one retrieval, one HTTP call.
 
-Deliberately small. It exists to make the Sprint 4 platform comparison first-hand
+Deliberately small. It exists to make the platform comparison first-hand
 rather than quoted: the same three capabilities the Langflow canvas uses, built
 once on n8n, so the matrix can say what each platform costs from experience.
 

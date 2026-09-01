@@ -2,7 +2,7 @@
 
 A flow containing a Human Input node cannot be executed through /api/v1/run at
 all - not even on branches that never reach the gate - so every scripted test of
-the Sprint 3 canvas goes through here.
+the approval-gate canvas goes through here.
 
 Usage (on the NAS, beside lf_api.py):
     python3 lf_v2.py run <flow-name-or-id> <message> [session_id] [decision]

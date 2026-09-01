@@ -1,4 +1,4 @@
-"""Refine the canvas into its Sprint 4 shape: the briefing gets its own branch.
+"""Refine the canvas into its briefing-branch shape: the briefing gets its own branch.
 
 DEFECT-3 is the only one of the three that still reproduces, and its fix is
 structural. The shift briefing sub-flow was reached as a tool of the incident
@@ -8,12 +8,12 @@ its own Chat Output through a Run Flow node in normal mode, with no agent in
 between - the same shape the out-of-scope branch already uses.
 
 DEFECT-1 and DEFECT-2 no longer reproduce; both were closed by structural changes
-made in Sprints 2 and 3 for other reasons. Sprint 4 validates them rather than
+made by the routing and approval-gate builds for other reasons. This one validates them rather than
 re-fixing them.
 
 Run after build_retrieval.py and before layout_flow.py:
 
-    python langflow/build/build_sprint4_flow.py <briefing-flow-id>
+    python langflow/build/build_briefing_branch_flow.py <briefing-flow-id>
     python langflow/build/layout_flow.py
 """
 
@@ -56,8 +56,8 @@ nodes = {node["id"]: node for node in flow["data"]["nodes"]}
 router = nodes["SmartRouter-rt001"]
 incident = nodes["Agent-inc01"]
 
-# Re-runnable: drop anything a previous Sprint 4 run added, so a prompt edit does
-# not need the whole sprint chain replayed.
+# Re-runnable: drop anything a previous run of this script added, so a prompt edit does
+# not need the whole build chain replayed.
 for node_id in ("RunFlow-brf02", "ChatOutput-brf02"):
     nodes.pop(node_id, None)
 # The tool-mode Run Flow is what the fix removes.

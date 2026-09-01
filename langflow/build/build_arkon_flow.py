@@ -46,7 +46,7 @@ flow.pop("id", None)
 # Field changes that carry a decision, applied to the seeded Agent node
 AGENT_VALUES = {
     "system_prompt": system_prompt,
-    # No tools exist in Sprint 1, so the two bundled ones are switched off:
+    # No tools exist on the base canvas, so the two bundled ones are switched off:
     # every node and every capability has to be justified by the business problem.
     "add_calculator_tool": False,
     "add_current_date_tool": False,

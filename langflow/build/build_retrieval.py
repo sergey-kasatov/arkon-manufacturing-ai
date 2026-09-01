@@ -1,6 +1,6 @@
 """Give the procedure specialist the document store and take the rules out of its prompt.
 
-Completes the Sprint 2 retrieval requirement on the existing canvas. Two nodes are
+Completes the retrieval side on the existing canvas. Two nodes are
 added - the custom OpenRouter embeddings and the Qdrant store in tool mode - and
 one prompt is replaced. Nothing else on the canvas changes.
 
@@ -10,7 +10,7 @@ siblings tools, and a tool lets the model search twice with different words when
 the first query misses. A fixed chain retrieves once, on whatever the operator
 happened to type.
 
-Run after the sprint scripts and before layout_flow.py:
+Run after the build scripts and before layout_flow.py:
 
     python langflow/build/build_ingest_flow.py --deploy
     python langflow/build/build_retrieval.py
@@ -55,7 +55,7 @@ if "procedure_v2" not in blocks:
 flow = json.loads(FLOW.read_text(encoding="utf-8"))
 nodes = {node["id"]: node for node in flow["data"]["nodes"]}
 procedure = nodes["Agent-EXpSZ"]
-# Re-runnable: a prompt change should not need the whole sprint chain replayed,
+# Re-runnable: a prompt change should not need the whole build chain replayed,
 # and it must not add a second copy of the store.
 already = "OpenRouterEmbeddings-emb01" in nodes
 if already:

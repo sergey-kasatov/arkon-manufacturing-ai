@@ -1,6 +1,6 @@
-"""Sprint 5: give the router somewhere to put a message it cannot place.
+"""Give the router somewhere to put a message it cannot place.
 
-The named gap after Sprint 4 was that an underspecified question is answered as
+The named gap after the briefing branch was that an underspecified question is answered as
 an off-topic one. "And what about that one?" with no antecedent reached the
 out-of-scope branch, so the operator was told the assistant does not handle that
 subject when the truth was that it could not tell which subject was meant.
@@ -21,9 +21,9 @@ The cost of either option is the same and it is not the building. A sixth
 destination changes the classification surface for all five existing routes, so
 the seven-exchange protocol runs again after this.
 
-Run after build_sprint4_flow.py and before layout_flow.py:
+Run after build_briefing_branch_flow.py and before layout_flow.py:
 
-    python langflow/build/build_sprint5_flow.py
+    python langflow/build/build_unclear_route_flow.py
     python langflow/build/layout_flow.py
 """
 

@@ -1,7 +1,7 @@
-"""Refine the Arkon Quality Assistant canvas into its Sprint 2 shape.
+"""Refine the Arkon Quality Assistant canvas into its routing shape.
 
-Takes the Sprint 1 flow and adds intent routing, three specialists and the live
-incident lookup. The Sprint 1 Agent and Chat Output are kept and become the
+Takes the base flow and adds intent routing, three specialists and the live
+incident lookup. The base Agent and Chat Output are kept and become the
 procedure branch, so the canvas is the refined original rather than a rebuild.
 
 Prompts and route descriptions are read from `langflow/prompts/` by block name.
@@ -102,7 +102,7 @@ api_request = lfbuild.node_from_spec(
     display_name="Incident Status API",
 )
 
-# The Sprint 1 agent becomes the procedure specialist, in place
+# The base agent becomes the procedure specialist, in place
 procedure = lfbuild.clone_node(
     agent_seed, "Agent-EXpSZ", (-850, -160),
     values={"system_prompt": blocks["procedure"].strip()},
@@ -151,7 +151,7 @@ flow["data"]["edges"] = [
 
 flow["description"] = (
     "Conversational front end for the Arkon Quality "
-    "Steering Cell. Sprint 2: intent routing through a Smart Router, three specialists "
+    "Steering Cell: intent routing through a Smart Router, three specialists "
     "with non-overlapping prompts, and a live incident lookup against the n8n incident "
     "status API with designed failure behaviour."
 )

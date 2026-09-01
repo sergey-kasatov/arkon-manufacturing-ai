@@ -94,18 +94,18 @@ that wrong produces an edge that is present in the file but does not render or
 execute. `build/lfbuild.py` owns that encoding; everything else builds on it.
 
 The scripts run in order, each taking the previous one's output as its input,
-which is how "one canvas refined across sprints" stays reproducible rather than
+which is how "one canvas refined step by step" stays reproducible rather than
 being a claim:
 
 ```bash
 python langflow/build/fetch_specs.py           # component templates from the running instance
 python langflow/build/build_arkon_flow.py      # first canvas, seed via ARKON_SEED_FLOW
-python langflow/build/build_sprint2_flow.py    # adds routing and the live lookup
-python langflow/build/build_sprint3_flow.py <briefing-flow-id>
+python langflow/build/build_routing_flow.py    # adds routing and the live lookup
+python langflow/build/build_approval_gate_flow.py <briefing-flow-id>
 python langflow/build/build_ingest_flow.py --deploy   # the document store, uploads and ingests
 python langflow/build/build_retrieval.py       # the store as the procedure specialist's tool
-python langflow/build/build_sprint4_flow.py <briefing-flow-id>   # the briefing gets its own branch
-python langflow/build/build_sprint5_flow.py    # the sixth route, for a message it cannot place
+python langflow/build/build_briefing_branch_flow.py <briefing-flow-id>   # the briefing gets its own branch
+python langflow/build/build_unclear_route_flow.py    # the sixth route, for a message it cannot place
 python langflow/build/layout_flow.py           # positions, run last
 ```
 
@@ -114,7 +114,7 @@ the templates the running Langflow reports, and those templates are not in the
 repository. It fetches them over ssh through `lf_api.py` on the NAS, so no
 Langflow credential is ever needed on the workstation.
 
-`layout_flow.py` must run last: the sprint scripts place each node as they add
+`layout_flow.py` must run last: the build scripts place each node as they add
 it and do not know what the canvas ends up looking like. It also refuses to
 finish silently, printing any pair of nodes whose boxes overlap.
 
@@ -266,8 +266,8 @@ claim, and it now has one measurement behind it instead of none.
   anywhere. The fix is a fallback branch that tells the Quality Manager; it is
   not built because it cannot be tested without waiting out the window, and an
   untested branch on the path that pages a human is worse than a named gap.
-- **Fixed in Sprint 5, kept here because the road to it is the useful part.** An
-  underspecified question used to be answered as an off-topic one. The fix looked
+- **Fixed by the sixth route, kept here because the road to it is the useful
+  part.** An underspecified question used to be answered as an off-topic one. The fix looked
   like one field and was not. Read out of `llm_conditional_router.py` in the
   running container, after this gap had been described two different wrong ways:
 

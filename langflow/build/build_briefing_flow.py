@@ -27,7 +27,7 @@ STATUS_API = "http://n8n.arkon.internal:5678/webhook/arkon-incident-status"
 
 blocks = prompts.load()
 if "briefing" not in blocks:
-    raise SystemExit("briefing block missing from the Sprint 3 artifact")
+    raise SystemExit("briefing block missing from the approval-gate artifact")
 
 main = json.loads(MAIN.read_text(encoding="utf-8"))
 nodes = {node["id"]: node for node in main["data"]["nodes"]}

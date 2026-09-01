@@ -31,7 +31,7 @@ LAYOUT = {
     "ChatOutput-KxTA8":    (-150, -750),
     "ChatOutput-inc01":    (-150, -150),
     "ChatOutput-oos01":    (-150, 150),
-    # Sprint 5. The same shape as the out-of-scope output, a fixed Route Message
+    # The unclear route. The same shape as the out-of-scope output, a fixed Route Message
     # straight from the router with no agent and no model call, but it cannot sit
     # beside it: the output column is 300 apart and a Chat Output is taller than
     # that. It goes in the gap below the declined branch instead.
@@ -45,7 +45,7 @@ LAYOUT = {
     "OpenRouterEmbeddings-emb01":                        (-2100, -1300),
     "ext:qdrant:QdrantVectorStoreComponent@official-kb01": (-1650, -750),
 
-    # The shift briefing is its own branch since Sprint 4, not a tool: it goes
+    # The shift briefing is its own branch since the briefing-branch build, not a tool: it goes
     # router -> sub-flow -> output with no agent in the path, which is what stops
     # its fixed format being paraphrased.
     "RunFlow-brf02":       (-1050, 2250),

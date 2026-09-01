@@ -1,9 +1,9 @@
 """Write the repository prompt blocks into the existing canvas, and change nothing else.
 
-The build claims the documents and the canvas cannot drift, because the sprint
+The build claims the documents and the canvas cannot drift, because the build
 scripts read the fenced blocks out of the repository prompt files. That is true at
 build time and only then: editing a prompt afterwards meant re-running the whole
-sprint chain, and the retrieval script is not idempotent, so a re-run would add
+build chain, and the retrieval script is not idempotent, so a re-run would add
 the store nodes a second time.
 
 This script closes that gap. It reads every `### BLOCK: name` from `langflow/prompts/`

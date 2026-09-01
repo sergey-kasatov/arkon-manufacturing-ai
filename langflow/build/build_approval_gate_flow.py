@@ -1,8 +1,8 @@
-"""Refine the Arkon Quality Assistant canvas into its Sprint 3 shape.
+"""Refine the Arkon Quality Assistant canvas into its approval-gate shape.
 
 Adds the human approval gate in front of the escalation write, the escalation
 record API as the specialist's tool, a declined branch, and the shift briefing
-sub-flow invoked through Run Flow. Everything from Sprint 2 stays in place.
+sub-flow invoked through Run Flow. Everything the routing build added stays in place.
 """
 
 import json
@@ -56,7 +56,7 @@ gate = lfbuild.node_from_spec(
         "decisions": ["Approve", "Reject"],
         # One hour, not the three-day default: an escalation approval that can wait
         # three days is not an escalation. The fallback branch is off, see the
-        # named gap in sprint3_orchestration.md.
+        # named gap recorded when the gate was added.
         "timeout": {"value": 1, "unit": "Hours"},
         "enable_fallback": False,
     },
@@ -104,14 +104,14 @@ declined_out = lfbuild.clone_node(nodes["ChatOutput-esc01"], "ChatOutput-dec01",
 
 escalation["data"]["node"]["template"]["system_prompt"]["value"] = blocks["escalation_v2"].strip()
 # A broken tool should cost five model calls and a clear failure, not the default
-# fifteen and a graph recursion error. Found the hard way, see the Sprint 3 doc.
+# fifteen and a graph recursion error. Found the hard way, and recorded when the gate was added.
 escalation["data"]["node"]["template"]["max_iterations"]["value"] = 5
 escalation["position"] = {"x": -620, "y": 440}
 nodes["ChatOutput-esc01"]["position"] = {"x": -260, "y": 440}
 
 flow["data"]["nodes"] = list(nodes.values()) + [gate, escalation_api, briefing, declined, declined_out]
 
-# Sprint 2 wired the router straight into the escalation specialist. That edge is
+# The routing build wired the router straight into the escalation specialist. That edge is
 # replaced by the gate: router -> approval -> approve branch -> specialist.
 kept = [
     edge for edge in flow["data"]["edges"]
@@ -132,7 +132,7 @@ flow["data"]["edges"] = kept + [
 
 flow["description"] = (
     "Conversational front end for the Arkon Quality "
-    "Steering Cell. Sprint 3: intent routing, a live incident lookup, a human approval "
+    "Steering Cell: intent routing, a live incident lookup, a human approval "
     "gate in front of the escalation write path, and the shift briefing sub-flow invoked "
     "through Run Flow."
 )
