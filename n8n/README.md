@@ -25,6 +25,30 @@ the `FD<n>-Unit-` marker. Three filters were added at the same time -
 `record_id`, `source_module`, `business_domain` - because every module carries
 those by contract, while `unit` only means something for CMAPSS.
 
+**The fifth module went in on 2026-09-02, and the workflows were again not
+touched.** Five MVTec component anomaly events created `ARK-INC-00019` through
+`ARK-INC-00023`: three P2 above the sound-part ceiling took the alert branch and
+answered `incident_created_alert_sent`, two P3 above the threshold answered
+`incident_recorded`, and a re-post of the first came back `duplicate_suppressed`
+with the store unchanged at thirteen. The status API needed nothing this time,
+because the Scania fix already returns the `evidence` object as published: an
+MVTec incident keeps its own `category`, `ceiling` and `threshold_basis` instead
+of being read as a remaining useful life.
+
+**And the replay found a defect in the events rather than in the workflows.** The
+MVTec adapter built the part identity from the category and the image file name,
+and MVTec numbers its test images from `000` inside *every* defect-type folder,
+so `grid/test/bent/000.png` and `grid/test/broken/000.png` were both
+`MVTEC-GRID-000`. 309 events carried 82 distinct record ids. Nothing rejects
+that - the contract asks for a record id, not for a unique one - but intake
+dedups on `record_id` plus `priority` for 24 hours, so a full replay would have
+recorded 106 incidents and silently suppressed 203 flagged parts as duplicates of
+each other. The adapter now carries the defect-type folder as well and the 309
+events have 309 distinct ids. **The other four adapters were checked for the same
+class and are clean**, one record id per event in all of casting, CMAPSS, NEU and
+Scania. Worth keeping as a rule: a dedup key is a claim that two records describe
+the same thing, and it is only as good as the identity the adapter builds.
+
 ## Workflow ids, and the one that is not readable
 
 Every workflow file carries a fixed `id`, so `n8n import:workflow` updates the
@@ -98,10 +122,36 @@ workflow static data does not grow without bound.
 | `replay_events.py` | Posts an events JSONL to the webhook for demos |
 | `incident_status_probe.py` | Contract test for the status API |
 
-Events come from `events/out/cmapss_events_full_fleet.jsonl` (707 events: 49 P1,
-87 P2, 90 P3, 481 P4). The earlier `cmapss_events_FD001.jsonl` is kept because it
-is what the first deployment was verified against; it comes from the superseded
-FD001-only model and should not be used for new demos.
+Five modules publish into this one webhook. Every batch is replayed by the same
+script, and the priority mix is the module's own, not a setting:
+
+| Batch | Events | Priorities |
+|---|---|---|
+| `cmapss_events_full_fleet.jsonl` | 707 | 49 P1, 87 P2, 90 P3, 481 P4 |
+| `scania_events.jsonl` | 778 | 240 P1, 69 P2, 469 P3 |
+| `casting_events.jsonl` | 460 | 13 P2, 447 P3 |
+| `neu_events.jsonl` | 360 | 3 P2, 357 P3 |
+| `mvtec_events.jsonl` | 309 | 262 P2, 47 P3 |
+
+The earlier `cmapss_events_FD001.jsonl` is kept because it is what the first
+deployment was verified against; it comes from the superseded FD001-only model
+and should not be used for new demos.
+
+**Replay a slice, never a batch.** Every P1 and P2 sends a Telegram card to the
+alert group, and the incident store is append-only with the counter in workflow
+static data, so nothing here can be undone. `mvtec_events.jsonl` is the sharpest
+case, 262 of its 309 events being P2. The 2026-09-02 MVTec run was five events
+in two commands, and it is the size a new module should go in at:
+
+```bash
+python n8n/replay_events.py http://AK2101:5678/webhook/arkon-event events/out/mvtec_events.jsonl --priority P2 --limit 3 --delay 1
+python n8n/replay_events.py http://AK2101:5678/webhook/arkon-event events/out/mvtec_events.jsonl --priority P3 --limit 2 --delay 1
+```
+
+A P2 replayed now is overdue an hour later, per the charter 7.1 window, and turns
+up in the OVERDUE block of the shift briefing. That is the store behaving
+correctly, and it is a reason to keep the demo store small rather than a reason
+to widen the window.
 
 ### Deployment steps (interactive)
 

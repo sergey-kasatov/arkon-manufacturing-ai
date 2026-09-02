@@ -120,9 +120,15 @@ def main():
         if abs(recorded - threshold) > 1e-4:
             raise SystemExit("threshold mismatch for %s: table %.4f, metrics file %.4f"
                              % (category, threshold, recorded))
-        # The image file name repeats across categories, so the part identity has to
-        # carry the category as well.
-        part = "%s-%s" % (category, Path(str(paths[index])).stem)
+        # The image file name repeats across categories AND across the defect-type
+        # folders inside one category, because MVTec numbers from 000 in every
+        # folder. grid/test/bent/000.png and grid/test/broken/000.png are two
+        # different parts, so the identity has to carry all three parts of the path.
+        # Category alone left 309 events sharing 82 record ids, and the Steering
+        # Cell dedups on record_id plus priority, so 203 flagged parts would have
+        # been suppressed as duplicates of each other.
+        defect_type = str(defects[index])
+        part = "%s-%s-%s" % (category, defect_type, Path(str(paths[index])).stem)
         event = {
             "event_id": "arkon-2026-4%05d" % (len(events) + 1),
             "event_time": now,
@@ -151,7 +157,7 @@ def main():
                 "image_path": str(paths[index]),
                 "image_size": image_size,
                 "test_label_class": "defect" if int(truth[index]) == 1 else "good",
-                "test_defect_type": str(defects[index]),
+                "test_defect_type": defect_type,
             },
             "context_origin": "real",
             "recommended_action": ACTION[priority],
