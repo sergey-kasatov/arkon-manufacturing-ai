@@ -12,7 +12,7 @@
   "properties": {
     "event_id": {"type": "string", "pattern": "^arkon-[0-9]{4}-[0-9]{6}$"},
     "event_time": {"type": "string", "format": "date-time"},
-    "source_module": {"enum": ["cmapss_rul", "scania_aps", "casting_cv", "neu_surface", "mvtec_anomaly", "nhtsa_nlp"]},
+    "source_module": {"enum": ["cmapss_rul", "scania_aps", "casting_cv", "neu_surface", "mvtec_anomaly", "gc10_detect", "nhtsa_nlp"]},
     "business_domain": {"enum": ["asset_reliability", "fleet_reliability", "visual_inspection", "field_quality"]},
     "risk_type": {"type": "string", "minLength": 1},
     "risk_score": {"type": "number", "minimum": 0, "maximum": 1},

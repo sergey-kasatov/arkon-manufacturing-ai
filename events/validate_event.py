@@ -16,7 +16,7 @@ from pathlib import Path
 PRIORITIES = {"P1", "P2", "P3", "P4"}
 STATUSES = {"new", "acknowledged", "in_containment", "resolved", "closed", "false_positive"}
 SOURCE_MODULES = {"cmapss_rul", "scania_aps", "casting_cv", "neu_surface",
-                  "mvtec_anomaly", "nhtsa_nlp"}
+                  "mvtec_anomaly", "gc10_detect", "nhtsa_nlp"}
 BUSINESS_DOMAINS = {"asset_reliability", "fleet_reliability", "visual_inspection", "field_quality"}
 CONTEXT_ORIGINS = {"real", "simulated"}
 

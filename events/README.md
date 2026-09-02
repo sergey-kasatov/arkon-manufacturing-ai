@@ -13,6 +13,7 @@ Cell. Contract owner: `docs/Project_Charter.md` sections 6 and 7.
 | `make_events_casting.py` | Casting defect adapter: the same, for the vision module |
 | `make_events_neu.py` | NEU steel surface adapter: the same, for the defect-type module |
 | `make_events_mvtec.py` | MVTec adapter: the same, for the four component anomaly detectors |
+| `make_events_gc10.py` | GC10 adapter: the same, for the detection module, and the first whose event carries a list |
 | `out/` | Generated event batches (demo input for the n8n workflow) |
 
 ## Usage
@@ -23,11 +24,13 @@ python events/make_events_scania.py
 python events/make_events_casting.py
 python events/make_events_neu.py
 python events/make_events_mvtec.py
+python events/make_events_gc10.py
 python events/validate_event.py events/out/cmapss_events_full_fleet.jsonl
 python events/validate_event.py events/out/scania_events.jsonl
 python events/validate_event.py events/out/casting_events.jsonl
 python events/validate_event.py events/out/neu_events.jsonl
 python events/validate_event.py events/out/mvtec_events.jsonl
+python events/validate_event.py events/out/gc10_events.jsonl
 ```
 
 ## CMAPSS priority mapping (charter 7.1)
@@ -168,7 +171,74 @@ contract change beyond the `source_module` enum, which gained `mvtec_anomaly` in
 both `arkon_event_schema.json` and `validate_event.py`. The consequence the NEU
 section records gets one step worse: a query filtered by
 `business_domain=visual_inspection` now returns three modules across three
-departments. Filtering by `source_module` still separates them.
+departments, and four once GC10 lands below. Filtering by `source_module` still
+separates them.
+
+## GC10 steel sheet defect priority mapping (charter 7.1)
+
+Two thresholds, where every other module has one. A detector needs one to decide
+what counts as a box at all and a second to decide how sure it is about the sheet,
+because the event it publishes is about the sheet.
+
+    best box score >= 0.90    the located defect is recorded against the coil, P3
+    best box score <  0.90    a person looks before the coil is dispositioned, P2
+    no box above 0.65          nothing is published
+
+Risk score is the best box's score. No P1 and no P4.
+
+**One event per sheet, and the boxes ride inside it.** Every adapter before this one
+publishes one measurement per record. A detector publishes n boxes on one sheet and
+35 per cent of these sheets carry more than one, up to eleven, so `evidence` carries
+a `detections` list with a class, a score and a box for each.
+
+**The alternative was measured against the platform rather than argued about.** One
+event per box would give up to eleven events carrying one sheet identity and usually
+one priority, and intake deduplicates on `record_id` plus `priority` for 24 hours, so
+ten of the eleven would be suppressed as duplicates of a defect they are not. That is
+the MVTec identity defect arriving by a different route. A sheet is also the unit an
+operator disposes of: eleven defects on one sheet is one decision.
+
+**This was expected to need a contract change and did not.** `evidence` is declared
+with `additionalProperties: true` in `arkon_event_schema.json`, and `validate_event.py`
+checks only that the four required keys are present, so a list fits where the contract
+already stood. The one closed enum that changed is `source_module`, which gained
+`gc10_detect` in both files, exactly as `neu_surface` and `mvtec_anomaly` did. Charter
+section 6 now records what `evidence` may hold, because it was true before this module
+and nobody had written it down.
+
+**A sheet with no detection publishes nothing, and that is not a pass.** Casting,
+Scania and MVTec also suppress their negative case, and they do it because a sound
+part is the normal one. This module suppresses its silent case for a different reason
+and the difference belongs on the record: GC10 contains no sheet anyone certified
+clean, and the eight that carry no annotation were dropped rather than assumed clean,
+so the module was fitted and scored only on sheets that contain a defect. It has never
+seen sound steel. **"No detection" is a failure to find, not a statement that the sheet
+is good**, and anything downstream that reads silence as a pass is wrong. On the test
+split 31 of 339 sheets are silent.
+
+**Priority comes from the best box's confidence, never from the defect class and
+never from its size.** The class rule is the NEU precedent: ranking a crease against
+an oil spot by severity needs metallurgical judgement this project does not have. The
+size rule is the less obvious half, because box area is measurable and available and
+would look like a measurement: a large water spot is cosmetic and a small crease may
+not be, and nothing in this module can tell the difference. That is the MVTec lesson,
+whose card says the priority may say how unusual and never how dangerous.
+
+**Both edges are declared targets rather than measured costs.** The detection
+threshold 0.65 is the lowest score at which precision on the selection split
+reaches 0.60, and the band edge 0.90 is the lowest best-box score at which the
+sheet's top detection is correct at least 90 per cent of the time. 0.60 and 90 per
+cent are Arkon assumptions in the same sense as casting's cost ratios; this dataset
+ships no statement of what a false trip costs against a missed defect. Every event
+carries `evidence.threshold_basis` and `evidence.detection_threshold_basis` so a
+consumer can see which of the two was calibrated. Reasoning in
+`docs/Model_Card_GC10_Detection.md` section 5.
+
+**This is the fourth module in the `visual_inspection` domain.** The consequence the
+NEU and MVTec sections record gets one step worse: a query filtered by
+`business_domain=visual_inspection` now returns four modules across four departments,
+and the roster assigns all four to the same two QC Engineers. Filtering by
+`source_module` still separates them.
 
 ## Data integrity
 
