@@ -7,7 +7,7 @@ instance, pinned to `n8nio/n8n:2.29.9`.
 
 | Workflow | Direction | Endpoint | Deployed |
 |---|---|---|---|
-| `quality_steering_cell_v1.json` | write | `POST /webhook/arkon-event` | 2026-08-30 |
+| `quality_steering_cell_v1.json` | write | `POST /webhook/arkon-event` | 2026-08-30, alert body fixed 2026-09-02 |
 | `incident_status_api_v1.json` | read | `GET /webhook/arkon-incident-status` | 2026-08-30 |
 | `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30 |
 | `comparison_slice_v1.json` | read | `POST /webhook/arkon-slice` | 2026-08-30 |
@@ -110,23 +110,41 @@ pass means something.
 node n8n/alert_body_probe.js
 ```
 
-> **NOT YET DEPLOYED as of 2026-09-02.** The fix is in this repository and the
-> probe passes against it. The workflow **running on the NAS is still the Markdown
-> version**, so until it is imported, any P1 or P2 whose text carries a `_`, `*`,
-> `` ` `` or `[` is still recorded without an alert. Do not read this section as a
-> description of the live system.
->
-> Deploying it is not a plain `import:workflow`. That rewrites the whole workflow
-> row including `staticData`, which on **this** workflow holds the incident counter
-> and the dedup cache, so a naive import restarts the numbering at
-> `ARK-INC-00001`. The safe route is to export the live workflow, apply the two
-> changes to **that** document - it also carries the Telegram credential's internal
-> id, which the tracked file does not - and import the result, then publish and
-> restart the container:
->
-> ```bash
-> docker exec n8n n8n export:workflow --id=o0vXtlRWIs9yFrUJ --output=/tmp/exp.json
-> ```
+### Deployed 2026-09-02, and the deploy is not a plain import
+
+**This workflow cannot be updated by importing the tracked file.**
+`import:workflow` rewrites the whole workflow row, and on **this** row that
+includes `staticData`, which holds the incident counter and the dedup cache: a
+naive import restarts the numbering at `ARK-INC-00001`. The tracked file also
+carries the Telegram credential by name only, while n8n binds credentials by
+internal id, so an import of it would leave the alert node unbound.
+
+So the fix went in the other way round. The live workflow was exported, the two
+changes were applied to **that** document, and the result was imported:
+
+```bash
+docker exec n8n n8n export:workflow --id=o0vXtlRWIs9yFrUJ --output=/tmp/exp.json
+# apply the two changes to the export, then
+docker exec n8n n8n import:workflow --input=/tmp/patched.json
+docker exec n8n n8n publish:workflow --id=o0vXtlRWIs9yFrUJ
+docker restart n8n
+```
+
+The Code node body was taken verbatim from the tracked file, so the running
+workflow has exactly the code the probe executed. Three things were asserted on
+the patched document before it was sent and again after: `counter` still 28, the
+dedup cache still ten entries, and the credential id unchanged. The import
+deactivates the workflow and says so, hence the publish; the restart is not
+optional, because the running process holds its active workflows in memory.
+
+**Verified by sending an event that would certainly have failed before.**
+`arkon-2026-400037`, summary `Component grid-metal_contamination-000 ...`, one
+underscore. It answered `incident_created_alert_sent` as `ARK-INC-00029` - the
+counter continuing from 28, which is what says the static data survived the
+import - and the execution record carries Telegram's own reply with a
+`message_id` and parsed `entities`. The three failed NEU executions and this one
+were read the same way, out of the `execution_entity` table, so the before and
+the after are the same measurement.
 
 **The general form is the one this project keeps meeting.** A path that is only
 ever exercised with data that happens to be safe is an untested path, and it does
