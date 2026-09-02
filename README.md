@@ -211,6 +211,30 @@ resolution reasons from the folder the module is scored on. The threshold and th
 memory-bank size are the two decisions made on sound parts alone, and
 `docs/Model_Card_MVTec_Anomaly.md` says which the others are.
 
+### Where on the part, and it costs nothing extra
+
+![The highest-scoring defect in each category, against the region the module points at](assets/cv/mvtec_model_localisation.png)
+
+The per-cell distances are computed on the way to the image score, so the map on
+the right is a by-product rather than a second model. It is also what an operator
+actually receives, because a label is the one thing this module does not have: not
+*what* is wrong, but *where* to look.
+
+**The four rows are the two ends of this dataset.** `screw` carries the smallest
+defects in the set, a median 0.29 per cent of the frame, and the map puts a single
+spot on the scratch. The three breaks in the `grid` are found separately rather
+than smeared into one. And the flipped nut and the misplaced transistor light up
+almost whole, because in those two defect types nothing is damaged at all: an
+intact part is in the wrong orientation, so the part is the anomaly. One threshold
+ranks both ends.
+
+**The metric flatters, which is part of why the map is here.** Defect pixels are
+0.250 to 11.719 per cent of the total, so a map that is roughly right everywhere
+already scores well; pixel AUROC runs 0.9322 in transistor to 0.9948 in screw and
+says less than the picture does. It is measured at 320 by 320 over every pixel of
+every test image, sound ones included, so it is not comparable with published
+MVTec figures at native resolution.
+
 **What these figures are not.** All five are held-out test splits of public
 datasets, scored offline. Nothing here ran on a real production line, and the
 operational context around the numbers is fabricated. Each module's limitations
@@ -390,7 +414,7 @@ reasons about defects reasons from the folder the module is scored on; the
 threshold and the memory-bank size are the two that escaped that, and the card
 names the rest
 - [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
-- [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of seven Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
+- [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of eight Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
 - [ ] NLP module - NHTSA complaint classification and field-quality trend detection
 - [ ] Incident lifecycle - acknowledge and close callbacks, escalation timer, queryable store
 - [ ] Streamlit app and Tableau views - the operational cockpit and the executive KPI view

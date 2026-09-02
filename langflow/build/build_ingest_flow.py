@@ -65,6 +65,11 @@ DOCUMENTS = [
     # Phase 2, added 2026-09-01. Fourth module, second in the visual_inspection
     # domain, and the seventh document in the store.
     ("docs/Model_Card_NEU_Surface.md", "NEU_Surface_Model_Card.md", "NEU Surface Defect Model Card"),
+    # Phase 2, added 2026-09-02. Fifth module, third in the visual_inspection
+    # domain, and the eighth document in the store. The event contract changed in
+    # the same commit, so this ingest is not additive: an edited document leaves
+    # its old chunks behind as orphans, and the collection was dropped first.
+    ("docs/Model_Card_MVTec_Anomaly.md", "MVTec_Anomaly_Model_Card.md", "MVTec Anomaly Model Card"),
     ("events/README.md", "Arkon_Event_Contract.md", "Arkon Event Contract"),
 ]
 

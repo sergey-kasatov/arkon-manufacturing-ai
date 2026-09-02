@@ -227,6 +227,18 @@ nothing on the canvas changed. Fixing a prompt without rebuilding the canvas is
 what `build/sync_prompts.py` is for. That is what turns a single-module assistant
 into the platform's assistant, and it is why the store was worth building at all.
 
+**The claim finally held with no edit at all, on 2026-09-02.** NEU still cost a
+route-description edit, because the Quality procedure route enumerated the four
+modules it knew and a fifth had nowhere to match. That edit ended the list with
+"and any module added after this was written", and MVTec is the first module to
+arrive since. It was added by putting its model card in `DOCUMENTS` and
+re-ingesting, with no prompt, no route description and nothing on the canvas
+touched, and three questions confirm it: what the module does and cannot do, a
+specific measurement from deep in the card (the 5 per cent budget against the
+9.8 to 22.7 per cent it realises), and a cross-document question the store had to
+answer from two sources. The generic clause is doing the work the enumeration
+used to do.
+
 **What the second module cost in total: one API projection.** The intake
 workflow validated a `scania_aps` event and created an incident with no change
 at all, because it validates a contract rather than a domain and takes the
@@ -236,22 +248,24 @@ claim, and it now has one measurement behind it instead of none.
 
 ## Known gaps
 
-- **The document store holds seven documents and is not coverage.** Charter, SOP,
-  the four model cards and the event contract. The chunk count is deliberately not
+- **The document store holds eight documents and is not coverage.** Charter, SOP,
+  the five model cards and the event contract. The chunk count is deliberately not
   repeated here: it changes on every re-ingest and
   `GET /collections/arkon-knowledge` is the only place that knows it. The
   validation questions span the documents and one is deliberately unanswerable,
   which shows retrieval works and shows the refusal path holds. It does not show
   the store answers everything an operator will ask. A question outside those
-  seven documents gets the fallback sentence, which is the correct behaviour and
+  eight documents gets the fallback sentence, which is the correct behaviour and
   still a gap in the knowledge base.
-- **The model cards now dominate the store by volume.** Measured on the live
-  collection on 2026-09-01 after the NEU ingest: 124 chunks over the seven
-  documents, of which the four model cards are 80, or 65 per cent. Charter,
-  SOP and event contract together are the other 44. Retrieval on a question
-  spanning two documents was last measured before the NEU card existed and has
-  not been repeated since, so the effect of that shift is an open risk rather
-  than a finding.
+- **The model cards dominate the store by volume, and by more than before.**
+  Measured on the live collection on 2026-09-02 after the MVTec ingest: 152 chunks
+  over the eight documents, of which the five model cards are 104, or 68 per cent,
+  against 65 per cent when there were four. Charter, SOP and event contract
+  together are the other 48. A question spanning two documents was measured again
+  on this store and answered from the event contract and the MVTec card together,
+  naming all three modules in `visual_inspection` and the field that separates
+  them, so the shift has not broken cross-document retrieval at this size. It is
+  still a trend rather than a bound: nothing here says where it stops working.
 - **Re-ingestion is idempotent only while the documents are unchanged.** Point ids
   are a hash of chunk text plus metadata, so an edited document leaves its old
   chunks behind as orphans. Editing a source document means dropping the

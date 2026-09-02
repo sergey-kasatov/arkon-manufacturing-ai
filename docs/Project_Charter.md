@@ -41,7 +41,7 @@ The initial MVP uses one working model from each core capability:
 - NHTSA Consumer Complaints 2020-2024 as the NLP field-quality module.
 - One n8n workflow that receives a validated Arkon risk event and creates an incident with an alert.
 
-MVTec, GC10, advanced detection models and additional n8n workflows are roadmap items. They are not prerequisites for the MVP. NEU was one of them and landed on 2026-09-01 as the second computer-vision module (`docs/Model_Card_NEU_Surface.md`); RAG landed earlier as the grounded assistant.
+GC10, advanced detection models and additional n8n workflows are roadmap items. They are not prerequisites for the MVP. Three of the original roadmap items have since landed: RAG as the grounded assistant, NEU on 2026-09-01 as the second computer-vision module (`docs/Model_Card_NEU_Surface.md`), and MVTec on 2026-09-02 as the third, four component anomaly detectors that fit on sound parts alone and train nothing (`docs/Model_Card_MVTec_Anomaly.md`).
 
 ## 5. Data boundaries and integrity
 
