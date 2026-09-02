@@ -12,7 +12,7 @@ forced by what the components actually do:
 - The embedding component is ours. Nothing Langflow ships can reach OpenRouter's
   embedding models; the reason is written at the top of
   `langflow/components/openrouter_embeddings.py`.
-- One lane per document instead of one File node holding all four. A File node
+- One lane per document instead of one File node holding all of them. A File node
   given several files emits a DataFrame whose only provenance column is the
   resolved container path, `/app/langflow/<user-uuid>/<name>.md`, and an answer
   citing that is worse than an answer citing nothing. A lane per document buys a

@@ -127,6 +127,22 @@ rides in `evidence.category`, and the adapter refuses to run if a threshold in
 the prediction table disagrees with the one in the metrics file, because that
 would mean one of the two files is stale.
 
+**The part identity carries the whole path, and it took a defect to notice.**
+`evidence.record_id` is `MVTEC-<CATEGORY>-<DEFECT TYPE>-<FILE STEM>`, because
+MVTec numbers its test images from `000` inside *every* defect-type folder:
+`grid/test/bent/000.png` and `grid/test/broken/000.png` are two different parts.
+The adapter first carried the category and the file stem only, which left 309
+events sharing 82 record ids. Nothing here rejected that - the contract asks for a
+record id, not for a unique one - and the cost lands downstream, where the
+Steering Cell suppresses duplicates on `record_id` plus `priority` for 24 hours: a
+full replay would have recorded 106 incidents and suppressed 203 flagged parts as
+duplicates of parts they are not. Fixed 2026-09-02. **The other four adapters were
+checked for the same class and each produces one record id per event.** The rule
+this leaves behind applies to every future adapter: a deduplication key is a claim
+that two records describe the same thing, so an adapter has to make the identity
+unique over everything the dataset varies, not over the part of the path that
+happens to be visible.
+
 **Only flagged parts produce an event**, like casting and Scania. This dataset
 has a sound class and the sound-or-not decision is the whole point of the module,
 so publishing every pass would bury the incident store. NEU publishes everything
