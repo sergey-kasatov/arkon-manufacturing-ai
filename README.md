@@ -21,8 +21,8 @@ under [What's Built](#whats-built).
 
 ## Results
 
-Four modules are trained, measured and documented. Every figure below is
-generated from the metrics file its own training run wrote, by
+Five modules are built, measured and documented. Every figure below is
+generated from the metrics file its own run wrote, by
 `python tools/make_result_plots.py` - no model is loaded and no dataset is read,
 so a clone reproduces the pictures in seconds. Those metrics files are the only
 thing git keeps under `models/`.
@@ -33,6 +33,7 @@ thing git keeps under `models/`.
 | **Fault classification** - Scania APS | **Total cost 10,660** on the challenge's own metric, between first and second of its published top three | 16,000 held-out trucks, 170 anonymised counters |
 | **Visual inspection** - casting product | **0 defects missed**, 7 good parts re-inspected, ROC AUC 0.9999 | 715 held-out images |
 | **Defect classification** - NEU steel surface | **1.0000 accuracy** over six defect types, against 0.9750 for a nearest-neighbour classifier that does no training at all | 360 held-out images |
+| **Anomaly detection** - MVTec components | **mean image AUROC 0.9817** over four categories (0.9650 to 1.0000), pixel AUROC 0.9738, nothing trained | 453 held-out images, sound parts only in the bank |
 
 ### Remaining useful life: one model for a mixed fleet
 
@@ -160,12 +161,62 @@ target and the rule returned zero. The band edge in the right panel is declared 
 an Arkon assumption, the way casting's cost ratios are, and
 `docs/Model_Card_NEU_Surface.md` says so rather than presenting it as measured.
 
-**What these figures are not.** All four are held-out test splits of public
+### Component anomalies: four detectors, and nothing trained
+
+![What the MVTec detectors are worth against the design that shipped in the repository](assets/cv/mvtec_benchmark_ladder.png)
+
+The fifth module is the first that does not classify anything and the first that
+**trains nothing at all**. It holds 56,960 feature vectors taken from sound
+parts, 87.4 MB for four component categories, and scores a new part by
+how far its worst patch sits from the nearest one. There is no loss, no epoch and
+no gradient anywhere in it.
+
+Mean image AUROC 0.9817 and mean pixel
+AUROC 0.9738, but **the four rows are
+the result and the mean is not**: they run from 0.9650 in
+screw to 1.0000 in metal_nut. The four categories were
+photographed at two resolutions in two colour modes with frame intensities from
+59 to 184, so they are four imaging setups rather than four views of one problem,
+and each gets its own memory bank and its own threshold.
+
+**The left panel is the reason the design is what it is.** The notebook folder
+shipped a skeleton that averaged `layer4` over the whole frame; on the same
+frozen features and the same folders it reaches 0.7810
+against 0.9817 for the shipped module. Notebook
+02 predicted that from the masks alone before either was run: the median `screw`
+defect covers 0.29 per cent of its frame, so averaging the frame gives it one
+part in 347 of the vector that decides the score.
+
+**The threshold is the casting lesson applied.** Casting searched a cost curve
+for an optimum and the optimum moved by a factor of five between runs of
+identical code. This module never searches: the threshold is the lowest score
+that flags no more than 5 per cent of held-out *sound* parts, so no defect is
+involved in setting it and there is no minimum for noise to relocate. Run twice
+from the same seed, the memory banks come back bit-identical, no test score moves
+at all, no decision changes, and the four thresholds shift in their fifth decimal
+against a casting operating point that spans 0.0436 to 0.2203.
+
+**Two things the module publishes and one it refuses to.** It publishes a score
+and, because the per-cell distances are computed on the way to it, a region: the
+pixel maps are scored against the shipped masks. It refuses to publish a
+severity. Fitted only on sound parts, it has no basis for calling a scratch worse
+than a bent lead, so there is no P1 band and the priority says only whether a
+sound part has ever scored this high. 309 of 453 test images
+produce an event and 144 are suppressed as sound.
+
+**And the honest caveat is about the benchmark, not the module.** MVTec AD ships
+no anomalous validation data at all: sound parts for fitting, mixed parts for
+reporting, nothing in between. Any choice that reasons about defect size or
+resolution reasons from the folder the module is scored on. The threshold and the
+memory-bank size are the two decisions made on sound parts alone, and
+`docs/Model_Card_MVTec_Anomaly.md` says which the others are.
+
+**What these figures are not.** All five are held-out test splits of public
 datasets, scored offline. Nothing here ran on a real production line, and the
 operational context around the numbers is fabricated. Each module's limitations
 are in its model card - [CMAPSS](docs/Model_Card_CMAPSS_RUL.md),
 [Scania](docs/Model_Card_Scania_APS.md), [casting](docs/Model_Card_Casting_CV.md),
-[NEU](docs/Model_Card_NEU_Surface.md) - and are not summarised away here.
+[NEU](docs/Model_Card_NEU_Surface.md), [MVTec](docs/Model_Card_MVTec_Anomaly.md) - and are not summarised away here.
 
 ---
 
@@ -178,6 +229,7 @@ Arkon Manufacturing AI Platform
 ├── 🔧  ML Classification Truck Fleet Dept.      Scania APS        Fault Detection
 ├── 🔍  CV Binary         Foundry Dept.          Casting Product   Defect Detection
 ├── 🔬  CV Multi-class    Rolling Mill Dept.     NEU Surface       Defect Type
+├── 🧭  CV Anomaly        Component Inspection   MVTec AD          Anomaly + Region
 ├── 🤖  LLM / RAG         All Departments        -                 AI Chatbot
 └── 📊  BI Dashboard      Executive Level        Tableau           KPI Analytics
 ```
@@ -293,7 +345,7 @@ because of anything the assistant did.
 | ML | [APS Failure at Scania Trucks](https://archive.ics.uci.edu/dataset/421/aps+failure+at+scania+trucks) | Scania CV AB via UCI ML Repository | CC BY 4.0 | ~54 MB | Binary classification |
 | CV | [Casting Product Quality Control](https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product) | Kaggle | CC BY-NC 4.0 | ~100 MB | Binary image classification |
 | CV | [NEU-DET Surface Defect Database](http://faculty.neu.edu.cn/songkechen/zh_CN/zdylm/263270/list/index.htm) | Northeastern University, China | Academic use | ~35 MB | 6-class classification (ships detection boxes too) |
-| CV (planned) | [MVTec Anomaly Detection](https://www.mvtec.com/company/research/datasets/mvtec-ad) | MVTec Software GmbH | Research only | ~4.9 GB | Anomaly detection |
+| CV | [MVTec Anomaly Detection](https://www.mvtec.com/company/research/datasets/mvtec-ad) | MVTec Software GmbH | Research only | ~4.9 GB | Anomaly detection (4 of 15 categories used) |
 | CV (planned) | [GC10-DET Surface Defects](https://github.com/lvxiaoming2019/GC10-DET-Metallic-Surface-Defect-Datasets) | Academic | Academic use | ~1 GB | Object detection |
 
 > **Note:** NASA CMAPSS is a physics-based simulation (not raw sensor data),
@@ -309,12 +361,34 @@ because of anything the assistant did.
 - [x] Project Charter - risk events, P1-P4 priorities, steering-cell rules (`docs/Project_Charter.md`)
 - [x] Time Series module, first pass - CMAPSS on FD001 alone, one subset of four (LR RMSE 20.79, XGBoost RMSE 17.11). Superseded by the full-fleet model below; its metrics are kept at `models/checkpoints/cmapss/cmapss_xgb_v1_meta.json` and the notebooks that produced it were rebuilt on the fleet on 2026-08-31
 - [x] Time Series module, full fleet - all four CMAPSS subsets, 709 training engines, six operating regimes, two fault modes, with temporal features over a 20-cycle window. XGBoost RMSE 11.01 on the benchmark task over 707 held-out engines, scoring the hardest subset about as well as the easiest (`notebooks/01_timeseries/cmapss_full_fleet.py`, `docs/Model_Card_CMAPSS_RUL.md`). Also built as a notebook trio that reproduces the deployed model without importing from the training script: nine measurements compared, none moved
-- [x] Risk-event layer - schema, validator and four adapters, one per trained module, all publishing the same contract (`events/`)
+- [x] Risk-event layer - schema, validator and five adapters, one per built module, all publishing the same contract (`events/`)
 - [x] n8n Quality Steering Cell - deployed on the NAS and verified end to end: contract validation, 24 h duplicate suppression, JSONL incident store, Telegram cards for P1 and P2 (`n8n/`)
 - [x] Operating documentation - CMAPSS model card and Steering Cell SOP (`docs/`)
 - [x] **Tabular module - Scania APS fault classifier.** XGBoost over 170 anonymised counters, total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure, which lands between first and second of the IDA 2016 challenge's published top three on the same test set. The decision threshold is worth a factor of 3.8; every structural choice is inside the noise of the selection (`notebooks/02_ml/scania_aps.py`, `docs/Model_Card_Scania_APS.md`). Rebuilt as a notebook pair on 2026-09-01, which reproduces the deployed model exactly - 22 measurements compared, none moved - and adds the one measurement the script never ran: the textbook pipeline of median imputation, MinMax scaling and SMOTE costs 11,820 against 10,660, and the threshold grid it uses starts above the optimum of both pipelines
 - [x] **CV module - casting defect inspection.** ResNet-18 fine-tuned end to end, 0 defects missed and 7 good parts rejected on 715 test images, ROC AUC 0.9999. Its priority bands run the opposite way to the other modules, and the reason is measured (`notebooks/03_cv/01_casting_defects/casting_cv.py`, `docs/Model_Card_Casting_CV.md`). Rebuilt as a notebook trio on 2026-09-01, which found two things the script never checked. **The published train and test folders share 64 byte-identical images, all of them good parts**, 55 of which were fitted on: recall is untouched because no defect is duplicated, and the false-alarm rate on genuinely unseen good parts is 3.03 percent against the 2.67 percent reported. **And the experiment does not reproduce itself** - four runs from the same seed on the same machine put the operating point anywhere from 0.0436 to 0.2203, the missed defects from 0 to 2 and the good parts rejected from 2 to 11, while the frozen-backbone ablation, which trains no convolution, comes back bit-identical every time. The instability is cuDNN's convolution backward pass reaching a decision threshold that is chosen on a cost curve with no well-determined minimum
 - [x] **CV module - NEU steel surface defect types.** ResNet-18 fine-tuned end to end over six defect classes, built from scratch as a notebook trio on 2026-09-01 with no training script behind it (`notebooks/03_cv/02_neu_steel_defects/`, `docs/Model_Card_NEU_Surface.md`). **1.0000 accuracy on 360 held-out images, and the notebook is what qualifies it**: a 1-nearest-neighbour classifier over un-finetuned ImageNet features already reaches 0.9750 on the same folder, so the benchmark is close to saturated and a perfect score is evidence about the dataset before it is evidence about the model. The dataset ships no test folder, so the shipped `validation/` folder is held out and scored once, and every number says which folder produced it. Two further findings: **6.8 per cent of the images carry a second defect class the folder label discards**, which is a ceiling on any single-label model, and **the confidence band could not be calibrated at all** because the model classified all 216 selection images correctly, so its band edge is declared as an Arkon assumption rather than measured. Unlike casting the split is clean - no image crosses it on either byte equality or feature similarity, with the control measured
+- [x] **CV module - MVTec component anomaly detection.** Four detectors, one per
+component category, built from scratch as a notebook trio on 2026-09-01 with no
+training script behind it (`notebooks/03_cv/03_mvtec_anomaly/`,
+`docs/Model_Card_MVTec_Anomaly.md`). **Nothing is trained**: a frozen ImageNet
+ResNet-18, a greedy coreset of 56,960 patch vectors taken from sound parts only,
+and a nearest-neighbour distance. Mean image AUROC
+0.9817 and mean pixel AUROC
+0.9738, spanning
+0.9650 in screw to 1.0000 in
+metal_nut, and the four numbers are reported as four results because the categories
+are four imaging setups. Three findings. **The skeleton design that shipped in the
+folder reaches 0.7810 against
+0.9817**, and notebook 02 predicted that from the
+mask geometry before either was run. **The threshold is declared on sound parts
+rather than searched on scores**, which is the casting lesson applied: run twice
+from one seed the banks come back bit-identical, no test score moves and no
+decision changes, with the four thresholds shifting only in their fifth decimal,
+because there is no backward pass for the non-determinism to enter through. And
+**the benchmark ships no anomalous validation data**, so every design choice that
+reasons about defects reasons from the folder the module is scored on; the
+threshold and the memory-bank size are the two that escaped that, and the card
+names the rest
 - [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
 - [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of seven Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
 - [ ] NLP module - NHTSA complaint classification and field-quality trend detection
@@ -336,7 +410,6 @@ worth more than the twelve nodes cost.
 
 | Module | Dataset | Task | Prerequisite |
 |--------|---------|------|-------------|
-| CV Anomaly Detection | MVTec AD | Unsupervised anomaly detection | Autoencoders |
 | CV Object Detection | GC10-DET | Bounding box defect localization | YOLO / detection models |
 | BI Dashboard | All modules | Executive KPI analytics | Tableau |
 
@@ -412,7 +485,7 @@ Then open **http://localhost:5000** in your browser.
 | `arkon-ml-scania` | Truck Fleet | scania_aps_notebook x2 |
 | `arkon-cv-casting` | Foundry | casting_cv_notebook x3 |
 | `arkon-cv-neu` | Rolling Mill | neu_resnet18_v1 x6 |
-| `arkon-cv-mvtec` | QC Anomaly | not created; the module is not built |
+| `arkon-cv-mvtec` | Component Inspection | mvtec_patchcore_v1_grid, _metal_nut, _screw, _transistor, _summary |
 | `arkon-cv-gc10` | Stamping | not created; the module is not built |
 
 Each run logs: hyperparameters, metrics per epoch, training time, and the metrics file.
@@ -443,14 +516,14 @@ arkon-manufacturing-ai/
 │   ├── 04_neu/                 NEU Steel Defect images
 │   ├── 05_mvtec/               MVTec Anomaly Detection images
 │   └── 06_gc10/                GC10-DET Steel Defect images
-├── models/                     Gitignored except the three *_meta.json metrics files
+├── models/                     Gitignored except the five *_meta.json metrics files
 │   ├── checkpoints/            Training checkpoints (auto-saved, skip retraining)
 │   └── *.pkl / *.pt            Final saved models
 ├── notebooks/
 │   ├── utils/arkon_utils.py    Shared utilities (device, MLflow, timer, checkpoint)
 │   ├── 01_timeseries/          CMAPSS - RUL prediction
 │   ├── 02_ml/                  Scania APS - fault classification
-│   └── 03_cv/                  Computer Vision - 4 datasets
+│   └── 03_cv/                  Computer Vision - casting, NEU, MVTec, GC10
 ├── mlflow.db                   MLflow experiment database
 ├── setup_windows_venv.bat      Windows venv + CUDA setup
 ├── requirements-windows.txt    Python dependencies

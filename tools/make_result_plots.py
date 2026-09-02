@@ -4,7 +4,7 @@ One figure per module, each built from the metrics JSON that its model card
 cites, so a figure and the card it illustrates cannot drift apart. No model is
 loaded, no dataset is read and no GPU is used: everything drawn here was already
 measured by the training scripts and written to
-`models/checkpoints/<module>/*_meta.json`. Those four files are the only ones
+`models/checkpoints/<module>/*_meta.json`. Those five files are the only ones
 git keeps under `models/`, for exactly this reason.
 
 What each figure is for:
@@ -20,6 +20,9 @@ What each figure is for:
   NEU      what the headline is worth. A perfect score on a benchmark where an
            untrained nearest-neighbour classifier already reaches 0.975 is a
            statement about the dataset before it is one about the model.
+  MVTec    four detectors rather than one number, and what the design is worth:
+           the skeleton that shipped in the notebook folder scores far below the
+           shipped module on the same frozen features.
 
 Deliberately not imported: `notebooks/utils/arkon_utils.save_figure`. That module
 imports joblib at module level and carries the training-time helpers with it;
@@ -421,12 +424,88 @@ def neu_figure(meta):
                 "models/checkpoints/neu/neu_cv_meta.json")
 
 
+# MVTec: four detectors, and what the skeleton design would have scored
+def mvtec_figure(meta):
+    categories = meta["categories"]
+    ladder = meta["benchmark_difficulty"]["image_auroc"]
+    performance = meta["test_performance"]["per_category"]
+    bands = meta["priority_bands"]
+
+    order = ["pixel mean and sd", "layer4 averaged", "layer4 patches", "layer2+3 patches"]
+    colours = {"layer2+3 patches": ACCENT, "layer4 averaged": ALERT}
+    labels = {
+        "pixel mean and sd": "two pixel statistics\nnearest neighbour",
+        "layer4 averaged": "layer4 averaged over the frame\nthe skeleton in the repository",
+        "layer4 patches": "layer4 patches\nthe grid, eight times coarser",
+        "layer2+3 patches": "layer2 and layer3 patches\nthe shipped module",
+    }
+
+    fig, (left, right) = plt.subplots(1, 2, figsize=(13.5, 4.9),
+                                      gridspec_kw={"width_ratios": [1.55, 1]})
+
+    means = [ladder[name]["mean"] for name in order]
+    bars = left.barh(range(len(order)), means,
+                     color=[colours.get(name, NEUTRAL) for name in order], height=0.62)
+    for row, name in enumerate(order):
+        spread = [ladder[name][category] for category in categories]
+        left.scatter(spread, [row] * len(spread), s=18, color=INK, zorder=3, alpha=0.75)
+        left.text(max(spread) + 0.02, row, "%.4f" % ladder[name]["mean"],
+                  va="center", fontsize=10.5, color=INK)
+    left.set_yticks(range(len(order)))
+    left.set_yticklabels([labels[name] for name in order], fontsize=9.5)
+    left.set_xlim(0, 1.2)
+    left.axvline(0.5, color=NEUTRAL, linestyle=":", linewidth=1.2, zorder=0)
+    left.text(0.5, len(order) - 0.42, " chance", fontsize=9, color=NEUTRAL, va="top")
+    left.set_xlabel("image AUROC: bar is the mean of four categories, dots are the categories")
+    left.set_title("The same frozen features, reduced four ways\n"
+                   "every row scored on the same four test folders", loc="left")
+    tidy(left, grid_axis="x")
+
+    # Right: what an operator receives, per category, and what never arrives
+    published_p2 = [bands[category]["P2"] for category in categories]
+    published_p3 = [bands[category]["P3"] for category in categories]
+    missed = [performance[category]["defects_total"] - performance[category]["defects_found"]
+              for category in categories]
+    positions = range(len(categories))
+    right.barh(positions, published_p2, color=ALERT, height=0.55, label="P2  no sound part scored this high")
+    right.barh(positions, published_p3, left=published_p2, color=ACCENT, height=0.55,
+               label="P3  above the threshold, inside the sound range")
+    widest = max(p2 + p3 for p2, p3 in zip(published_p2, published_p3))
+    for row, category in enumerate(categories):
+        total = published_p2[row] + published_p3[row]
+        right.text(total + widest * 0.03, row,
+                   "%d events, %d defect%s not flagged"
+                   % (total, missed[row], "" if missed[row] == 1 else "s"),
+                   va="center", fontsize=9, color=INK)
+    right.set_yticks(list(positions))
+    right.set_yticklabels(categories, fontsize=10)
+    right.set_xlim(0, widest * 1.75)
+    # The annotations run to the right of every bar, so the legend needs a row of its
+    # own below the bottom one rather than a corner of the plotting area.
+    right.set_ylim(-1.15, len(categories) - 0.45)
+    right.set_xlabel("events published; sound parts are suppressed and never sent")
+    right.legend(fontsize=8.5, loc="lower right", frameon=False)
+    right.set_title("What each detector sends an operator\n"
+                    "both band edges are quantiles of held-out sound parts", loc="left")
+    tidy(right, grid_axis="x")
+
+    fig.suptitle("MVTec AD: four component categories, mean image AUROC %.4f, "
+                 "mean pixel AUROC %.4f"
+                 % (meta["test_performance"]["mean_image_auroc"],
+                    meta["test_performance"]["mean_pixel_auroc"]),
+                 fontsize=15, x=0.045, ha="left", y=1.0)
+    fig.tight_layout()
+    return save(fig, "mvtec_benchmark_ladder", "cv",
+                "models/checkpoints/mvtec/mvtec_cv_meta.json")
+
+
 def main():
     print("Reading metrics from %s" % CKPT_DIR.relative_to(PROJECT_ROOT))
     scania_figure(load("scania", "scania_aps_meta.json"))
     casting_figure(load("casting", "casting_cv_meta.json"))
     cmapss_figure(load("cmapss", "cmapss_full_fleet_meta.json"))
     neu_figure(load("neu", "neu_cv_meta.json"))
+    mvtec_figure(load("mvtec", "mvtec_cv_meta.json"))
 
 
 if __name__ == "__main__":

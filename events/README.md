@@ -12,6 +12,7 @@ Cell. Contract owner: `docs/Project_Charter.md` sections 6 and 7.
 | `make_events_scania.py` | Scania APS adapter: the same, for the tabular module |
 | `make_events_casting.py` | Casting defect adapter: the same, for the vision module |
 | `make_events_neu.py` | NEU steel surface adapter: the same, for the defect-type module |
+| `make_events_mvtec.py` | MVTec adapter: the same, for the four component anomaly detectors |
 | `out/` | Generated event batches (demo input for the n8n workflow) |
 
 ## Usage
@@ -21,10 +22,12 @@ python events/make_events_cmapss.py
 python events/make_events_scania.py
 python events/make_events_casting.py
 python events/make_events_neu.py
+python events/make_events_mvtec.py
 python events/validate_event.py events/out/cmapss_events_full_fleet.jsonl
 python events/validate_event.py events/out/scania_events.jsonl
 python events/validate_event.py events/out/casting_events.jsonl
 python events/validate_event.py events/out/neu_events.jsonl
+python events/validate_event.py events/out/mvtec_events.jsonl
 ```
 
 ## CMAPSS priority mapping (charter 7.1)
@@ -99,7 +102,7 @@ assumption in the same sense as casting's cost ratios. The adapter reads it from
 the metrics file rather than defining it, so the two cannot drift apart. Reasoning
 in `docs/Model_Card_NEU_Surface.md` section 5.
 
-**This is the second module in the `visual_inspection` domain.** No contract change
+**This was the second module in the `visual_inspection` domain**, and MVTec is now the third. No contract change
 was needed for that: the domain was already in the enum, already in `roster.json`
 and already in the assistant's assignment rules. What did change is the
 `source_module` enum, which gained `neu_surface` in both
@@ -107,6 +110,49 @@ and already in the assistant's assignment rules. What did change is the
 incident query filtered by `business_domain=visual_inspection` now returns two
 modules, so that field has stopped being a one-to-one proxy for a module.
 Filtering by `source_module` still separates them.
+
+## MVTec component anomaly priority mapping (charter 7.1)
+
+Anomaly score against two edges read off held-out sound parts:
+`above the ceiling -> P2`, `above the threshold -> P3`, below it the part is not
+published. No P1 and no P4. Risk score is `score / (score + threshold)`, which is
+bounded, never saturates, and puts the threshold at exactly 0.5 for every
+category whatever its raw distances look like. The raw distance rides in
+`evidence.prediction`.
+
+**Four models behind one event stream.** grid, metal_nut, screw and transistor
+are four imaging setups with four memory banks and four thresholds, so the
+threshold an event carries depends on the category that produced it. The category
+rides in `evidence.category`, and the adapter refuses to run if a threshold in
+the prediction table disagrees with the one in the metrics file, because that
+would mean one of the two files is stale.
+
+**Only flagged parts produce an event**, like casting and Scania. This dataset
+has a sound class and the sound-or-not decision is the whole point of the module,
+so publishing every pass would bury the incident store. NEU publishes everything
+only because NEU has no sound class at all.
+
+**The priority says how unusual, never how dangerous.** The module is fitted on
+sound parts alone and has never seen a defect, so it has no basis for ranking a
+scratch against a bent lead against a flipped nut. What it can say is whether any
+held-out sound part ever scored this high: above the ceiling, none did. There is
+no P1 band for the same reason, since P1 in the charter means safety-relevant.
+
+**Both edges come from sound parts and neither has seen a defect.** The threshold
+is the lowest score that flags no more than 5 per cent of the calibration parts,
+the ceiling is the highest score any of them reached, and
+`evidence.threshold_basis` says so on every event. This is the casting lesson
+applied rather than restated: casting searched a cost curve for an optimum and
+the optimum moved by a factor of five between identical runs, so this module
+declares a budget and reads a quantile instead. Reasoning in
+`docs/Model_Card_MVTec_Anomaly.md` section 5.
+
+**This is the third module in the `visual_inspection` domain**, and it needed no
+contract change beyond the `source_module` enum, which gained `mvtec_anomaly` in
+both `arkon_event_schema.json` and `validate_event.py`. The consequence the NEU
+section records gets one step worse: a query filtered by
+`business_domain=visual_inspection` now returns three modules across three
+departments. Filtering by `source_module` still separates them.
 
 ## Data integrity
 

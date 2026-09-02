@@ -1,0 +1,521 @@
+{
+  "dataset": "MVTec AD, four categories: grid, metal_nut, screw, transistor",
+  "task": "unsupervised anomaly detection, fitted on sound parts only",
+  "architecture": "resnet18 ImageNet backbone, frozen; layer2 and layer3 with 3x3 local aggregation concatenated on the layer2 grid; greedy coreset memory bank; image score is the largest per-patch nearest-neighbour distance",
+  "trained": false,
+  "training_note": "nothing is fitted to MVTec. The module stores feature vectors taken from sound parts and computes a distance, so there is no loss, no epoch and no learning rate.",
+  "image_size": 320,
+  "layers": [
+    "layer2",
+    "layer3"
+  ],
+  "patches_per_image": 1600,
+  "seed": 42,
+  "categories": [
+    "grid",
+    "metal_nut",
+    "screw",
+    "transistor"
+  ],
+  "split_note": "the dataset ships train/ with sound parts only and test/ with both. The train folder is cut 70%/30% at seed 42 into a memory bank and a calibration set of sound parts the bank does not hold; the shipped test/ folder is scored once.",
+  "composition": {
+    "grid": {
+      "bank": 185,
+      "calibration": 79,
+      "test": 78,
+      "test_defective": 57
+    },
+    "metal_nut": {
+      "bank": 154,
+      "calibration": 66,
+      "test": 115,
+      "test_defective": 93
+    },
+    "screw": {
+      "bank": 224,
+      "calibration": 96,
+      "test": 160,
+      "test_defective": 119
+    },
+    "transistor": {
+      "bank": 149,
+      "calibration": 64,
+      "test": 100,
+      "test_defective": 40
+    }
+  },
+  "memory_bank": {
+    "rule": "the smallest budget at which the median score of the held-out sound parts is within 2% of what the complete bank gives them",
+    "basis": "chosen on sound parts alone, with no defect label involved",
+    "budgets_measured": [
+      0.005,
+      0.01,
+      0.02,
+      0.05
+    ],
+    "sweep": [
+      {
+        "category": "grid",
+        "budget": 0.005,
+        "vectors": 1480,
+        "median_sound_score": 1.8407,
+        "gap_to_complete": 0.197
+      },
+      {
+        "category": "grid",
+        "budget": 0.01,
+        "vectors": 2960,
+        "median_sound_score": 1.7545,
+        "gap_to_complete": 0.141
+      },
+      {
+        "category": "grid",
+        "budget": 0.02,
+        "vectors": 5920,
+        "median_sound_score": 1.6748,
+        "gap_to_complete": 0.0891
+      },
+      {
+        "category": "grid",
+        "budget": 0.05,
+        "vectors": 14800,
+        "median_sound_score": 1.5998,
+        "gap_to_complete": 0.0404
+      },
+      {
+        "category": "metal_nut",
+        "budget": 0.005,
+        "vectors": 1232,
+        "median_sound_score": 2.2282,
+        "gap_to_complete": 0.2821
+      },
+      {
+        "category": "metal_nut",
+        "budget": 0.01,
+        "vectors": 2464,
+        "median_sound_score": 2.0727,
+        "gap_to_complete": 0.1926
+      },
+      {
+        "category": "metal_nut",
+        "budget": 0.02,
+        "vectors": 4928,
+        "median_sound_score": 1.9607,
+        "gap_to_complete": 0.1281
+      },
+      {
+        "category": "metal_nut",
+        "budget": 0.05,
+        "vectors": 12320,
+        "median_sound_score": 1.8766,
+        "gap_to_complete": 0.0797
+      },
+      {
+        "category": "screw",
+        "budget": 0.005,
+        "vectors": 1792,
+        "median_sound_score": 1.8583,
+        "gap_to_complete": 0.3113
+      },
+      {
+        "category": "screw",
+        "budget": 0.01,
+        "vectors": 3584,
+        "median_sound_score": 1.7104,
+        "gap_to_complete": 0.2069
+      },
+      {
+        "category": "screw",
+        "budget": 0.02,
+        "vectors": 7168,
+        "median_sound_score": 1.607,
+        "gap_to_complete": 0.134
+      },
+      {
+        "category": "screw",
+        "budget": 0.05,
+        "vectors": 17920,
+        "median_sound_score": 1.5205,
+        "gap_to_complete": 0.0729
+      },
+      {
+        "category": "transistor",
+        "budget": 0.005,
+        "vectors": 1192,
+        "median_sound_score": 2.1431,
+        "gap_to_complete": 0.303
+      },
+      {
+        "category": "transistor",
+        "budget": 0.01,
+        "vectors": 2384,
+        "median_sound_score": 2.0288,
+        "gap_to_complete": 0.2335
+      },
+      {
+        "category": "transistor",
+        "budget": 0.02,
+        "vectors": 4768,
+        "median_sound_score": 1.912,
+        "gap_to_complete": 0.1625
+      },
+      {
+        "category": "transistor",
+        "budget": 0.05,
+        "vectors": 11920,
+        "median_sound_score": 1.8069,
+        "gap_to_complete": 0.0986
+      }
+    ],
+    "per_category": {
+      "grid": {
+        "images": 185,
+        "patches": 296000,
+        "budget": 0.05,
+        "kept": 14800,
+        "at_the_cap": true,
+        "complete_bank_median": 1.5378,
+        "megabytes": 22.7,
+        "seconds": 77.1
+      },
+      "metal_nut": {
+        "images": 154,
+        "patches": 246400,
+        "budget": 0.05,
+        "kept": 12320,
+        "at_the_cap": true,
+        "complete_bank_median": 1.738,
+        "megabytes": 18.9,
+        "seconds": 57.3
+      },
+      "screw": {
+        "images": 224,
+        "patches": 358400,
+        "budget": 0.05,
+        "kept": 17920,
+        "at_the_cap": true,
+        "complete_bank_median": 1.4172,
+        "megabytes": 27.5,
+        "seconds": 55.9
+      },
+      "transistor": {
+        "images": 149,
+        "patches": 238400,
+        "budget": 0.05,
+        "kept": 11920,
+        "at_the_cap": true,
+        "complete_bank_median": 1.6448,
+        "megabytes": 18.3,
+        "seconds": 32.6
+      }
+    },
+    "cost_after_the_fact": {
+      "measured_on": "screw",
+      "variants": [
+        {
+          "bank": "every patch",
+          "vectors": 358400,
+          "image_auroc": 0.9783,
+          "scoring_seconds": 16.2
+        },
+        {
+          "bank": "coreset 0.5%",
+          "vectors": 1792,
+          "image_auroc": 0.9678,
+          "scoring_seconds": 0.2
+        },
+        {
+          "bank": "coreset 1%",
+          "vectors": 3584,
+          "image_auroc": 0.9818,
+          "scoring_seconds": 0.3
+        },
+        {
+          "bank": "coreset 2%",
+          "vectors": 7168,
+          "image_auroc": 0.9688,
+          "scoring_seconds": 0.4
+        },
+        {
+          "bank": "coreset 5%",
+          "vectors": 17920,
+          "image_auroc": 0.965,
+          "scoring_seconds": 0.9
+        },
+        {
+          "bank": "random 5%",
+          "vectors": 17920,
+          "image_auroc": 0.8407,
+          "scoring_seconds": 0.9
+        }
+      ]
+    }
+  },
+  "benchmark_difficulty": {
+    "note": "the same frozen features reduced four ways on the same test folders, so the shipped design can be read against the alternatives rather than against chance",
+    "image_auroc": {
+      "layer2+3 patches": {
+        "grid": 0.9749,
+        "metal_nut": 1.0,
+        "screw": 0.965,
+        "transistor": 0.9871,
+        "mean": 0.9817
+      },
+      "layer4 patches": {
+        "grid": 0.6759,
+        "metal_nut": 0.9306,
+        "screw": 0.7362,
+        "transistor": 0.9096,
+        "mean": 0.8131
+      },
+      "layer4 averaged": {
+        "grid": 0.5873,
+        "metal_nut": 0.8631,
+        "screw": 0.7723,
+        "transistor": 0.9012,
+        "mean": 0.781
+      },
+      "pixel mean and sd": {
+        "grid": 0.6608,
+        "metal_nut": 0.5836,
+        "screw": 0.1898,
+        "transistor": 0.6104,
+        "mean": 0.5112
+      }
+    }
+  },
+  "input_resolution": {
+    "note": "the module ships at 320, chosen from the mask geometry in notebook 02 section 5; 224 measured here for the record",
+    "measurements": [
+      {
+        "category": "grid",
+        "input": 224,
+        "patches_per_image": 784,
+        "image_auroc": 0.9465,
+        "seconds": 11.9
+      },
+      {
+        "category": "grid",
+        "input": 320,
+        "patches_per_image": 1600,
+        "image_auroc": 0.9749,
+        "seconds": 49.0
+      },
+      {
+        "category": "screw",
+        "input": 224,
+        "patches_per_image": 784,
+        "image_auroc": 0.9397,
+        "seconds": 17.1
+      },
+      {
+        "category": "screw",
+        "input": 320,
+        "patches_per_image": 1600,
+        "image_auroc": 0.965,
+        "seconds": 47.9
+      }
+    ]
+  },
+  "operating_point": {
+    "rule": "the lowest score that flags no more than 5% of the calibration parts, which are sound parts the memory bank does not hold",
+    "basis": "declared budget on sound parts, read off the calibration quantile. No search over a cost curve, and no defect involved in either edge.",
+    "false_alarm_budget": 0.05,
+    "risk_score_formula": "score / (score + threshold), so the threshold is 0.5",
+    "per_category": {
+      "grid": {
+        "calibration_parts": 79,
+        "median_normal": 1.5998,
+        "threshold": 1.7574,
+        "ceiling": 1.7824,
+        "flagged_on_calibration": 3,
+        "realised_false_alarm": 0.038
+      },
+      "metal_nut": {
+        "calibration_parts": 66,
+        "median_normal": 1.8766,
+        "threshold": 2.0246,
+        "ceiling": 2.039,
+        "flagged_on_calibration": 3,
+        "realised_false_alarm": 0.0455
+      },
+      "screw": {
+        "calibration_parts": 96,
+        "median_normal": 1.5205,
+        "threshold": 1.7111,
+        "ceiling": 1.8896,
+        "flagged_on_calibration": 4,
+        "realised_false_alarm": 0.0417
+      },
+      "transistor": {
+        "calibration_parts": 64,
+        "median_normal": 1.8069,
+        "threshold": 2.0822,
+        "ceiling": 2.2878,
+        "flagged_on_calibration": 3,
+        "realised_false_alarm": 0.0469
+      }
+    }
+  },
+  "test_performance": {
+    "measured_on": "the folder the dataset ships as test/, scored once",
+    "per_category": {
+      "grid": {
+        "image_auroc": 0.9749,
+        "defects_found": 54,
+        "defects_total": 57,
+        "recall": 0.9474,
+        "false_alarms": 3,
+        "sound_total": 21,
+        "false_alarm_rate": 0.1429
+      },
+      "metal_nut": {
+        "image_auroc": 1.0,
+        "defects_found": 93,
+        "defects_total": 93,
+        "recall": 1.0,
+        "false_alarms": 5,
+        "sound_total": 22,
+        "false_alarm_rate": 0.2273
+      },
+      "screw": {
+        "image_auroc": 0.965,
+        "defects_found": 103,
+        "defects_total": 119,
+        "recall": 0.8655,
+        "false_alarms": 4,
+        "sound_total": 41,
+        "false_alarm_rate": 0.0976
+      },
+      "transistor": {
+        "image_auroc": 0.9871,
+        "defects_found": 39,
+        "defects_total": 40,
+        "recall": 0.975,
+        "false_alarms": 8,
+        "sound_total": 60,
+        "false_alarm_rate": 0.1333
+      }
+    },
+    "mean_image_auroc": 0.9817,
+    "pixel_localisation": {
+      "grid": {
+        "pixel_auroc": 0.9841,
+        "defect_pixels": 55087,
+        "total_pixels": 7987200,
+        "defect_share": 0.0069
+      },
+      "metal_nut": {
+        "pixel_auroc": 0.9842,
+        "defect_pixels": 1379988,
+        "total_pixels": 11776000,
+        "defect_share": 0.11719
+      },
+      "screw": {
+        "pixel_auroc": 0.9948,
+        "defect_pixels": 40908,
+        "total_pixels": 16384000,
+        "defect_share": 0.0025
+      },
+      "transistor": {
+        "pixel_auroc": 0.9322,
+        "defect_pixels": 490701,
+        "total_pixels": 10240000,
+        "defect_share": 0.04792
+      }
+    },
+    "mean_pixel_auroc": 0.9738,
+    "pixel_note": "computed at 320 by 320 over every pixel of every test image, sound ones included, so it is not comparable with published MVTec figures at native resolution"
+  },
+  "priority_bands": {
+    "grid": {
+      "events": 57,
+      "P2": 55,
+      "P3": 2,
+      "suppressed": 21,
+      "defects_suppressed": 3,
+      "sound_published": 3
+    },
+    "metal_nut": {
+      "events": 98,
+      "P2": 97,
+      "P3": 1,
+      "suppressed": 17,
+      "defects_suppressed": 0,
+      "sound_published": 5
+    },
+    "screw": {
+      "events": 107,
+      "P2": 73,
+      "P3": 34,
+      "suppressed": 53,
+      "defects_suppressed": 16,
+      "sound_published": 4
+    },
+    "transistor": {
+      "events": 47,
+      "P2": 37,
+      "P3": 10,
+      "suppressed": 53,
+      "defects_suppressed": 1,
+      "sound_published": 8
+    }
+  },
+  "calibration_holdout_cost": {
+    "grid": {
+      "bank_70_percent": 0.9749,
+      "bank_100_percent": 0.9791,
+      "cost": -0.0042
+    },
+    "metal_nut": {
+      "bank_70_percent": 1.0,
+      "bank_100_percent": 0.9976,
+      "cost": 0.0024
+    },
+    "screw": {
+      "bank_70_percent": 0.965,
+      "bank_100_percent": 0.9785,
+      "cost": -0.0135
+    },
+    "transistor": {
+      "bank_70_percent": 0.9871,
+      "bank_100_percent": 0.9937,
+      "cost": -0.0066
+    }
+  },
+  "reproduction": {
+    "note": "the whole pipeline run twice from the same seed in the same session",
+    "exact": true,
+    "per_category": {
+      "grid": {
+        "bank_identical": true,
+        "max_score_difference": 0.0,
+        "threshold_moved": -1e-05,
+        "auroc_run_2": 0.9749,
+        "decisions_changed": 0
+      },
+      "metal_nut": {
+        "bank_identical": true,
+        "max_score_difference": 0.0,
+        "threshold_moved": -3.2e-05,
+        "auroc_run_2": 1.0,
+        "decisions_changed": 0
+      },
+      "screw": {
+        "bank_identical": true,
+        "max_score_difference": 0.0,
+        "threshold_moved": -3.4e-05,
+        "auroc_run_2": 0.965,
+        "decisions_changed": 0
+      },
+      "transistor": {
+        "bank_identical": true,
+        "max_score_difference": 0.0,
+        "threshold_moved": 8e-06,
+        "auroc_run_2": 0.9871,
+        "decisions_changed": 0
+      }
+    }
+  },
+  "benchmark_limitation": "MVTec AD ships no anomalous validation data, so every design choice that reasons about defects reasons from the folder the module is scored on. The threshold and the memory-bank budget are the two choices this module makes on sound parts alone."
+}
