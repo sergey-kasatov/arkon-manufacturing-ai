@@ -19,9 +19,10 @@ charter.** The charter says which modules exist, what each one measures and what
 version 1 of the platform can and cannot do. What has been *sent* is a different
 kind of fact: it changes the moment anybody replays anything, and the charter is
 ingested into the assistant's knowledge store, so every edit to it costs a
-snapshot, a collection drop, a rebuild and a re-measurement. Three of those
-happened on 2026-09-02 and two were caused by charter sentences about runs. This
-file is not ingested. The run log belongs here.
+snapshot, a collection drop, a rebuild and a re-measurement. Four of those
+happened on 2026-09-02: two were caused by charter sentences about runs, and the
+fourth was this move, which is the last one that class will cost. This file is not
+ingested. The run log belongs here.
 
 Counted from the incident store on 2026-09-02, not from memory:
 
