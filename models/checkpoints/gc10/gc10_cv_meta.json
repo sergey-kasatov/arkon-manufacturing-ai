@@ -1,0 +1,267 @@
+{
+  "dataset": "GC10-DET metallic surface defects, 2048 x 1000 single-channel photographs of steel sheet, ten defect classes with Pascal VOC boxes",
+  "architecture": "fasterrcnn_resnet50_fpn_v2, COCO weights, eleven-way box head",
+  "task": "object detection",
+  "min_size": 800,
+  "max_size": 1600,
+  "batch_size": 2,
+  "epochs": 10,
+  "best_epoch": 9,
+  "learning_rate": 0.005,
+  "lr_drop_epoch": 8,
+  "warmup_iterations": 500,
+  "seed": 42,
+  "classes": {
+    "1": "punching_hole",
+    "2": "welding_line",
+    "3": "crescent_gap",
+    "4": "water_spot",
+    "5": "oil_spot",
+    "6": "silk_spot",
+    "7": "inclusion",
+    "8": "rolled_pit",
+    "9": "crease",
+    "10": "waist_folding"
+  },
+  "augmentation": "horizontal and vertical flip only. A rotation is excluded because an axis-aligned box cannot follow one: it either leaves the defect outside the box or grows the box over background nobody marked.",
+  "split": {
+    "unit": "source",
+    "note": "Whole sources, never sheets. The middle field of the file name is the coil the photograph came from, and 93 per cent of sheet pairs closer than 2 grey levels share one. Splitting by sheet scores the module on frames of a coil it was fitted on. Measured in notebook 02 sections 5 to 8.",
+    "proportions": {
+      "fit": 0.7,
+      "selection": 0.15,
+      "test": 0.15
+    },
+    "sheets": {
+      "fit": 1619,
+      "selection": 334,
+      "test": 339
+    },
+    "boxes": {
+      "fit": 2508,
+      "selection": 511,
+      "test": 544
+    },
+    "coils": {
+      "fit": 289,
+      "selection": 95,
+      "test": 83
+    }
+  },
+  "label_repairs": {
+    "class_10_spellings": {
+      "10_yaozhe": 12,
+      "10_yaozhed": 131
+    },
+    "boxes_dropped_by_unknown_tag": {
+      "d": 1
+    },
+    "sheets_dropped_with_no_box": [
+      "img_02_4406772100_00175",
+      "img_05_425382900_00002",
+      "img_06_3402617700_00988",
+      "img_06_425614600_00429",
+      "img_06_425614600_00438",
+      "img_07_3436814000_00020",
+      "img_07_436164700_01539",
+      "img_08_4406743300_00407"
+    ]
+  },
+  "metric": "VOC 2010 all-point average precision, implemented in notebook 03 section 4 because neither torchmetrics nor pycocotools is in this environment, and validated there against six cases including two computed by hand",
+  "test_performance": {
+    "measured_on": "339 sheets from 83 coils no other split contains, scored once",
+    "map_50": 0.58783,
+    "map_75": 0.22232,
+    "precision_at_threshold": 0.60364,
+    "recall_at_threshold": 0.61029,
+    "boxes_found": 332,
+    "boxes_claimed_not_there": 218,
+    "boxes_present": 544,
+    "per_class_ap_50": {
+      "1": 0.9799,
+      "2": 0.8373,
+      "3": 0.99633,
+      "4": 0.63067,
+      "5": 0.58154,
+      "6": 0.29354,
+      "7": 0.46743,
+      "8": 0.30795,
+      "9": 0.17361,
+      "10": 0.61001
+    },
+    "per_class_boxes": {
+      "1": 61,
+      "2": 87,
+      "3": 49,
+      "4": 41,
+      "5": 54,
+      "6": 167,
+      "7": 39,
+      "8": 14,
+      "9": 11,
+      "10": 21
+    }
+  },
+  "selection_performance": {
+    "map_50": 0.59777,
+    "map_75": 0.26199
+  },
+  "operating_point": {
+    "detection_threshold": 0.65,
+    "detection_rule": "the lowest score at which precision over the selection split reaches 0.60",
+    "detection_rule_degenerated": false,
+    "threshold_basis": "calibrated",
+    "band_edge": 0.9,
+    "band_rule": "the lowest best-box score at which the top detection on a sheet is correct at IoU 0.5 at least 90% of the time on the selection split",
+    "band_rule_degenerated": true,
+    "band_basis": "declared",
+    "iou_match": 0.5,
+    "test_sheets_published": 308,
+    "test_sheets_silent": 31,
+    "test_top_detection_correct": 0.75974
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.4195,
+      "selection_map_50": 0.46771,
+      "seconds": 371.6
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.27831,
+      "selection_map_50": 0.44637,
+      "seconds": 375.6
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.2545,
+      "selection_map_50": 0.48041,
+      "seconds": 371.0
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.24271,
+      "selection_map_50": 0.55806,
+      "seconds": 366.1
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.23125,
+      "selection_map_50": 0.52798,
+      "seconds": 387.3
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.21663,
+      "selection_map_50": 0.54174,
+      "seconds": 389.7
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.2126,
+      "selection_map_50": 0.5064,
+      "seconds": 329.6
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.20727,
+      "selection_map_50": 0.53766,
+      "seconds": 401.2
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.18267,
+      "selection_map_50": 0.59777,
+      "seconds": 363.6
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.1738,
+      "selection_map_50": 0.5306,
+      "seconds": 321.2
+    }
+  ],
+  "ablation_frozen_backbone": {
+    "best_epoch": 10,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 0.40036,
+        "selection_map_50": 0.3038,
+        "seconds": 233.6
+      },
+      {
+        "epoch": 2,
+        "train_loss": 0.27058,
+        "selection_map_50": 0.40805,
+        "seconds": 303.5
+      },
+      {
+        "epoch": 3,
+        "train_loss": 0.25791,
+        "selection_map_50": 0.41617,
+        "seconds": 229.7
+      },
+      {
+        "epoch": 4,
+        "train_loss": 0.25202,
+        "selection_map_50": 0.46972,
+        "seconds": 286.3
+      },
+      {
+        "epoch": 5,
+        "train_loss": 0.2452,
+        "selection_map_50": 0.42699,
+        "seconds": 228.4
+      },
+      {
+        "epoch": 6,
+        "train_loss": 0.2388,
+        "selection_map_50": 0.46566,
+        "seconds": 263.5
+      },
+      {
+        "epoch": 7,
+        "train_loss": 0.23535,
+        "selection_map_50": 0.50763,
+        "seconds": 229.9
+      },
+      {
+        "epoch": 8,
+        "train_loss": 0.23347,
+        "selection_map_50": 0.44698,
+        "seconds": 244.5
+      },
+      {
+        "epoch": 9,
+        "train_loss": 0.22356,
+        "selection_map_50": 0.48833,
+        "seconds": 231.3
+      },
+      {
+        "epoch": 10,
+        "train_loss": 0.21759,
+        "selection_map_50": 0.50828,
+        "seconds": 211.0
+      }
+    ],
+    "test_map_50": 0.51746,
+    "test_map_75": 0.19849,
+    "minutes": 41.0
+  },
+  "reproduction": {
+    "note": "the fine-tuned arm refitted from the same seed in the same session",
+    "values_compared": 6,
+    "values_moved": 5,
+    "run_2_best_epoch": 9,
+    "run_2_test_map_50": 0.62348,
+    "run_2_detection_threshold": 0.55,
+    "run_2_test_sheets_published": 311
+  },
+  "timing": {
+    "fine_tuned_minutes": 61.3,
+    "device": "NVIDIA GeForce RTX 3070 Laptop GPU",
+    "input_scale_note": "measured on this machine under sustained load: one training step of two sheets costs 0.92 s at min_size 1000 / max_size 2048 and 0.32 s at 800 / 1600, which is 2.9 times the time for 1.6 times the pixels. 800 is also the scale the COCO weights were fitted at."
+  }
+}

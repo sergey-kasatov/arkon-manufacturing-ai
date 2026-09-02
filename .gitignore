@@ -24,6 +24,7 @@ models/**
 !models/checkpoints/scania/scania_aps_meta.json
 !models/checkpoints/neu/neu_cv_meta.json
 !models/checkpoints/mvtec/mvtec_cv_meta.json
+!models/checkpoints/gc10/gc10_cv_meta.json
 
 # Python
 __pycache__/

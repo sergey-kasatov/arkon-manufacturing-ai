@@ -4,7 +4,7 @@ One figure per module, each built from the metrics JSON that its model card
 cites, so a figure and the card it illustrates cannot drift apart. No model is
 loaded, no dataset is read and no GPU is used: everything drawn here was already
 measured by the training scripts and written to
-`models/checkpoints/<module>/*_meta.json`. Those five files are the only ones
+`models/checkpoints/<module>/*_meta.json`. Those six files are the only ones
 git keeps under `models/`, for exactly this reason.
 
 What each figure is for:
@@ -23,6 +23,10 @@ What each figure is for:
   MVTec    four detectors rather than one number, and what the design is worth:
            the skeleton that shipped in the notebook folder scores far below the
            shipped module on the same frozen features.
+  GC10     the per-class spread is not the denominators, which is what the
+           panel is for: the class with the most boxes scores nearly worst. Plus
+           the box ledger - what a detector found, what it missed and what it
+           claimed was there and was not, on one scale.
 
 Deliberately not imported: `notebooks/utils/arkon_utils.save_figure`. That module
 imports joblib at module level and carries the training-time helpers with it;
@@ -499,6 +503,97 @@ def mvtec_figure(meta):
                 "models/checkpoints/mvtec/mvtec_cv_meta.json")
 
 
+# GC10: the per-class spread is mostly the denominators, and what a detector claims
+def gc10_figure(meta):
+    performance = meta["test_performance"]
+    operating = meta["operating_point"]
+    classes = meta["classes"]
+    per_class = performance["per_class_ap_50"]
+    per_boxes = performance["per_class_boxes"]
+
+    # A class the test split does not contain has no AP. There should be none, and a
+    # figure that silently dropped one would hide exactly the thing worth seeing.
+    scored = sorted((class_id for class_id, ap in per_class.items() if ap is not None),
+                    key=lambda class_id: per_class[class_id])
+    absent = [class_id for class_id, ap in per_class.items() if ap is None]
+
+    fig, (left, right) = plt.subplots(1, 2, figsize=(13.5, 4.9),
+                                      gridspec_kw={"width_ratios": [1.5, 1]})
+
+    values = [per_class[class_id] for class_id in scored]
+    boxes = [per_boxes[class_id] for class_id in scored]
+    # The panel exists to say that the thin rows are thin because of their
+    # denominators, so the bars are coloured by how many boxes stand behind them
+    # rather than by how well they scored.
+    thin = [n < 20 for n in boxes]
+    bars = left.barh(range(len(scored)), values,
+                     color=[ALERT if is_thin else ACCENT for is_thin in thin], height=0.62)
+    for bar, value in zip(bars, values):
+        left.text(value + 0.015, bar.get_y() + bar.get_height() / 2, "%.3f" % value,
+                  va="center", fontsize=10, color=INK)
+    left.set_yticks(range(len(scored)))
+    left.set_yticklabels(["%s  n=%d" % (classes[class_id].replace("_", " "),
+                                        per_boxes[class_id]) for class_id in scored],
+                         fontsize=9.5)
+    left.set_xlim(0, 1.14)
+    left.axvline(performance["map_50"], color=INK, linestyle=":", linewidth=1.4, zorder=0)
+    # The mean is never below the smallest class AP and the rows are drawn ascending,
+    # so the space just right of the line on the bottom row is clear in every run.
+    left.text(performance["map_50"] + 0.012, 0, "mAP %.3f" % performance["map_50"],
+              fontsize=9.5, color=INK, va="center")
+    left.set_xlabel("average precision at IoU 0.5, on the held-out coils")
+    left.set_title("Ten classes, red where under twenty boxes stand behind the score\n"
+                   "and the count is not what orders them, see the panel on the right",
+                   loc="left")
+    tidy(left, grid_axis="x")
+
+    # Right: the box ledger. A detector's honest summary is what it found, what it
+    # missed and what it claimed that was not there, drawn on one scale.
+    found = performance["boxes_found"]
+    missed = performance["boxes_present"] - found
+    claimed = performance["boxes_claimed_not_there"]
+    published = operating["test_sheets_published"]
+    silent = operating["test_sheets_silent"]
+
+    right.barh([2], [found], color=ACCENT, height=0.55)
+    right.barh([2], [missed], left=[found], color=FAINT, height=0.55)
+    right.barh([1], [claimed], color=ALERT, height=0.55)
+    right.barh([0], [published], color=ACCENT, height=0.55)
+    right.barh([0], [silent], left=[published], color=NEUTRAL, height=0.55)
+
+    widest = max(performance["boxes_present"], claimed, published + silent)
+    right.text(performance["boxes_present"] + widest * 0.03, 2,
+               "%d found, %d missed" % (found, missed), va="center", fontsize=9.5, color=INK)
+    right.text(claimed + widest * 0.03, 1, "%d claimed, nothing there" % claimed,
+               va="center", fontsize=9.5, color=INK)
+    right.text(published + silent + widest * 0.03, 0,
+               "%d publish, %d stay silent" % (published, silent),
+               va="center", fontsize=9.5, color=INK)
+    right.set_yticks([2, 1, 0])
+    right.set_yticklabels(["boxes that are there\n%d annotated" % performance["boxes_present"],
+                           "boxes that are not",
+                           "sheets, one event each"], fontsize=9.5)
+    # The annotations run to the right of every bar, so the axis needs headroom; the
+    # label has to stay short enough to fit inside the figure at that width.
+    right.set_xlim(0, widest * 1.9)
+    right.set_ylim(-0.7, 2.7)
+    right.set_xlabel("count, at a detection threshold of %.2f"
+                     % operating["detection_threshold"])
+    right.set_title("What the module claims, and what it lets past\n"
+                    "precision %.3f, recall %.3f"
+                    % (performance["precision_at_threshold"],
+                       performance["recall_at_threshold"]), loc="left")
+    tidy(right, grid_axis="x")
+
+    note = "" if not absent else "  (%d class(es) absent from the test split)" % len(absent)
+    fig.suptitle("GC10-DET: ten defect classes located on %d held-out sheets, mAP@0.5 %.4f%s"
+                 % (meta["split"]["sheets"]["test"], performance["map_50"], note),
+                 fontsize=15, x=0.045, ha="left", y=1.0)
+    fig.tight_layout()
+    return save(fig, "gc10_detection_ledger", "cv",
+                "models/checkpoints/gc10/gc10_cv_meta.json")
+
+
 def main():
     print("Reading metrics from %s" % CKPT_DIR.relative_to(PROJECT_ROOT))
     scania_figure(load("scania", "scania_aps_meta.json"))
@@ -506,6 +601,7 @@ def main():
     cmapss_figure(load("cmapss", "cmapss_full_fleet_meta.json"))
     neu_figure(load("neu", "neu_cv_meta.json"))
     mvtec_figure(load("mvtec", "mvtec_cv_meta.json"))
+    gc10_figure(load("gc10", "gc10_cv_meta.json"))
 
 
 if __name__ == "__main__":
