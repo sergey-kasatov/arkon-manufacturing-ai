@@ -49,6 +49,92 @@ class and are clean**, one record id per event in all of casting, CMAPSS, NEU an
 Scania. Worth keeping as a rule: a dedup key is a claim that two records describe
 the same thing, and it is only as good as the identity the adapter builds.
 
+**NEU went through the same day and completed the set**, and it is the module that
+had been written but never posted. Its two P3 events were recorded as
+`ARK-INC-00027` and `ARK-INC-00028` with nothing touched. Its three P2 events
+created `ARK-INC-00024` to `00026` and **their alerts were refused by Telegram**,
+which is the next section and is not a NEU problem. All five modules have now
+published into this webhook.
+
+## The alert branch was rejecting its own data, and answering 200
+
+**Found 2026-09-02 by sending NEU, the fifth and last module to go through here.**
+Three P2 events came back **HTTP 200 with an empty body**, which this file has
+always said means the workflow failed after the webhook was answered. It did. The
+execution record shows the Telegram node returning
+
+```text
+400 - {"ok":false,"error_code":400,
+       "description":"Bad Request: can't parse entities: Can't find end of the entity starting at byte offset 89"}
+```
+
+Byte 89 of the rendered card is the underscore in `inclusion_244`. The alert body
+was a Markdown template with six raw event values interpolated into it, and legacy
+Telegram Markdown reads `_` as an italic marker, so one underscore in a record id
+made Telegram refuse the whole message.
+
+**What makes this the worst defect found in this system is not the 400.** By the
+time Telegram refused, the incident had been written, its id consumed and its
+dedup key stored, so a retry inside the 24-hour window is answered
+`duplicate_suppressed` and the alert is gone for good. `ARK-INC-00024` through
+`00026` are in the store, correct in every field, and **no alert for them reached
+anybody**. The caller was told 200.
+
+**And it was never NEU-specific.** Every alerting event in the repository was
+counted, and the exposure is:
+
+| Batch | P1 and P2 events | Would have been refused |
+|---|---|---|
+| `casting_events.jsonl` | 13 | **13, all of them** |
+| `mvtec_events.jsonl` | 262 | **210** |
+| `neu_events.jsonl` | 3 | **3, all of them** |
+| `cmapss_events_full_fleet.jsonl` | 136 | 0 |
+| `scania_events.jsonl` | 309 | 0 |
+
+CMAPSS and Scania identifiers are digits and hyphens. **The branch was verified on
+CMAPSS at deployment and has never been sent anything else that alerts**, so it
+looked like a working alert channel for three weeks while it would have dropped
+every casting alert and four out of five MVTec ones. The MVTec run earlier the
+same day landed in the safe fifth by accident: `grid` and `bent` are the only
+category and defect-type names in that dataset without an underscore.
+
+**The fix moves the markup off the template and into the code.** The Code node now
+builds the whole body, escapes every value that comes out of an event, and hands
+the Telegram node one field; `parse_mode` is HTML rather than Markdown, because
+HTML has exactly three characters to escape and none of them can be left unmatched
+by accident. `alert_body_probe.js` renders all 738 alerting events through the real
+node and checks each body, and it carries five cases whose answer is known so a
+pass means something.
+
+```bash
+node n8n/alert_body_probe.js
+```
+
+> **NOT YET DEPLOYED as of 2026-09-02.** The fix is in this repository and the
+> probe passes against it. The workflow **running on the NAS is still the Markdown
+> version**, so until it is imported, any P1 or P2 whose text carries a `_`, `*`,
+> `` ` `` or `[` is still recorded without an alert. Do not read this section as a
+> description of the live system.
+>
+> Deploying it is not a plain `import:workflow`. That rewrites the whole workflow
+> row including `staticData`, which on **this** workflow holds the incident counter
+> and the dedup cache, so a naive import restarts the numbering at
+> `ARK-INC-00001`. The safe route is to export the live workflow, apply the two
+> changes to **that** document - it also carries the Telegram credential's internal
+> id, which the tracked file does not - and import the result, then publish and
+> restart the container:
+>
+> ```bash
+> docker exec n8n n8n export:workflow --id=o0vXtlRWIs9yFrUJ --output=/tmp/exp.json
+> ```
+
+**The general form is the one this project keeps meeting.** A path that is only
+ever exercised with data that happens to be safe is an untested path, and it does
+not announce itself: this one answered 200. The same sentence is already in this
+file about the escalation endpoint's 503 branch, which survived because it could
+not be reached. Here the branch could be reached; nobody had reached it with
+anything but CMAPSS.
+
 ## Workflow ids, and the one that is not readable
 
 Every workflow file carries a fixed `id`, so `n8n import:workflow` updates the
@@ -66,9 +152,10 @@ names. The fourth does not, and the reason is worth keeping:
 the incident counter lives.** `$getWorkflowStaticData("global")` on this workflow
 holds `counter`, which produces the `ARK-INC-*` numbering, and `seen`, the 24-hour
 duplicate-suppression window. Giving the file a readable id would mean importing
-under a new id, which creates a **new** workflow with empty static data: the next
-incident would be `ARK-INC-00001` against a store that already holds eighteen, and
-the dedup memory would be gone. The n8n CLI has `import`, `export`, `update` and
+under a new id, which creates a **new** workflow with empty static data: the
+counter would restart, so the next incident would be `ARK-INC-00001` against a
+store whose ids already run past `ARK-INC-00028`, and the dedup memory would be
+gone. The n8n CLI has `import`, `export`, `update` and
 `unpublish` but **no delete**, so the old row could not be cleaned up afterwards
 either, and the rename would leave exactly the extra copy the fixed id exists to
 prevent.
@@ -121,6 +208,7 @@ workflow static data does not grow without bound.
 | `incident_status_api_v1.json` | The status API workflow, importable into n8n |
 | `replay_events.py` | Posts an events JSONL to the webhook for demos |
 | `incident_status_probe.py` | Contract test for the status API |
+| `alert_body_probe.js` | Contract test for the Telegram alert body, over every alerting event |
 
 Five modules publish into this one webhook. Every batch is replayed by the same
 script, and the priority mix is the module's own, not a setting:
@@ -140,8 +228,8 @@ and should not be used for new demos.
 **Replay a slice, never a batch.** Every P1 and P2 sends a Telegram card to the
 alert group, and the incident store is append-only with the counter in workflow
 static data, so nothing here can be undone. `mvtec_events.jsonl` is the sharpest
-case, 262 of its 309 events being P2. The 2026-09-02 MVTec run was five events
-in two commands, and it is the size a new module should go in at:
+case, 262 of its 309 events being P2. The MVTec and NEU runs of 2026-09-02 were five events
+each in two commands, and that is the size a new module should go in at:
 
 ```bash
 python n8n/replay_events.py http://AK2101:5678/webhook/arkon-event events/out/mvtec_events.jsonl --priority P2 --limit 3 --delay 1
