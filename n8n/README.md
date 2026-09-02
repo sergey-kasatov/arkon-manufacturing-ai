@@ -12,6 +12,37 @@ instance, pinned to `n8nio/n8n:2.29.9`.
 | `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30 |
 | `comparison_slice_v1.json` | read | `POST /webhook/arkon-slice` | 2026-08-30 |
 
+## The run log: what has actually been sent through here
+
+**This is where deployment state lives, and it is deliberately not in the
+charter.** The charter says which modules exist, what each one measures and what
+version 1 of the platform can and cannot do. What has been *sent* is a different
+kind of fact: it changes the moment anybody replays anything, and the charter is
+ingested into the assistant's knowledge store, so every edit to it costs a
+snapshot, a collection drop, a rebuild and a re-measurement. Three of those
+happened on 2026-09-02 and two were caused by charter sentences about runs. This
+file is not ingested. The run log belongs here.
+
+Counted from the incident store on 2026-09-02, not from memory:
+
+| Module | Incidents | Ids | Sent |
+|---|---|---|---|
+| `cmapss_rul` | 6 | `ARK-INC-00011` to `00016` | 2026-08-30, the deployment verification |
+| `scania_aps` | 1 | `ARK-INC-00017` | 2026-08-30, first event of the second module |
+| `casting_cv` | 1 | `ARK-INC-00018` | 2026-08-30, first event of the third module |
+| `mvtec_anomaly` | 6 | `ARK-INC-00019` to `00023`, and `00029` | 2026-09-02, a five-event slice plus the one that verified the alert fix |
+| `neu_surface` | 5 | `ARK-INC-00024` to `00028` | 2026-09-02, the run that found the alert defect |
+
+**All five modules that publish the section 6 event contract have now been through
+this webhook.** Only NHTSA, which is not built, has not.
+
+Two things the table is careful about. **The store is not a complete history of
+every id ever issued**: it holds 19 incidents while the counter stands at 29, and
+ids below `ARK-INC-00011` were consumed by earlier deployment testing whose
+records are not in the current file. And **the counter, not the store, is the
+identity**: it lives in the workflow's static data, which is why re-importing this
+workflow needs the care described further down.
+
 **Module-agnostic as of 2026-08-30, and now measured.** The first Scania APS
 event was posted to the intake webhook and created `ARK-INC-00017` with no
 change to any workflow: intake validates a contract rather than a domain, and it
