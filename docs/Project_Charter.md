@@ -26,7 +26,7 @@ The project demonstrates the following capabilities in one coherent system:
 |---|---|---|
 | Time series machine learning | NASA CMAPSS | Remaining useful life and maintenance priority |
 | Tabular machine learning | Scania APS | Probability of a component-related service issue |
-| Computer vision | Casting Defect, NEU Surface Defect and MVTec Component Anomaly | Inspection result (casting), defect category (NEU) and unlike-any-sound-part flag (MVTec) |
+| Computer vision | Casting Defect, NEU Surface Defect, MVTec Component Anomaly and GC10 Defect Detection | Inspection result (casting), defect category (NEU), unlike-any-sound-part flag (MVTec) and located defects with their boxes (GC10) |
 | NLP and LLM | NHTSA Consumer Complaints | Field-quality component trend and complaint triage |
 | Automation | n8n | Incident routing, alerting, approval, and audit trail |
 | Decision communication | Streamlit and Tableau | Operational cockpit and executive quality view |
@@ -41,7 +41,7 @@ The initial MVP uses one working model from each core capability:
 - NHTSA Consumer Complaints 2020-2024 as the NLP field-quality module.
 - One n8n workflow that receives a validated Arkon risk event and creates an incident with an alert.
 
-GC10, advanced detection models and additional n8n workflows are roadmap items. They are not prerequisites for the MVP. Three of the original roadmap items have since landed: RAG as the grounded assistant, NEU on 2026-09-01 as the second computer-vision module (`docs/Model_Card_NEU_Surface.md`), and MVTec on 2026-09-02 as the third, four component anomaly detectors that fit on sound parts alone and train nothing (`docs/Model_Card_MVTec_Anomaly.md`).
+Additional n8n workflows are roadmap items. They are not prerequisites for the MVP. Four of the original roadmap items have since landed: RAG as the grounded assistant, NEU on 2026-09-01 as the second computer-vision module (`docs/Model_Card_NEU_Surface.md`), MVTec on 2026-09-02 as the third, four component anomaly detectors that fit on sound parts alone and train nothing (`docs/Model_Card_MVTec_Anomaly.md`), and GC10 on 2026-09-02 as the fourth and the object detection item, which is the only module that answers where a defect is rather than whether there is one (`docs/Model_Card_GC10_Detection.md`).
 
 ## 5. Data boundaries and integrity
 
@@ -82,6 +82,10 @@ Every model publishes a common event after its own validation step. This makes t
 ```
 
 The exact priority thresholds will be defined per module and documented with the model. A risk score is not automatically a production stop decision.
+
+**What `evidence` may hold, and what it may not.** The four keys in the example - `record_id`, `model_version`, `prediction` and `threshold` - are required of every module and are the only ones any consumer may assume. Beyond them the object is deliberately open, because what a person needs in order to act on an event differs by module: NEU carries the whole six-way probability vector so a reader can see the runner-up, MVTec carries the category and the ceiling its threshold came from, and GC10 carries `detections`, a list of located defects with their boxes, because a detector's answer is several boxes on one frame rather than one number about it. **A list in `evidence` needed no change to this contract**, which is worth recording because it was expected to: the schema declares `evidence` with `additionalProperties: true` and the validator checks only that the four required keys are present.
+
+The field that is closed, and therefore the one thing a new module does change, is `source_module`. It is an enum in both `events/arkon_event_schema.json` and `events/validate_event.py`, and adding a module means adding a name to both.
 
 ## 7. Quality Steering Cell operating rules
 
@@ -184,6 +188,7 @@ n8n orchestrates operational work. It does not train or host machine-learning mo
 - **DONE 2026-08-30.** Casting Defect computer vision, publishing the same event contract. `docs/Model_Card_Casting_CV.md`.
 - **DONE 2026-09-01.** NEU steel surface defect classification, publishing the same event contract. `docs/Model_Card_NEU_Surface.md`. A roadmap item rather than an original Phase 2 entry, listed here because it publishes the contract.
 - **DONE 2026-09-02.** MVTec component anomaly detection, publishing the same event contract. `docs/Model_Card_MVTec_Anomaly.md`. Also a roadmap item, and the third module in the `visual_inspection` domain.
+- **DONE 2026-09-02.** GC10 steel sheet defect detection, publishing the same event contract. `docs/Model_Card_GC10_Detection.md`. The roadmap's object-detection item, the fourth module in the `visual_inspection` domain, and the first whose event carries a list rather than a single measurement.
 - Implement NHTSA text classification and field-quality trend detection, then publish the same event contract.
 
 ### Phase 3: Product integration
@@ -223,7 +228,7 @@ The figures below were read from `docs/Model_Card_CMAPSS_RUL.md` and counted in 
 
 **One Phase 3 item was brought forward and is also done.** The grounded assistant of section 9 was built on Langflow on 2026-08-30, against this documentation and the deployed workflow, and it closes the last open MVP criterion of section 10. Its precondition was the one Phase 3 states - documentation, model cards and incident records first - and that precondition was met before it was built. Two further n8n endpoints came with it: `GET /webhook/arkon-incident-status` and `POST /webhook/arkon-escalation`. See `langflow/README.md` and `n8n/README.md`.
 
-**Four modules beyond CMAPSS publish the section 6 event contract.** Two of them are Phase 2 entries and two are roadmap items that landed early, and the distinction matters only to the plan: to the platform they are four modules on one contract. Only NHTSA text classification, the last Phase 2 entry, has nothing behind it.
+**Five modules beyond CMAPSS publish the section 6 event contract.** Two of them are Phase 2 entries and three are roadmap items that landed early, and the distinction matters only to the plan: to the platform they are five modules on one contract. Only NHTSA text classification, the last Phase 2 entry, has nothing behind it.
 
 **Which of them have been sent through the deployed Steering Cell, when, and with what result is the run log in `n8n/README.md`, and it is kept there rather than here deliberately.** This document is ingested into the assistant's knowledge store. A sentence about what has been run so far is false the moment anybody runs something, and correcting it here costs a snapshot, a collection drop, a rebuild and a re-measurement; `n8n/README.md` is not ingested and carries no such cost. What belongs in this charter is what the platform is and what version 1 can do, both of which the assistant has to be able to answer.
 
@@ -233,7 +238,7 @@ The figures below were read from `docs/Model_Card_CMAPSS_RUL.md` and counted in 
 - **MVTec component anomaly detection** (`docs/Model_Card_MVTec_Anomaly.md`). Four detectors, one per component category, and the first module here that trains nothing: a frozen ImageNet backbone, a coreset of feature vectors taken from sound parts only, and a nearest-neighbour distance. Mean image AUROC 0.9817 and mean pixel AUROC 0.9738, and **the four rows matter more than the mean**, which the card says in its own words: they span 0.0350 from 0.9650 on screw to 1.0000 on metal_nut, and the realised false-alarm rate spans 9.8 to 22.7 per cent against a declared budget of 5. It is the third module in the `visual_inspection` domain, so that field has stopped being a proxy for a module in three places rather than two. Both of its priority edges come from held-out sound parts and neither has ever seen a defect, which is the casting operating-point lesson applied rather than restated: casting searched a cost curve for an optimum that moved by a factor of five between identical runs, so this module declares a budget and reads a quantile. 309 events published from 453 test images, 262 P2 and 47 P3, with 20 defective parts never published and 20 sound parts published as a false alarm.
 
 
-**What the four modules after CMAPSS cost the platform: one API projection, and then one alert defect that had been there all along.** The intake workflow has needed no change for any of them, because it validates a contract rather than a domain; the runs that establish that are in the `n8n/README.md` log. The status API needed a real fix on the second and third, and it was not the cosmetic one it had been recorded as: it projected `evidence.prediction` as `predicted_rul` for every module, so a Scania failure probability of 0.0373 was served as a remaining useful life of 0.0373 cycles and the assistant reported it as one. The projection now returns the evidence object as published, and that fix is why MVTec cost nothing: an MVTec incident keeps its own `category`, `ceiling` and `threshold_basis` without anyone touching the API.
+**What the five modules after CMAPSS cost the platform: one API projection, and then one alert defect that had been there all along.** The intake workflow has needed no change for any of them, because it validates a contract rather than a domain; the runs that establish that are in the `n8n/README.md` log. The status API needed a real fix on the second and third, and it was not the cosmetic one it had been recorded as: it projected `evidence.prediction` as `predicted_rul` for every module, so a Scania failure probability of 0.0373 was served as a remaining useful life of 0.0373 cycles and the assistant reported it as one. The projection now returns the evidence object as published, and that fix is why MVTec cost nothing: an MVTec incident keeps its own `category`, `ceiling` and `threshold_basis` without anyone touching the API.
 
 **Then NEU's identifiers cost something real, and the platform had been carrying the fault since its first deployment.** The alert body was a Markdown template with raw event values interpolated into it, so any identifier containing an underscore made the messaging API refuse the whole card - while the incident had already been written and its id consumed, and the caller was answered HTTP 200. It survived because the branch had only ever been exercised with the one module whose identifiers happen to contain no character the markup treats as markup. Fixed by building and escaping the body in code, deployed and verified.
 

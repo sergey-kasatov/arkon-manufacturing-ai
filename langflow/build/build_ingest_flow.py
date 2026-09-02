@@ -70,6 +70,12 @@ DOCUMENTS = [
     # the same commit, so this ingest is not additive: an edited document leaves
     # its old chunks behind as orphans, and the collection was dropped first.
     ("docs/Model_Card_MVTec_Anomaly.md", "MVTec_Anomaly_Model_Card.md", "MVTec Anomaly Model Card"),
+    # Phase 2, added 2026-09-02. Sixth module, fourth in the visual_inspection
+    # domain, and the ninth document in the store. The charter and the event
+    # contract both changed in the same commit, so this ingest is not additive
+    # either: the collection was dropped first.
+    ("docs/Model_Card_GC10_Detection.md", "GC10_Detection_Model_Card.md",
+     "GC10 Defect Detection Model Card"),
     ("events/README.md", "Arkon_Event_Contract.md", "Arkon Event Contract"),
 ]
 

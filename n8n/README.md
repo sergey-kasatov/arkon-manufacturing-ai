@@ -33,9 +33,27 @@ Counted from the incident store on 2026-09-02, not from memory:
 | `casting_cv` | 1 | `ARK-INC-00018` | 2026-08-30, first event of the third module |
 | `mvtec_anomaly` | 6 | `ARK-INC-00019` to `00023`, and `00029` | 2026-09-02, a five-event slice plus the one that verified the alert fix |
 | `neu_surface` | 5 | `ARK-INC-00024` to `00028` | 2026-09-02, the run that found the alert defect |
+| `gc10_detect` | 5 | `ARK-INC-00030` to `00034` | 2026-09-02, the sixth module, and the first whose events carry a list |
 
-**All five modules that publish the section 6 event contract have now been through
+**All six modules that publish the section 6 event contract have now been through
 this webhook.** Only NHTSA, which is not built, has not.
+
+**The sixth module cost the platform nothing at all, and it was the one expected to
+cost something.** GC10 is a detector, so its `evidence` carries `detections`, a list
+of located defects rather than the single measurement every earlier module
+published. Three P2 answered `incident_created_alert_sent` and two P3 answered
+`incident_recorded`, with no workflow touched. **The status API needed nothing
+either**, and the reason is the Scania fix rather than luck: that fix stopped the API
+projecting `evidence.prediction` into a named field and made it return the evidence
+object as published, so a list rides through a path that was never designed for one.
+Verified by querying `source_module=gc10_detect` and reading `detections` back out of
+the store.
+
+**And it exercised the alert fix on the hardest input the platform has seen.** Every
+GC10 record id is a file stem like `GC10-IMG_01_SIS001577_00012`, three underscores
+in the identifier alone, and the alert body carries several more in the defect class
+names. Before 2026-09-02 every one of those three P2 alerts would have been refused
+by Telegram while the incident was written and the caller answered 200.
 
 Two things the table is careful about. **The store is not a complete history of
 every id ever issued**: it holds 19 incidents while the counter stands at 29, and
@@ -85,7 +103,7 @@ the same thing, and it is only as good as the identity the adapter builds.
 had been written but never posted. Its two P3 events were recorded as
 `ARK-INC-00027` and `ARK-INC-00028` with nothing touched. Its three P2 events
 created `ARK-INC-00024` to `00026` and **their alerts were refused by Telegram**,
-which is the next section and is not a NEU problem. All five modules have now
+which is the next section and is not a NEU problem. All six modules have now
 published into this webhook.
 
 ## The alert branch was rejecting its own data, and answering 200
@@ -260,7 +278,7 @@ workflow static data does not grow without bound.
 | `incident_status_probe.py` | Contract test for the status API |
 | `alert_body_probe.js` | Contract test for the Telegram alert body, over every alerting event |
 
-Five modules publish into this one webhook. Every batch is replayed by the same
+Six modules publish into this one webhook. Every batch is replayed by the same
 script, and the priority mix is the module's own, not a setting:
 
 | Batch | Events | Priorities |
@@ -270,6 +288,7 @@ script, and the priority mix is the module's own, not a setting:
 | `casting_events.jsonl` | 460 | 13 P2, 447 P3 |
 | `neu_events.jsonl` | 360 | 3 P2, 357 P3 |
 | `mvtec_events.jsonl` | 309 | 262 P2, 47 P3 |
+| `gc10_events.jsonl` | 308 | 68 P2, 240 P3 |
 
 The earlier `cmapss_events_FD001.jsonl` is kept because it is what the first
 deployment was verified against; it comes from the superseded FD001-only model
@@ -278,7 +297,7 @@ and should not be used for new demos.
 **Replay a slice, never a batch.** Every P1 and P2 sends a Telegram card to the
 alert group, and the incident store is append-only with the counter in workflow
 static data, so nothing here can be undone. `mvtec_events.jsonl` is the sharpest
-case, 262 of its 309 events being P2. The MVTec and NEU runs of 2026-09-02 were five events
+case, 262 of its 309 events being P2. The MVTec, NEU and GC10 runs of 2026-09-02 were five events
 each in two commands, and that is the size a new module should go in at:
 
 ```bash

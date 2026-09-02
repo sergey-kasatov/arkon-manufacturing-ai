@@ -21,7 +21,7 @@ under [What's Built](#whats-built).
 
 ## Results
 
-Five modules are built, measured and documented. Every figure below is
+Six modules are built, measured and documented. Every figure below is
 generated from the metrics file its own run wrote, by
 `python tools/make_result_plots.py` - no model is loaded and no dataset is read,
 so a clone reproduces the pictures in seconds. Those metrics files are the only
@@ -34,6 +34,7 @@ thing git keeps under `models/`.
 | **Visual inspection** - casting product | **0 defects missed**, 7 good parts re-inspected, ROC AUC 0.9999 | 715 held-out images |
 | **Defect classification** - NEU steel surface | **1.0000 accuracy** over six defect types, against 0.9750 for a nearest-neighbour classifier that does no training at all | 360 held-out images |
 | **Anomaly detection** - MVTec components | **mean image AUROC 0.9817** over four categories (0.9650 to 1.0000), pixel AUROC 0.9738, nothing trained | 453 held-out images, sound parts only in the bank |
+| **Defect localisation** - GC10 steel sheet | **mAP@0.5 0.5878** over ten defect classes, and the only module that says where a defect is | 339 held-out sheets from 83 coils no other split contains |
 
 ### Remaining useful life: one model for a mixed fleet
 
@@ -235,12 +236,60 @@ says less than the picture does. It is measured at 320 by 320 over every pixel o
 every test image, sound ones included, so it is not comparable with published
 MVTec figures at native resolution.
 
-**What these figures are not.** All five are held-out test splits of public
+
+### Where on the sheet, and what a detector actually claims
+
+![GC10 per-class average precision against the boxes behind it, and the box ledger](assets/cv/gc10_detection_ledger.png)
+
+Five modules return one answer for a whole frame: defective or sound, a defect
+type, an anomaly score. **This one returns boxes**, which is the gap the NEU model
+card names in its own limitation 3 and points at this module to close.
+
+**The left panel refutes the obvious reading of itself.** It looks as though the
+spread should be about how many boxes stand behind each class, and it is not:
+**silk spot has the most boxes of any class, 167, and sits near the bottom
+at 0.29**. The counts do matter at the thin end - Crease (n=11), rolled pit (n=14) carry fewer
+than twenty boxes each, and an AP on that many moves by whole tenths when one
+detection changes - but they do not order the table. What does is how well-defined the
+defect's boundary is: sharp geometric features at the top, diffuse low-contrast
+textures at the bottom, where an IoU of 0.5 against one annotator's box is a hard
+target for reasons no number of epochs would fix.
+
+**The right panel is the honest summary of a detector.** Of 544 annotated
+boxes it located 332 and missed 212, and it claimed 218 that are
+not there: precision 0.604, recall 0.610 at a detection threshold of
+0.65. 308 of 339 sheets publish an event and 31 stay
+silent.
+
+**A silent sheet is not a pass, and this is the one thing to carry away.** GC10
+contains no sheet anyone certified clean, and the eight with no annotation were
+dropped rather than assumed sound, so the module was fitted and scored only on sheets
+that contain a defect. It has never seen good steel. The 31 silent sheets are
+the module failing to find a defect that is there.
+
+**The split is over coils, not over sheets, and the standard duplicate check did not
+find the reason.** Nothing in this dataset is byte-identical, so the check that caught
+casting's 64 shared images answers cleanly here. But the distance from a sheet to its
+nearest neighbour runs smoothly from 0.38 to 34 grey levels with no gap, and
+clustering chains: at 8 grey levels one group holds more than half the dataset. The
+file name carries the unit that works - **93 per cent of sheet pairs closer than 2
+grey levels share a coil id, against 1.1 per cent of random pairs**. Splitting by coil
+cut the pairs straddling the split from 777 to 53. It cannot reach zero, and the model
+card says so rather than claiming the leak is gone.
+
+**Adapting the features is worth +0.0704 mAP**: the frozen-backbone ablation reaches
+0.5175 against 0.5878 fine-tuned, the same ablation casting and NEU ran.
+And the metric is this repository's own, because the environment has neither
+`torchmetrics` nor `pycocotools`: VOC average precision in forty lines, validated in
+the notebook against six cases whose answers are known, two of them worked out by hand.
+
+**What these figures are not.** All six are held-out test splits of public
 datasets, scored offline. Nothing here ran on a real production line, and the
 operational context around the numbers is fabricated. Each module's limitations
 are in its model card - [CMAPSS](docs/Model_Card_CMAPSS_RUL.md),
 [Scania](docs/Model_Card_Scania_APS.md), [casting](docs/Model_Card_Casting_CV.md),
-[NEU](docs/Model_Card_NEU_Surface.md), [MVTec](docs/Model_Card_MVTec_Anomaly.md) - and are not summarised away here.
+[NEU](docs/Model_Card_NEU_Surface.md), [MVTec](docs/Model_Card_MVTec_Anomaly.md),
+[GC10](docs/Model_Card_GC10_Detection.md) - and are not summarised away here.
 
 ---
 
@@ -370,7 +419,7 @@ because of anything the assistant did.
 | CV | [Casting Product Quality Control](https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product) | Kaggle | CC BY-NC 4.0 | ~100 MB | Binary image classification |
 | CV | [NEU-DET Surface Defect Database](http://faculty.neu.edu.cn/songkechen/zh_CN/zdylm/263270/list/index.htm) | Northeastern University, China | Academic use | ~35 MB | 6-class classification (ships detection boxes too) |
 | CV | [MVTec Anomaly Detection](https://www.mvtec.com/company/research/datasets/mvtec-ad) | MVTec Software GmbH | Research only | ~4.9 GB | Anomaly detection (4 of 15 categories used) |
-| CV (planned) | [GC10-DET Surface Defects](https://github.com/lvxiaoming2019/GC10-DET-Metallic-Surface-Defect-Datasets) | Academic | Academic use | ~1 GB | Object detection |
+| CV | [GC10-DET Surface Defects](https://github.com/lvxiaoming2019/GC10-DET-Metallic-Surface-Defect-Datasets) | Academic | Academic use | ~1 GB | Object detection |
 
 > **Note:** NASA CMAPSS is a physics-based simulation (not raw sensor data),
 > but is the gold-standard benchmark for RUL prediction research.
@@ -385,7 +434,7 @@ because of anything the assistant did.
 - [x] Project Charter - risk events, P1-P4 priorities, steering-cell rules (`docs/Project_Charter.md`)
 - [x] Time Series module, first pass - CMAPSS on FD001 alone, one subset of four (LR RMSE 20.79, XGBoost RMSE 17.11). Superseded by the full-fleet model below; its metrics are kept at `models/checkpoints/cmapss/cmapss_xgb_v1_meta.json` and the notebooks that produced it were rebuilt on the fleet on 2026-08-31
 - [x] Time Series module, full fleet - all four CMAPSS subsets, 709 training engines, six operating regimes, two fault modes, with temporal features over a 20-cycle window. XGBoost RMSE 11.01 on the benchmark task over 707 held-out engines, scoring the hardest subset about as well as the easiest (`notebooks/01_timeseries/cmapss_full_fleet.py`, `docs/Model_Card_CMAPSS_RUL.md`). Also built as a notebook trio that reproduces the deployed model without importing from the training script: nine measurements compared, none moved
-- [x] Risk-event layer - schema, validator and five adapters, one per built module, all publishing the same contract (`events/`)
+- [x] Risk-event layer - schema, validator and six adapters, one per built module, all publishing the same contract (`events/`)
 - [x] n8n Quality Steering Cell - deployed on the NAS and verified end to end: contract validation, 24 h duplicate suppression, JSONL incident store, Telegram cards for P1 and P2 (`n8n/`)
 - [x] Operating documentation - CMAPSS model card and Steering Cell SOP (`docs/`)
 - [x] **Tabular module - Scania APS fault classifier.** XGBoost over 170 anonymised counters, total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure, which lands between first and second of the IDA 2016 challenge's published top three on the same test set. The decision threshold is worth a factor of 3.8; every structural choice is inside the noise of the selection (`notebooks/02_ml/scania_aps.py`, `docs/Model_Card_Scania_APS.md`). Rebuilt as a notebook pair on 2026-09-01, which reproduces the deployed model exactly - 22 measurements compared, none moved - and adds the one measurement the script never ran: the textbook pipeline of median imputation, MinMax scaling and SMOTE costs 11,820 against 10,660, and the threshold grid it uses starts above the optimum of both pipelines
@@ -413,6 +462,22 @@ because there is no backward pass for the non-determinism to enter through. And
 reasons about defects reasons from the folder the module is scored on; the
 threshold and the memory-bank size are the two that escaped that, and the card
 names the rest
+- [x] **CV module - GC10 steel sheet defect detection.** `fasterrcnn_resnet50_fpn_v2`
+fine-tuned from COCO weights over ten defect classes, built from scratch as a notebook
+trio on 2026-09-02 (`notebooks/03_cv/04_gc10_steel_defects/`,
+`docs/Model_Card_GC10_Detection.md`). **mAP@0.5 0.5878** on 339 held-out
+sheets, and it is the only module that answers where: 332 of 544 annotated
+boxes located, 218 claimed that are not there. Four findings. **The ten folders
+are not a labelling** - one in five annotated sheets carries a class its folder never
+names, so the boxes are the label and the folder is used for nothing. **The sheet is not
+a safe split unit and the standard duplicate check cannot say so**: nothing here is
+identical, but similarity is a continuum with no gap, and the file name's middle field
+turns out to be the coil, which explains 93 per cent of the closest pairs; splitting by
+coil cut the pairs straddling the split from 777 to 53. **The event carries a list and
+the contract did not have to change**, because `evidence` was already open beyond its
+four required keys. And **a sheet with no detection publishes nothing, which is not a
+pass**: this dataset holds no sheet anyone certified clean, so the module has never seen
+sound steel and its silence is a failure to find
 - [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
 - [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of eight Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
 - [ ] NLP module - NHTSA complaint classification and field-quality trend detection
@@ -434,8 +499,10 @@ worth more than the twelve nodes cost.
 
 | Module | Dataset | Task | Prerequisite |
 |--------|---------|------|-------------|
-| CV Object Detection | GC10-DET | Bounding box defect localization | YOLO / detection models |
 | BI Dashboard | All modules | Executive KPI analytics | Tableau |
+
+CV object detection on GC10-DET was the third row here until 2026-09-02, when it
+was built: `docs/Model_Card_GC10_Detection.md`.
 
 ---
 
@@ -510,7 +577,7 @@ Then open **http://localhost:5000** in your browser.
 | `arkon-cv-casting` | Foundry | casting_cv_notebook x3 |
 | `arkon-cv-neu` | Rolling Mill | neu_resnet18_v1 x6 |
 | `arkon-cv-mvtec` | Component Inspection | mvtec_patchcore_v1_grid, _metal_nut, _screw, _transistor, _summary |
-| `arkon-cv-gc10` | Stamping | not created; the module is not built |
+| `arkon-cv-gc10` | Stamping | gc10_fasterrcnn_v1 |
 
 Each run logs: hyperparameters, metrics per epoch, training time, and the metrics file.
 The table above is read from `mlflow.db` rather than maintained by hand: an earlier
