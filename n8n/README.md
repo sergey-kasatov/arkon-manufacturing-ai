@@ -68,6 +68,16 @@ Code node, and the NHTSA batch's 9 alerting events passed with the other 801. Th
 ordering is the whole point of the probe: the defect it exists for was found by
 sending a batch and losing three alerts to an HTTP 200.
 
+**And the three cards were confirmed to have arrived, which is a separate claim from
+the workflow saying it sent them.** Sergey read them off the Telegram group:
+`ARK-INC-00035`, `00036` and `00037`, all at 18:46 on 2026-09-03, each carrying the
+priority, the incident id, the summary, the assignee, the recommended action and the
+event id. That distinction is the whole of DEFECT-8: for three weeks the workflow
+answered `incident_created_alert_sent` and HTTP 200 on every alert the messaging API
+had refused, with the incident already written and its id consumed. **A run log that
+records only what the workflow returned cannot tell the two apart**, so from here a
+new module's slice is not finished until somebody has seen the cards.
+
 **The sixth module cost the platform nothing at all, and it was the one expected to
 cost something.** GC10 is a detector, so its `evidence` carries `detections`, a list
 of located defects rather than the single measurement every earlier module
