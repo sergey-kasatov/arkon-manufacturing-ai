@@ -261,6 +261,14 @@ not there: precision 0.602, recall 0.643 at a detection threshold of
 0.60. 310 of 339 sheets publish an event and 29 stay
 silent.
 
+![Located defects on four held-out sheets, against the boxes the annotator drew](assets/cv/gc10_detections.png)
+
+**This is what the module returns and no other module can.** Red is what it found,
+blue dashed is what the annotator drew, and the four sheets are one from each
+outcome: two the module is confident about, one it is not, and one where it found
+nothing at all. Five modules would have answered the first three with a single word
+and the fourth with the same word.
+
 **A silent sheet is not a pass, and this is the one thing to carry away.** GC10
 contains no sheet anyone certified clean, and the eight with no annotation were
 dropped rather than assumed sound, so the module was fitted and scored only on sheets
