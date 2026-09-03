@@ -59,9 +59,13 @@ that rewords.
 The approval gate is the only thing standing between a request and the single
 write the assistant can perform. Nothing reaches
 `POST /webhook/arkon-escalation` unless a human picked Approve, and an approval
-is not an authorisation to do something the system cannot do: an approved
-"acknowledge this incident" is still refused, because there is no write path for
-it.
+is not an authorisation to do something this assistant cannot do: an approved
+"acknowledge this incident" is still refused. Until 2026-09-03 the reason was
+that the system had no write path for it. It has one now
+(`POST /webhook/arkon-incident-transition`), and the refusal stands on a
+different footing: the assistant has no connection to that endpoint, and the
+operator makes the transition. Wiring it in would be a second guarded write and
+a canvas change, and it has deliberately not been made.
 
 **A canvas with a Human Input node cannot be run through `/api/v1/run` at all**,
 including on branches that never reach the gate. Use
@@ -257,11 +261,14 @@ claim, and it now has one measurement behind it instead of none.
   the store answers everything an operator will ask. A question outside those
   10 documents gets the fallback sentence, which is the correct behaviour and
   still a gap in the knowledge base.
-- **The model cards dominate the store by volume, and by more than before.**
-  Measured on the live collection on 2026-09-03 after the NHTSA ingest: 236 chunks
-  over the 10 documents, of which the 7 model cards are 162, or 69 per cent,
-  against 68 per cent when there were five and 65 per cent when there were four.
-  Charter, SOP and event contract together are the other 74. A question spanning two documents was measured again
+- **The model cards dominate the store by volume, and 2026-09-03 is the first day
+  that stopped rising.** Measured on the live collection after the lifecycle
+  rebuild: 245 chunks over the 10 documents, of which the 7 model cards are 162,
+  or 66 per cent, against 69 after the NHTSA ingest that morning, 68 per cent when
+  there were five cards and 65 when there were four. Charter, SOP and event
+  contract together are the other 83, and they grew by 9 while no card moved,
+  which is what a piece of platform work looks like in this store as against a
+  piece of model work. A question spanning two documents was measured again
   on this store and answered from the event contract and the MVTec card together,
   naming all three modules in `visual_inspection` and the field that separates
   them, so the shift has not broken cross-document retrieval at this size. It is
@@ -279,10 +286,25 @@ claim, and it now has one measurement behind it instead of none.
   collection and re-running, which takes about a minute and is not automated.
   Measured on 2026-08-30 after the charter correction: drop, re-ingest, 42
   chunks; ingest again on the same documents, still 42.
-- **One write, and only one.** After a human approves at the gate, the assistant
-  can record an escalation. It cannot acknowledge, close or resolve an incident,
-  because the Steering Cell has no write path for those states in version 1, and
-  it declines those requests even when the gate approved them.
+- **One write, and only one, and the reason for it changed on 2026-09-03.** After
+  a human approves at the gate, the assistant can record an escalation. It still
+  cannot acknowledge, close or resolve an incident and still declines those
+  requests even when the gate approved them, but it now declines them because it
+  has no connection to that endpoint rather than because the endpoint does not
+  exist. The lifecycle write path is deployed (`n8n/README.md`), and wiring it in
+  as a second guarded tool is a canvas change that has deliberately not been made:
+  the canvas has been untouched since 2026-09-01, through three modules, and the
+  escalation gate is the pattern a second write would copy rather than extend.
+  The prompts were corrected so the refusal states the real reason; a refusal
+  that gives a false reason is worse than the refusal itself.
+- **What the assistant gained without a canvas change.** The status API it already
+  reads now folds the transition log, so an incident's `status` is its real state
+  and each one carries the times to acknowledge, resolve and close, plus the full
+  history of who moved it when. The store summary carries the plant-wide medians.
+  `overdue` finally measures something: it always meant "unacknowledged past the
+  window" and, with no acknowledgement path, counted the whole store. The Incident
+  Specialist prompt was extended to use those fields and to say that `raised_as`,
+  which reads `new` on every incident, is not a contradiction of `status`.
 - **No authentication in front of it.** Langflow enforces login, but the flow
   endpoint is reachable by anyone holding an API key on the LAN or the Tailscale
   network. Anything beyond a demo needs a real identity in front of the operator
