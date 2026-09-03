@@ -168,8 +168,8 @@ fitting nor the threshold selection has seen.
 
 | Measure | Test | Selection |
 |---|---|---|
-| mAP at IoU 0.5 | **0.5878** | 0.5978 |
-| mAP at IoU 0.75 | 0.2223 | 0.2620 |
+| mAP at IoU 0.5 | **0.6260** | 0.6247 |
+| mAP at IoU 0.75 | 0.2129 | 0.2571 |
 
 The best epoch is 9 of 10, so the last 1 epochs bought nothing on the selection split and the schedule is longer than the task needs.
 
@@ -177,26 +177,26 @@ The best epoch is 9 of 10, so the last 1 epochs bought nothing on the selection 
 
 | Class | Defect | AP at IoU 0.5 | Boxes in the test split |
 |---|---|---|---|
-| 1 | punching hole | 0.9799 | 61 |
-| 2 | welding line | 0.8373 | 87 |
-| 3 | crescent gap | 0.9963 | 49 |
-| 4 | water spot | 0.6307 | 41 |
-| 5 | oil spot | 0.5815 | 54 |
-| 6 | silk spot | 0.2935 | 167 |
-| 7 | inclusion | 0.4674 | 39 |
-| 8 | rolled pit | 0.3080 | 14 |
-| 9 | crease | 0.1736 | 11 |
-| 10 | waist folding | 0.6100 | 21 |
+| 1 | punching hole | 0.9478 | 61 |
+| 2 | welding line | 0.9487 | 87 |
+| 3 | crescent gap | 0.9988 | 49 |
+| 4 | water spot | 0.6568 | 41 |
+| 5 | oil spot | 0.6317 | 54 |
+| 6 | silk spot | 0.2676 | 167 |
+| 7 | inclusion | 0.4461 | 39 |
+| 8 | rolled pit | 0.3684 | 14 |
+| 9 | crease | 0.3388 | 11 |
+| 10 | waist folding | 0.6550 | 21 |
 
 **The obvious explanation is wrong, and the table refutes it.** Before the run it
 looked as though the spread would mostly be a matter of how many boxes stand behind
 each class. It is not: **silk spot has the most boxes of any class, 167, and
-scores 0.2935**, near the bottom. The counts do matter at the thin end -
+scores 0.2676**, near the bottom. The counts do matter at the thin end -
 Crease (n=11), rolled pit (n=14) are scored on fewer than twenty boxes each and an AP on that many moves
 by whole tenths when one detection changes - but they do not order the table.
 
 **What does order it is how well-defined the defect's own boundary is.** The classes
-at the top are sharp geometric features: crescent gap at 0.9963 and punching hole
+at the top are sharp geometric features: crescent gap at 0.9988 and punching hole
 just below it, where a box has one obvious right answer. The classes at the bottom are
 diffuse: silk spot is a low-contrast texture spread over a median tenth of the frame
 with a 1.11-decade spread in size, so where its box ends is a judgement, and an IoU of
@@ -205,27 +205,27 @@ annotation as much as of the model, and it is not something more epochs would fi
 
 ### What the module claims, and what it lets past
 
-At the detection threshold of 0.65, on the test split:
+At the detection threshold of 0.60, on the test split:
 
-- **332 of 544 annotated boxes located**, so 212 were missed.
-- **218 boxes claimed that are not there.**
-- Precision 0.6036, recall 0.6103.
-- **308 of 339 sheets publish an event** and 31 stay
+- **350 of 544 annotated boxes located**, so 194 were missed.
+- **231 boxes claimed that are not there.**
+- Precision 0.6024, recall 0.6434.
+- **310 of 339 sheets publish an event** and 29 stay
   silent because nothing on them scored above the threshold.
 
 ### What adapting the features is worth
 
 The frozen-backbone ablation fits only the region proposal network and the detection
 heads, leaving every backbone convolution at its COCO values. It reaches
-**0.5175 mAP@0.5 against 0.5878 fine-tuned, a gap of +0.0704**.
+**0.5175 mAP@0.5 against 0.6260 fine-tuned, a gap of +0.1085**.
 Casting and NEU ran the same ablation, so the three computer vision modules answer
 one question on one basis.
 
 ### Does it reproduce
 
-**No, and it reaches the operating point.** 5 of 6 recorded values moved. The detection threshold the rule returns went 0.65 to 0.55 and the number of sheets publishing an event went 308 to 311, so a refit at the same seed changes who is asked to look at a coil.
+**No, and it reaches the operating point.** 4 of 6 recorded values moved: the number of sheets publishing an event went 310 to 306, while the detection threshold came back at 0.60 both times. A refit at the same seed changes who is asked to look at a coil.
 
-**And the headline moved with it, in the direction that matters for how it should be read.** Test mAP@0.5 went 0.5878 to 0.6235, +0.0357, so **the shipped model is the worse of two draws** and 0.5878 is one sample rather than a property of the design. For scale, that swing is 51 per cent of the +0.0704 the frozen ablation measures as the whole worth of fine-tuning the backbone. Anything comparing this module against another on a difference smaller than that is comparing draws.
+**And the headline moved with it, in the direction that matters for how it should be read.** Test mAP@0.5 went 0.6260 to 0.6462, +0.0202, so **the shipped model is the worse of two draws** and 0.6260 is one sample rather than a property of the design. For scale, that swing is 19 per cent of the +0.1085 the frozen ablation measures as the whole worth of fine-tuning the backbone. Anything comparing this module against another on a difference smaller than that is comparing draws.
 
 **This is the casting result again, on a different architecture.** `docs/Model_Card_Casting_CV.md` limitation 6 records four runs from one seed spanning an operating point from 0.0436 to 0.2203, and locates the cause in the cuDNN convolution backward pass rather than in the code, because its frozen arm was bit-identical every time. Nothing here contradicts that, and this module inherits the consequence: a threshold read off a curve that a refit moves is a threshold with a draw in it. The MVTec module escaped this by having no backward pass at all.
 
@@ -238,14 +238,14 @@ The best surviving box on the sheet decides:
     best box score >= 0.90   the located defect can be recorded, P3
     best box score <  0.90   the module found something and cannot name
                                         it confidently, a person looks, P2
-    no box above 0.65    nothing is published at all
+    no box above 0.60    nothing is published at all
 
 **There are two operating points here and every other Arkon module has one.** A
 detector needs one threshold to decide what counts as a box at all, and this module
 needs a second to decide how sure it is about the sheet, because the event it
 publishes is about the sheet.
 
-- **What counts as a box: 0.65**, calibrated on the selection split. The rule was
+- **What counts as a box: 0.60**, calibrated on the selection split. The rule was
   declared before the curve was looked at: the lowest score at which precision over
   the selection split reaches 0.60. Precision rather than recall,
   because the cost of a wrong box lands on an operator who walks to a coil and finds
@@ -253,7 +253,7 @@ publishes is about the sheet.
 - **How sure about the sheet: 0.90**, declared, because the rule returned nothing on the selection split. The rule: the lowest
   best-box score at which the sheet's top detection is correct at IoU 0.5 at least
   90 per cent of the time. Above that edge the top detection is right
-  76.0 per cent of the time on the test split.
+  77.1 per cent of the time on the test split.
 
 **0.60 and 90 per cent are Arkon assumptions**, in the
 same sense as casting's cost ratios. This dataset ships no statement of what a false
@@ -301,7 +301,7 @@ true before this module and nobody had written it down.
 1. **The module has never seen sound steel, so it cannot pass a sheet.** Every sheet
    it was fitted on, selected on and scored on contains at least one defect: GC10
    holds no clean sheet, and the eight with no annotation were dropped rather than
-   assumed clean. So the 31 test sheets that publish nothing are the module
+   assumed clean. So the 29 test sheets that publish nothing are the module
    **failing to find** a defect that is there, not the module saying the steel is
    good. Anything downstream that reads silence as a pass is wrong, and the adapter
    documentation says so in the same words.
@@ -340,10 +340,10 @@ true before this module and nobody had written it down.
    defect catalogue known in advance, while MVTec buys "something here is unusual"
    with no labels at all and cannot say what.
 9. **The module does not reproduce, and the divergence reaches the operating point.**
-   Refitting from the same seed on the same machine moved 5 of
-   6 recorded values. Test mAP@0.5 went 0.5878 to
-   0.6235 and the detection threshold the rule returns went
-   0.65 to 0.55. **So every number in section 4 is one
+   Refitting from the same seed on the same machine moved 4 of
+   6 recorded values. Test mAP@0.5 went 0.6260 to
+   0.6462 and the detection threshold the rule returns went
+   0.60 to 0.60. **So every number in section 4 is one
    draw**, the shipped one is the worse of the two that were run, and the
    two operating points in section 5 carry a draw as well as a rule. This is the casting instability on a different
    architecture and it is the single most important caveat on this card.
@@ -357,7 +357,7 @@ true before this module and nobody had written it down.
 python verify_setup.py
 
 # 2. The notebooks, in order. 01 and 02 take minutes; 03 takes about
-#    61 minutes on an RTX 3070 for the fine-tuned arm alone, and runs
+#    85 minutes on an RTX 3070 for the fine-tuned arm alone, and runs
 #    three arms.
 jupyter nbconvert --to notebook --execute --inplace \
   notebooks/03_cv/04_gc10_steel_defects/01_gc10_eda.ipynb

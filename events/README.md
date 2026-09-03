@@ -182,7 +182,7 @@ because the event it publishes is about the sheet.
 
     best box score >= 0.90    the located defect is recorded against the coil, P3
     best box score <  0.90    a person looks before the coil is dispositioned, P2
-    no box above 0.65          nothing is published
+    no box above 0.60          nothing is published
 
 Risk score is the best box's score. No P1 and no P4.
 
@@ -214,7 +214,7 @@ clean, and the eight that carry no annotation were dropped rather than assumed c
 so the module was fitted and scored only on sheets that contain a defect. It has never
 seen sound steel. **"No detection" is a failure to find, not a statement that the sheet
 is good**, and anything downstream that reads silence as a pass is wrong. On the test
-split 31 of 339 sheets are silent.
+split 29 of 339 sheets are silent.
 
 **Priority comes from the best box's confidence, never from the defect class and
 never from its size.** The class rule is the NEU precedent: ranking a crease against
@@ -225,7 +225,7 @@ not be, and nothing in this module can tell the difference. That is the MVTec le
 whose card says the priority may say how unusual and never how dangerous.
 
 **Both edges are declared targets rather than measured costs.** The detection
-threshold 0.65 is the lowest score at which precision on the selection split
+threshold 0.60 is the lowest score at which precision on the selection split
 reaches 0.60, and the band edge 0.90 is the lowest best-box score at which the
 sheet's top detection is correct at least 90 per cent of the time. 0.60 and 90 per
 cent are Arkon assumptions in the same sense as casting's cost ratios; this dataset

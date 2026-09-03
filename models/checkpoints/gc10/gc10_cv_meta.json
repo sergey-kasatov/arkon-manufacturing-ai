@@ -70,24 +70,24 @@
   "metric": "VOC 2010 all-point average precision, implemented in notebook 03 section 4 because neither torchmetrics nor pycocotools is in this environment, and validated there against six cases including two computed by hand",
   "test_performance": {
     "measured_on": "339 sheets from 83 coils no other split contains, scored once",
-    "map_50": 0.58783,
-    "map_75": 0.22232,
-    "precision_at_threshold": 0.60364,
-    "recall_at_threshold": 0.61029,
-    "boxes_found": 332,
-    "boxes_claimed_not_there": 218,
+    "map_50": 0.62598,
+    "map_75": 0.21292,
+    "precision_at_threshold": 0.60241,
+    "recall_at_threshold": 0.64338,
+    "boxes_found": 350,
+    "boxes_claimed_not_there": 231,
     "boxes_present": 544,
     "per_class_ap_50": {
-      "1": 0.9799,
-      "2": 0.8373,
-      "3": 0.99633,
-      "4": 0.63067,
-      "5": 0.58154,
-      "6": 0.29354,
-      "7": 0.46743,
-      "8": 0.30795,
-      "9": 0.17361,
-      "10": 0.61001
+      "1": 0.94783,
+      "2": 0.94871,
+      "3": 0.99878,
+      "4": 0.65682,
+      "5": 0.63171,
+      "6": 0.26762,
+      "7": 0.4461,
+      "8": 0.36838,
+      "9": 0.33882,
+      "10": 0.65503
     },
     "per_class_boxes": {
       "1": 61,
@@ -103,11 +103,11 @@
     }
   },
   "selection_performance": {
-    "map_50": 0.59777,
-    "map_75": 0.26199
+    "map_50": 0.62469,
+    "map_75": 0.25707
   },
   "operating_point": {
-    "detection_threshold": 0.65,
+    "detection_threshold": 0.6,
     "detection_rule": "the lowest score at which precision over the selection split reaches 0.60",
     "detection_rule_degenerated": false,
     "threshold_basis": "calibrated",
@@ -116,70 +116,70 @@
     "band_rule_degenerated": true,
     "band_basis": "declared",
     "iou_match": 0.5,
-    "test_sheets_published": 308,
-    "test_sheets_silent": 31,
-    "test_top_detection_correct": 0.75974
+    "test_sheets_published": 310,
+    "test_sheets_silent": 29,
+    "test_top_detection_correct": 0.77097
   },
   "history": [
     {
       "epoch": 1,
-      "train_loss": 0.4195,
-      "selection_map_50": 0.46771,
-      "seconds": 371.6
+      "train_loss": 0.42014,
+      "selection_map_50": 0.46203,
+      "seconds": 359.3
     },
     {
       "epoch": 2,
-      "train_loss": 0.27831,
-      "selection_map_50": 0.44637,
-      "seconds": 375.6
+      "train_loss": 0.27379,
+      "selection_map_50": 0.44042,
+      "seconds": 356.0
     },
     {
       "epoch": 3,
-      "train_loss": 0.2545,
-      "selection_map_50": 0.48041,
-      "seconds": 371.0
+      "train_loss": 0.25304,
+      "selection_map_50": 0.50374,
+      "seconds": 460.6
     },
     {
       "epoch": 4,
-      "train_loss": 0.24271,
-      "selection_map_50": 0.55806,
-      "seconds": 366.1
+      "train_loss": 0.24041,
+      "selection_map_50": 0.59394,
+      "seconds": 611.0
     },
     {
       "epoch": 5,
-      "train_loss": 0.23125,
-      "selection_map_50": 0.52798,
-      "seconds": 387.3
+      "train_loss": 0.22592,
+      "selection_map_50": 0.54681,
+      "seconds": 320.6
     },
     {
       "epoch": 6,
-      "train_loss": 0.21663,
-      "selection_map_50": 0.54174,
-      "seconds": 389.7
+      "train_loss": 0.21616,
+      "selection_map_50": 0.56573,
+      "seconds": 355.4
     },
     {
       "epoch": 7,
-      "train_loss": 0.2126,
-      "selection_map_50": 0.5064,
-      "seconds": 329.6
+      "train_loss": 0.21008,
+      "selection_map_50": 0.56794,
+      "seconds": 522.3
     },
     {
       "epoch": 8,
-      "train_loss": 0.20727,
-      "selection_map_50": 0.53766,
-      "seconds": 401.2
+      "train_loss": 0.20453,
+      "selection_map_50": 0.56789,
+      "seconds": 793.2
     },
     {
       "epoch": 9,
-      "train_loss": 0.18267,
-      "selection_map_50": 0.59777,
-      "seconds": 363.6
+      "train_loss": 0.18403,
+      "selection_map_50": 0.62469,
+      "seconds": 812.1
     },
     {
       "epoch": 10,
-      "train_loss": 0.1738,
-      "selection_map_50": 0.5306,
-      "seconds": 321.2
+      "train_loss": 0.17435,
+      "selection_map_50": 0.56861,
+      "seconds": 523.0
     }
   ],
   "ablation_frozen_backbone": {
@@ -189,78 +189,78 @@
         "epoch": 1,
         "train_loss": 0.40036,
         "selection_map_50": 0.3038,
-        "seconds": 233.6
+        "seconds": 233.7
       },
       {
         "epoch": 2,
         "train_loss": 0.27058,
         "selection_map_50": 0.40805,
-        "seconds": 303.5
+        "seconds": 401.0
       },
       {
         "epoch": 3,
         "train_loss": 0.25791,
         "selection_map_50": 0.41617,
-        "seconds": 229.7
+        "seconds": 234.6
       },
       {
         "epoch": 4,
         "train_loss": 0.25202,
         "selection_map_50": 0.46972,
-        "seconds": 286.3
+        "seconds": 292.7
       },
       {
         "epoch": 5,
         "train_loss": 0.2452,
         "selection_map_50": 0.42699,
-        "seconds": 228.4
+        "seconds": 431.6
       },
       {
         "epoch": 6,
         "train_loss": 0.2388,
         "selection_map_50": 0.46566,
-        "seconds": 263.5
+        "seconds": 212.6
       },
       {
         "epoch": 7,
         "train_loss": 0.23535,
         "selection_map_50": 0.50763,
-        "seconds": 229.9
+        "seconds": 264.3
       },
       {
         "epoch": 8,
         "train_loss": 0.23347,
         "selection_map_50": 0.44698,
-        "seconds": 244.5
+        "seconds": 304.8
       },
       {
         "epoch": 9,
         "train_loss": 0.22356,
         "selection_map_50": 0.48833,
-        "seconds": 231.3
+        "seconds": 227.5
       },
       {
         "epoch": 10,
         "train_loss": 0.21759,
         "selection_map_50": 0.50828,
-        "seconds": 211.0
+        "seconds": 263.4
       }
     ],
     "test_map_50": 0.51746,
     "test_map_75": 0.19849,
-    "minutes": 41.0
+    "minutes": 47.8
   },
   "reproduction": {
     "note": "the fine-tuned arm refitted from the same seed in the same session",
     "values_compared": 6,
-    "values_moved": 5,
+    "values_moved": 4,
     "run_2_best_epoch": 9,
-    "run_2_test_map_50": 0.62348,
-    "run_2_detection_threshold": 0.55,
-    "run_2_test_sheets_published": 311
+    "run_2_test_map_50": 0.64621,
+    "run_2_detection_threshold": 0.6,
+    "run_2_test_sheets_published": 306
   },
   "timing": {
-    "fine_tuned_minutes": 61.3,
+    "fine_tuned_minutes": 85.2,
     "device": "NVIDIA GeForce RTX 3070 Laptop GPU",
     "input_scale_note": "measured on this machine under sustained load: one training step of two sheets costs 0.92 s at min_size 1000 / max_size 2048 and 0.32 s at 800 / 1600, which is 2.9 times the time for 1.6 times the pixels. 800 is also the scale the COCO weights were fitted at."
   }

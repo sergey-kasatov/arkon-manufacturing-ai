@@ -34,7 +34,7 @@ thing git keeps under `models/`.
 | **Visual inspection** - casting product | **0 defects missed**, 7 good parts re-inspected, ROC AUC 0.9999 | 715 held-out images |
 | **Defect classification** - NEU steel surface | **1.0000 accuracy** over six defect types, against 0.9750 for a nearest-neighbour classifier that does no training at all | 360 held-out images |
 | **Anomaly detection** - MVTec components | **mean image AUROC 0.9817** over four categories (0.9650 to 1.0000), pixel AUROC 0.9738, nothing trained | 453 held-out images, sound parts only in the bank |
-| **Defect localisation** - GC10 steel sheet | **mAP@0.5 0.5878** over ten defect classes, and the only module that says where a defect is | 339 held-out sheets from 83 coils no other split contains |
+| **Defect localisation** - GC10 steel sheet | **mAP@0.5 0.6260** over ten defect classes, and the only module that says where a defect is | 339 held-out sheets from 83 coils no other split contains |
 
 ### Remaining useful life: one model for a mixed fleet
 
@@ -248,7 +248,7 @@ card names in its own limitation 3 and points at this module to close.
 **The left panel refutes the obvious reading of itself.** It looks as though the
 spread should be about how many boxes stand behind each class, and it is not:
 **silk spot has the most boxes of any class, 167, and sits near the bottom
-at 0.29**. The counts do matter at the thin end - Crease (n=11), rolled pit (n=14) carry fewer
+at 0.27**. The counts do matter at the thin end - Crease (n=11), rolled pit (n=14) carry fewer
 than twenty boxes each, and an AP on that many moves by whole tenths when one
 detection changes - but they do not order the table. What does is how well-defined the
 defect's boundary is: sharp geometric features at the top, diffuse low-contrast
@@ -256,15 +256,15 @@ textures at the bottom, where an IoU of 0.5 against one annotator's box is a har
 target for reasons no number of epochs would fix.
 
 **The right panel is the honest summary of a detector.** Of 544 annotated
-boxes it located 332 and missed 212, and it claimed 218 that are
-not there: precision 0.604, recall 0.610 at a detection threshold of
-0.65. 308 of 339 sheets publish an event and 31 stay
+boxes it located 350 and missed 194, and it claimed 231 that are
+not there: precision 0.602, recall 0.643 at a detection threshold of
+0.60. 310 of 339 sheets publish an event and 29 stay
 silent.
 
 **A silent sheet is not a pass, and this is the one thing to carry away.** GC10
 contains no sheet anyone certified clean, and the eight with no annotation were
 dropped rather than assumed sound, so the module was fitted and scored only on sheets
-that contain a defect. It has never seen good steel. The 31 silent sheets are
+that contain a defect. It has never seen good steel. The 29 silent sheets are
 the module failing to find a defect that is there.
 
 **The split is over coils, not over sheets, and the standard duplicate check did not
@@ -277,8 +277,8 @@ grey levels share a coil id, against 1.1 per cent of random pairs**. Splitting b
 cut the pairs straddling the split from 777 to 53. It cannot reach zero, and the model
 card says so rather than claiming the leak is gone.
 
-**Adapting the features is worth +0.0704 mAP**: the frozen-backbone ablation reaches
-0.5175 against 0.5878 fine-tuned, the same ablation casting and NEU ran.
+**Adapting the features is worth +0.1085 mAP**: the frozen-backbone ablation reaches
+0.5175 against 0.6260 fine-tuned, the same ablation casting and NEU ran.
 And the metric is this repository's own, because the environment has neither
 `torchmetrics` nor `pycocotools`: VOC average precision in forty lines, validated in
 the notebook against six cases whose answers are known, two of them worked out by hand.
@@ -465,9 +465,9 @@ names the rest
 - [x] **CV module - GC10 steel sheet defect detection.** `fasterrcnn_resnet50_fpn_v2`
 fine-tuned from COCO weights over ten defect classes, built from scratch as a notebook
 trio on 2026-09-02 (`notebooks/03_cv/04_gc10_steel_defects/`,
-`docs/Model_Card_GC10_Detection.md`). **mAP@0.5 0.5878** on 339 held-out
-sheets, and it is the only module that answers where: 332 of 544 annotated
-boxes located, 218 claimed that are not there. Four findings. **The ten folders
+`docs/Model_Card_GC10_Detection.md`). **mAP@0.5 0.6260** on 339 held-out
+sheets, and it is the only module that answers where: 350 of 544 annotated
+boxes located, 231 claimed that are not there. Four findings. **The ten folders
 are not a labelling** - one in five annotated sheets carries a class its folder never
 names, so the boxes are the label and the folder is used for nothing. **The sheet is not
 a safe split unit and the standard duplicate check cannot say so**: nothing here is
@@ -577,7 +577,7 @@ Then open **http://localhost:5000** in your browser.
 | `arkon-cv-casting` | Foundry | casting_cv_notebook x3 |
 | `arkon-cv-neu` | Rolling Mill | neu_resnet18_v1 x6 |
 | `arkon-cv-mvtec` | Component Inspection | mvtec_patchcore_v1_grid, _metal_nut, _screw, _transistor, _summary |
-| `arkon-cv-gc10` | Stamping | gc10_fasterrcnn_v1 |
+| `arkon-cv-gc10` | Stamping | gc10_fasterrcnn_v1 x2 |
 
 Each run logs: hyperparameters, metrics per epoch, training time, and the metrics file.
 The table above is read from `mlflow.db` rather than maintained by hand: an earlier

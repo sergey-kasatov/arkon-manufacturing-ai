@@ -33,7 +33,7 @@ Counted from the incident store on 2026-09-02, not from memory:
 | `casting_cv` | 1 | `ARK-INC-00018` | 2026-08-30, first event of the third module |
 | `mvtec_anomaly` | 6 | `ARK-INC-00019` to `00023`, and `00029` | 2026-09-02, a five-event slice plus the one that verified the alert fix |
 | `neu_surface` | 5 | `ARK-INC-00024` to `00028` | 2026-09-02, the run that found the alert defect |
-| `gc10_detect` | 5 | `ARK-INC-00030` to `00034` | 2026-09-02, the sixth module, and the first whose events carry a list |
+| `gc10_detect` | 5 | `ARK-INC-00030` to `00034` | 2026-09-02, the sixth module, and the first whose events carry a list. **From the batch notebook 03 produced before it was re-run on 2026-09-03**, so these five are a record of a superseded batch: the module does not reproduce, and the re-run moved the detection threshold and with it which sheets publish. The record ids on them still name real sheets |
 
 **All six modules that publish the section 6 event contract have now been through
 this webhook.** Only NHTSA, which is not built, has not.
@@ -288,7 +288,7 @@ script, and the priority mix is the module's own, not a setting:
 | `casting_events.jsonl` | 460 | 13 P2, 447 P3 |
 | `neu_events.jsonl` | 360 | 3 P2, 357 P3 |
 | `mvtec_events.jsonl` | 309 | 262 P2, 47 P3 |
-| `gc10_events.jsonl` | 308 | 68 P2, 240 P3 |
+| `gc10_events.jsonl` | 310 | 63 P2, 247 P3 |
 
 The earlier `cmapss_events_FD001.jsonl` is kept because it is what the first
 deployment was verified against; it comes from the superseded FD001-only model
