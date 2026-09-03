@@ -8,9 +8,12 @@ it does not change the incident itself.
 import json
 import pathlib
 
+from lifecycle import FOLD_JS, js_constants
+
 OUT = pathlib.Path(__file__).resolve().parent.parent / "escalation_record_v1.json"
 
 INCIDENT_STORE = "/data/arkon/incidents.jsonl"
+TRANSITION_STORE = "/data/arkon/incident_transitions.jsonl"
 ESCALATION_STORE = "/data/arkon/escalations.jsonl"
 
 VALIDATE = r"""// Arkon Escalation Record - request validation.
@@ -52,11 +55,19 @@ if (reason.length < MIN_REASON) {
 const requestedBy = text(body.requested_by) || "arkon-quality-assistant";
 const approvedBy = text(body.approved_by) || "human approval gate";
 
+// Test affordance only, and the same one the incident status API carries: it
+// lets the assistant's 503 branch be demonstrated on demand without moving the
+// store aside. It is read after validation and before anything is opened, so a
+// malformed request still gets its 400 and no escalation id is consumed. A
+// production deployment removes it or puts it behind an operator role.
+const simulateFailure = ["1", "true", "yes"].includes(text(body.simulate_failure).toLowerCase());
+
 return [
   {
     json: {
       valid: errors.length === 0,
       errors,
+      simulate_failure: simulateFailure,
       request: {
         incident_id: incidentId,
         reason: reason.slice(0, MAX_REASON),
@@ -68,11 +79,22 @@ return [
 ];
 """
 
-BUILD_RECORD = r"""// Arkon Escalation Record - confirm the incident exists, then build the record.
+BUILD_RECORD = (
+    r"""// Arkon Escalation Record - confirm the incident exists, then build the record.
 // An escalation against an incident that is not in the store is refused: it would
 // be an audit entry pointing at nothing.
+//
+// The status captured here is the fold of the transition log, not the value on
+// the store line. Reading the line directly would write "new" into every
+// escalation record for ever, which is a false statement in an audit entry whose
+// whole purpose is to say what the incident was doing when somebody escalated it.
+"""
+    + js_constants()
+    + FOLD_JS
+    + r"""
 const request = $("Validate Escalation").first().json.request;
-const storeText = $input.first().json.store_text ?? "";
+const storeText = $("Extract Store Text").first().json.store_text ?? "";
+const transitionsText = $("Extract Transitions Text").first().json.transitions_text ?? "";
 
 const incidents = [];
 for (const line of storeText.split("\n").map((l) => l.trim()).filter(Boolean)) {
@@ -95,12 +117,15 @@ const state = $getWorkflowStaticData("global");
 state.nextEscalationId = (state.nextEscalationId ?? 0) + 1;
 const escalationId = "ARK-ESC-" + String(state.nextEscalationId).padStart(5, "0");
 
+const lifecycle = arkonFold(incident, arkonTransitionsById(transitionsText).byId);
+
 const record = {
   escalation_id: escalationId,
   created_at: new Date().toISOString(),
   incident_id: incident.incident_id,
   incident_priority: incident.priority,
-  incident_status_at_escalation: incident.status,
+  incident_status_at_escalation: lifecycle.status,
+  incident_transitions_at_escalation: lifecycle.transition_count,
   incident_summary: incident.summary,
   reason: request.reason,
   requested_by: request.requested_by,
@@ -119,6 +144,7 @@ return [
   },
 ];
 """
+)
 
 
 def respond(node_id, name, position, body_expression, response_code=None):
@@ -137,7 +163,11 @@ def respond(node_id, name, position, body_expression, response_code=None):
     }
 
 
-def if_node(node_id, name, position, left_value):
+def if_node(node_id, name, position, left_value, condition_id=None):
+    # condition_id defaults to the node id. Simulated Failure? was added to the
+    # deployed workflow by hand and carries a distinct one; passing it keeps this
+    # generator byte-identical to the file that is actually running.
+    condition_id = condition_id or node_id
     return {
         "id": node_id,
         "name": name,
@@ -154,7 +184,7 @@ def if_node(node_id, name, position, left_value):
                 },
                 "conditions": [
                     {
-                        "id": node_id,
+                        "id": condition_id,
                         "leftValue": left_value,
                         "rightValue": True,
                         "operator": {"type": "boolean", "operation": "true", "singleValue": True},
@@ -201,19 +231,33 @@ workflow = {
             '={{ JSON.stringify({status: "rejected", errors: $json.errors}) }}',
             400,
         ),
+        if_node(
+            "b1000000-0000-4000-8000-00000000000e",
+            "Simulated Failure?",
+            [-656, 160],
+            "={{ $json.simulate_failure }}",
+            condition_id="b1000000-0000-4000-8000-00000000000f",
+        ),
+        respond(
+            "b1000000-0000-4000-8000-000000000010",
+            "Respond Simulated Unavailable",
+            [-432, -160],
+            '={{ JSON.stringify({status: "unavailable", message: "The escalation was not recorded (simulated failure requested by the caller)."}) }}',
+            503,
+        ),
         {
             "id": "b1000000-0000-4000-8000-000000000005",
             "name": "Read Incident Store",
             "type": "n8n-nodes-base.readWriteFile",
             "typeVersion": 1.1,
-            "position": [-656, 160],
+            "position": [-432, 160],
             "onError": "continueErrorOutput",
             "parameters": {"operation": "read", "fileSelector": INCIDENT_STORE, "options": {}},
         },
         respond(
             "b1000000-0000-4000-8000-000000000006",
             "Respond Store Unavailable",
-            [-432, -16],
+            [-208, -16],
             '={{ JSON.stringify({status: "unavailable", message: "The incident store could not be read, so the escalation was not recorded."}) }}',
             503,
         ),
@@ -222,7 +266,7 @@ workflow = {
             "name": "Extract Store Text",
             "type": "n8n-nodes-base.extractFromFile",
             "typeVersion": 1.1,
-            "position": [-432, 224],
+            "position": [-208, 224],
             "parameters": {
                 "operation": "text",
                 "binaryPropertyName": "data",
@@ -231,23 +275,55 @@ workflow = {
             },
         },
         {
+            "id": "b1000000-0000-4000-8000-000000000011",
+            "name": "Read Transition Store",
+            "type": "n8n-nodes-base.readWriteFile",
+            "typeVersion": 1.1,
+            "position": [16, 224],
+            "onError": "continueErrorOutput",
+            "parameters": {"operation": "read", "fileSelector": TRANSITION_STORE, "options": {}},
+        },
+        # Same rule as the status API: an unreadable transition log is a 503, not
+        # an empty one. Treated as empty, this endpoint would write "new" into the
+        # audit record of an incident that had already been closed.
+        respond(
+            "b1000000-0000-4000-8000-000000000012",
+            "Respond Transition Log Unavailable",
+            [240, -16],
+            '={{ JSON.stringify({status: "unavailable", message: "The incident transition log could not be read, so the escalation was not recorded."}) }}',
+            503,
+        ),
+        {
+            "id": "b1000000-0000-4000-8000-000000000013",
+            "name": "Extract Transitions Text",
+            "type": "n8n-nodes-base.extractFromFile",
+            "typeVersion": 1.1,
+            "position": [240, 224],
+            "parameters": {
+                "operation": "text",
+                "binaryPropertyName": "data",
+                "destinationKey": "transitions_text",
+                "options": {},
+            },
+        },
+        {
             "id": "b1000000-0000-4000-8000-000000000008",
             "name": "Build Escalation Record",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
-            "position": [-208, 224],
+            "position": [464, 224],
             "parameters": {"jsCode": BUILD_RECORD},
         },
         if_node(
             "b1000000-0000-4000-8000-000000000009",
             "Incident Found?",
-            [16, 224],
+            [688, 224],
             "={{ $json.found }}",
         ),
         respond(
             "b1000000-0000-4000-8000-00000000000a",
             "Respond Unknown Incident",
-            [240, 400],
+            [912, 400],
             '={{ JSON.stringify({status: "rejected", errors: ["no incident " + $json.incident_id + " in the store, so no escalation was recorded"]}) }}',
             404,
         ),
@@ -256,7 +332,7 @@ workflow = {
             "name": "Build Escalation Line",
             "type": "n8n-nodes-base.convertToFile",
             "typeVersion": 1.1,
-            "position": [240, 160],
+            "position": [912, 160],
             "parameters": {"operation": "toText", "sourceProperty": "escalation_jsonl", "options": {}},
         },
         {
@@ -264,7 +340,7 @@ workflow = {
             "name": "Append Escalation Record",
             "type": "n8n-nodes-base.readWriteFile",
             "typeVersion": 1.1,
-            "position": [464, 160],
+            "position": [1136, 160],
             "parameters": {
                 "operation": "write",
                 "fileName": ESCALATION_STORE,
@@ -274,7 +350,7 @@ workflow = {
         respond(
             "b1000000-0000-4000-8000-00000000000d",
             "Respond Recorded",
-            [688, 160],
+            [1360, 160],
             '={{ JSON.stringify({status: "escalation_recorded", escalation_id: $(\'Build Escalation Record\').item.json.escalation.escalation_id, incident_id: $(\'Build Escalation Record\').item.json.escalation.incident_id, recorded_at: $(\'Build Escalation Record\').item.json.escalation.created_at, notification_channel: "none"}) }}',
         ),
     ],
@@ -283,7 +359,7 @@ workflow = {
         "Validate Escalation": {"main": [[{"node": "Valid?", "type": "main", "index": 0}]]},
         "Valid?": {
             "main": [
-                [{"node": "Read Incident Store", "type": "main", "index": 0}],
+                [{"node": "Simulated Failure?", "type": "main", "index": 0}],
                 [{"node": "Respond Invalid", "type": "main", "index": 0}],
             ]
         },
@@ -293,7 +369,14 @@ workflow = {
                 [{"node": "Respond Store Unavailable", "type": "main", "index": 0}],
             ]
         },
-        "Extract Store Text": {"main": [[{"node": "Build Escalation Record", "type": "main", "index": 0}]]},
+        "Extract Store Text": {"main": [[{"node": "Read Transition Store", "type": "main", "index": 0}]]},
+        "Read Transition Store": {
+            "main": [
+                [{"node": "Extract Transitions Text", "type": "main", "index": 0}],
+                [{"node": "Respond Transition Log Unavailable", "type": "main", "index": 0}],
+            ]
+        },
+        "Extract Transitions Text": {"main": [[{"node": "Build Escalation Record", "type": "main", "index": 0}]]},
         "Build Escalation Record": {"main": [[{"node": "Incident Found?", "type": "main", "index": 0}]]},
         "Incident Found?": {
             "main": [
@@ -303,6 +386,12 @@ workflow = {
         },
         "Build Escalation Line": {"main": [[{"node": "Append Escalation Record", "type": "main", "index": 0}]]},
         "Append Escalation Record": {"main": [[{"node": "Respond Recorded", "type": "main", "index": 0}]]},
+        "Simulated Failure?": {
+            "main": [
+                [{"node": "Respond Simulated Unavailable", "type": "main", "index": 0}],
+                [{"node": "Read Incident Store", "type": "main", "index": 0}],
+            ]
+        },
     },
     "settings": {"executionOrder": "v1", "binaryMode": "separate", "availableInMCP": False},
     "pinData": {},

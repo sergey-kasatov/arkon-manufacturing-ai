@@ -1,16 +1,26 @@
 # n8n Quality Steering Cell
 
-Operational layer of the Arkon platform: one workflow writes incidents and
-alerts, a second one answers questions about them. Process owner:
-`docs/Project_Charter.md` sections 7 and 8. Both run on a self-hosted n8n
+Operational layer of the Arkon platform: one workflow raises incidents and
+alerts, one moves them along their lifecycle, one answers questions about them
+and one records an approved escalation. Process owner:
+`docs/Project_Charter.md` sections 7 and 8. All of them run on a self-hosted n8n
 instance, pinned to `n8nio/n8n:2.29.9`.
 
 | Workflow | Direction | Endpoint | Deployed |
 |---|---|---|---|
 | `quality_steering_cell_v1.json` | write | `POST /webhook/arkon-event` | 2026-08-30, alert body fixed 2026-09-02 |
-| `incident_status_api_v1.json` | read | `GET /webhook/arkon-incident-status` | 2026-08-30 |
-| `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30 |
+| `incident_transition_v1.json` | write | `POST /webhook/arkon-incident-transition` | 2026-09-03 |
+| `incident_status_api_v1.json` | read | `GET /webhook/arkon-incident-status` | 2026-08-30, folds transitions since 2026-09-03 |
+| `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30, folds transitions since 2026-09-03 |
 | `comparison_slice_v1.json` | read | `POST /webhook/arkon-slice` | 2026-08-30 |
+
+**Three of the four share one piece of code.** The incident line is written once,
+at `new`, and never rewritten, so the current status of an incident is the fold of
+the transition log onto that line. That fold lives in `n8n/build/lifecycle.py` and
+is injected verbatim into the three workflows that report a status; a state
+machine copied into three generated JS bodies is a state machine that drifts.
+`n8n/build/check_lifecycle_js.py` asserts the injection is verbatim and then runs
+the fold under node.
 
 ## The run log: what has actually been sent through here
 
@@ -420,14 +430,17 @@ so they are recorded with their real cause.
 
 ### Known boundaries of v1
 
-- Acknowledge and close buttons and the escalation timer are the next
-  iteration: they need a Telegram Trigger node for callback handling and a
-  Wait-based escalation branch (charter 7.4). v1 demonstrates intake,
-  validation, dedup, incident record, and the priority-routed alert.
-- The incident store is append-only JSONL in v1. Moving it to the n8n Data
-  Table node (the charter 7.5 target, and now available natively with insert,
-  get, update and upsert operations) happens when the Streamlit cockpit starts
-  reading incidents, together with the incident lifecycle from charter 7.2.
+- Acknowledge and close buttons on the alert card and the escalation timer are
+  the next iteration: they need a Telegram Trigger node for callback handling and
+  a Wait-based escalation branch (charter 7.4). **There is now something behind
+  those buttons**, which there was not until 2026-09-03: the lifecycle write path
+  below. This workflow itself still only ever writes an incident at `new`, and
+  that is correct - raising is its job and moving is the other endpoint's.
+- The incident store is append-only JSONL in v1, and the lifecycle keeps it that
+  way: transitions go to a second append-only log rather than rewriting a line.
+  Moving both to the n8n Data Table node (the charter 7.5 target, and now
+  available natively with insert, get, update and upsert operations) happens when
+  the Streamlit cockpit starts reading incidents.
 - The alert group is a Telegram `group`, not a `supergroup`. If Telegram
   upgrades it, the chat id changes from `-548...` to a `-100...` form and
   alerts stop arriving silently. The chat id lives in the Telegram node.
@@ -563,11 +576,15 @@ private IP ranges by default and needs
 
 ### Known boundaries of the status API
 
-- Read-only. Acknowledging, escalating or closing an incident is a write and
-  belongs to the lifecycle work of charter 7.2, together with the move off JSONL.
-- The whole store is parsed on every call. That is correct at demo scale and
-  wrong at plant scale; the fix is the same move to a queryable store, not a
-  smarter parser.
+- Read-only, and it stays that way. Acknowledging or closing an incident is
+  `POST /webhook/arkon-incident-transition`, escalating is
+  `POST /webhook/arkon-escalation`.
+- **Two stores are now parsed on every call**, incidents and the transition log,
+  and the fold runs over both. Correct at demo scale and wrong at plant scale; the
+  fix is the same move to a queryable store, not a smarter parser.
+- **A status it reports is a fold, not a field.** Reading `incidents.jsonl`
+  directly gives `new` for every incident, for ever. `raised_as` is returned on
+  every record so the two cannot be mistaken for a contradiction.
 - No authentication. The endpoint sits on the LAN and the Tailscale network
   only. Anything beyond the demo needs at least a header credential, and that is
   a stated item in the readiness account.
@@ -672,9 +689,245 @@ future deploy. Verified on 2026-08-31: carried forward as
   its caller sends. The gate is enforced on the Langflow canvas, not on the wire.
   In production the gate would hand the agent a signed, single-use token that this
   endpoint checks.
-- **It does not change the incident.** The incident's own lifecycle transition
-  belongs with the move to a queryable store, per charter 7.2 and 7.5.
+- **It does not change the incident.** Escalating is a record that somebody asked
+  for help, not a lifecycle state. Moving the incident is the transition endpoint
+  below, and the two are deliberately separate: an escalated incident is still
+  `acknowledged` or `in_containment`, and collapsing them would lose that.
 
+## Incident lifecycle (write path)
+
+Fourth workflow, `incident_transition_v1.json`, built 2026-09-03, workflow id
+`arkonTransit01`. It is the write path of charter 7.2, and it is the piece
+everything else in Phase 3 and Phase 4 was waiting on.
+
+**What was missing, stated plainly.** The Steering Cell wrote an incident once, at
+`new`, and there was no way to write any later state. So no incident had ever been
+acknowledged, contained, resolved or closed; the response-time KPI the charter
+asks for could not exist, because a KPI needs two timestamps and only one was ever
+recorded; the `status` filter on the read API was a filter over a constant; and
+`overdue_incidents` counted every P1 and P2 in the store for ever, since nothing
+could ever stop being unacknowledged. On 2026-09-03 all 29 incidents in the store
+read `new`, which is what a lifecycle with no write path looks like from the
+outside: not an error, just a number that never moves.
+
+```text
+POST /webhook/arkon-incident-transition
+  -> Validate the request                 (400, one reason per bad parameter)
+  -> Simulated failure requested?         (503, test affordance)
+  -> Read /data/arkon/incidents.jsonl     (503 on an unreadable store)
+  -> Read the transition log              (503 on an unreadable log)
+  -> Incident exists?                     (404 if not; nothing is recorded)
+  -> Does the lifecycle allow this move?  (409 if not; nothing is recorded)
+  -> Append the transition                (200 with the new ARK-TRN id)
+```
+
+### It appends a log rather than rewriting the incident
+
+This is the design decision worth defending, because the obvious alternative is to
+open `incidents.jsonl`, find the line and change its `status` field.
+
+Three reasons against it, in order of weight. The incident store is append-only
+and both existing write paths keep it that way. A read-modify-write of the whole
+file would race the intake workflow, which appends to the same file with no lock,
+so a burst of events during a rewrite loses whichever side finishes second. And a
+response-time KPI needs the history: an overwritten record keeps one timestamp and
+the charter asks for the interval between two.
+
+So the store keeps the incident as it was raised, `/data/arkon/incident_transitions.jsonl`
+keeps what happened to it, and **the current status is a fold**: the last
+transition recorded against the incident, or `new` if there is none. The fold also
+produces the milestone timestamps and the response times. It lives in
+`n8n/build/lifecycle.py` and runs in all three workflows that report a status.
+
+The cost is honest and worth naming: every consumer now reads two files instead of
+one, and a consumer that reads only the incident store sees `new` for ever. The
+status API returns `raised_as` on every incident for exactly that reason, so a
+reader who opens the JSONL and finds a different word knows the two are not in
+conflict.
+
+### The lifecycle, and what it refuses
+
+```text
+new ---> acknowledged ---> in_containment ---> resolved ---> closed
+ |            |                  |                |
+ +------------+------------------+----------------+---> false_positive
+                                 ^                |
+                                 +----------------+  (reopen: containment did not hold)
+```
+
+`closed` and `false_positive` are terminal. `new` is the intake state and can
+never be re-entered, so `to_status=new` is refused with its own reason rather than
+the generic list. `resolved -> in_containment` is the only backward edge and it is
+why every KPI is computed from the **first** time a milestone is reached: an
+incident that bounces twice still reports the resolution that first happened.
+
+| Parameter | Required | Notes |
+|---|---|---|
+| `incident_id` | yes | `ARK-INC-00014`, or a plain number |
+| `to_status` | yes | `acknowledged`, `in_containment`, `resolved`, `closed`, `false_positive` |
+| `actor` | no | defaults to `human operator` |
+| `note` | no | up to 500 characters |
+| `simulate_failure` | no | `true`, `1`, `yes`; same affordance as the other two endpoints |
+
+Parameters are read from the JSON body **or the query string**, for the same
+reason the escalation endpoint accepts both: Langflow's API Request component can
+hand a model the URL and nothing else. The method stays POST.
+
+Five answers, deliberately distinct:
+
+| Situation | HTTP | `status` |
+|---|---|---|
+| transition recorded | 200 | `transition_recorded` |
+| request not understood | 400 | `rejected`, one `errors` entry per bad parameter |
+| incident not in the store | 404 | `rejected` |
+| the lifecycle does not allow the move from where the incident is | 409 | `rejected`, with `current_status` and `allowed_next` |
+| a store unreadable, or failure simulated | 503 | `unavailable` |
+
+**409 is the one that earns its own code.** The request is well formed and the
+incident is real; it has simply moved on. A caller has to be able to tell "you
+asked wrong" from "you are too late", and the answer carries `current_status` and
+`allowed_next` so it can retry correctly rather than guess. This is the same
+separation the status API draws between `no_match` and `unavailable`.
+
+**An unreadable transition log is a 503 on all three endpoints, never an empty
+log.** Read as empty it would report every incident as `new` with a 200, which is
+a wrong status served confidently, and that is the one answer this endpoint set
+exists to prevent. The practical consequence is a deployment step: the file has to
+exist before the status API is imported, or a working endpoint goes down.
+
+### The transition record
+
+```json
+{
+  "transition_id": "ARK-TRN-00001",
+  "recorded_at": "2026-09-03T19:46:11.291Z",
+  "incident_id": "ARK-INC-00013",
+  "incident_priority": "P1",
+  "incident_created_at": "2026-08-30T12:01:16.000Z",
+  "from_status": "new",
+  "to_status": "acknowledged",
+  "actor": "M. Brandt",
+  "note": "picked up by the assigned planner",
+  "minutes_since_created": 6225.4,
+  "minutes_since_previous_transition": null,
+  "acknowledge_window_minutes": 15,
+  "acknowledged_within_window": false,
+  "context_origin": "simulated"
+}
+```
+
+The timestamps are the record of truth. The three derived numbers are computed at
+write time so a consumer reading this file alone, a Tableau extract for instance,
+has the KPI without performing the fold. `acknowledged_within_window` is filled
+only on the transition it describes and is null on every other one, including on
+P3 and P4 where charter 7.1 defines no window. `context_origin: simulated` marks
+the actor, the same boundary the escalation record draws; the timestamps and the
+state machine are real.
+
+### What the status API gained
+
+The read path folds the log and now answers things it could not before. Per
+incident: the current `status`, `raised_as`, and a `lifecycle` object with the
+transition count, the three milestone timestamps, the three response times and the
+full history. Over the store: `incidents_by_status`, a `transitions` block, and
+`response_times` with the median time to acknowledge, the median time to close,
+and the within-window and late counts. The median rather than the mean, because
+one incident acknowledged the next morning would otherwise move the number more
+than every incident acknowledged on time.
+
+`overdue_incidents` finally measures something. It always meant "still
+unacknowledged past the charter 7.1 window"; with no acknowledgement path it
+counted the whole store. It dropped from 19 to 17 the moment two incidents were
+acknowledged.
+
+### Testing it
+
+```bash
+python n8n/build/check_lifecycle_js.py        # the fold and the machine, offline
+python n8n/incident_transition_probe.py       # the contract, against the deployment
+```
+
+The first asserts that the JS in the generated workflow JSON is the JS in
+`lifecycle.py` character for character, then runs the fold under node against
+cases written out by hand: the full path, the reopen, `false_positive` counting as
+a closing outcome, out-of-order log lines, damaged lines, and four properties of
+the machine including that every open state can still reach a closing outcome.
+That last one is there because a state an incident can enter and never leave is
+not something anybody would notice from the outside.
+
+The second is the live contract suite, and **every case in it is a case that must
+not reach the store**, the same discipline as `escalation_probe.py`. It finds its
+own subject for the 409 cases rather than naming one: it asks the status API for
+an incident that is still `new` and then requests `closed`, which the machine
+refuses from there. That keeps the suite valid as the store fills up, and if the
+store holds no `new` incident those two cases are skipped and say so.
+
+17 of 17 passed on 2026-09-03 against the deployment, and the transition log was
+still 0 lines afterwards.
+
+### Driving one incident, for the demo
+
+```bash
+python n8n/drive_incident.py ARK-INC-00013                    # the full path
+python n8n/drive_incident.py ARK-INC-00016 false_positive     # the other outcome
+python n8n/drive_incident.py 21 --delay 45 --dry-run          # print, write nothing
+```
+
+`drive_incident.py` is the counterpart of `replay_events.py`: that script raises
+incidents, this one moves them. It is not a test and it is deliberately not part
+of the probe suite, because every step is a real write that cannot be undone and
+an incident can only be driven to a terminal state once. To rehearse the demo
+again, raise a fresh incident first.
+
+**Use `--delay` for a demo.** Without it the four steps land inside one second and
+every response time comes out equal, which is true and reads as broken. That
+happened on the first run of `ARK-INC-00013`, whose four transitions are 0.2
+seconds apart and whose three KPIs are therefore all 6225.4 minutes.
+
+### Deploying it
+
+No credentials, so it goes in from the command line. **Create the transition log
+first**: the write node in append mode does not create its file (trap 3 above),
+and the status API now returns 503 without it.
+
+```bash
+docker exec n8n touch /data/arkon/incident_transitions.jsonl
+docker cp incident_transition_v1.json n8n:/tmp/w.json && docker exec n8n n8n import:workflow --input=/tmp/w.json && docker exec n8n n8n publish:workflow --id=arkonTransit01 && docker restart n8n
+```
+
+The status API and the escalation record changed with it and are re-imported the
+same way. **The escalation workflow carries its counter in `staticData` and a
+plain import rewinds it**, so read the live value first and carry it into the
+document being imported, per the section above. It was carried forward as
+`{"global": {"nextEscalationId": 13}}` on 2026-09-03 and verified after the
+restart. The transition workflow has the same trap and no exemption from it: once
+`ARK-TRN` ids exist, a re-import of the tracked file resets `nextTransitionId` to
+zero.
+
+Deployed and verified 2026-09-03 on n8n 2.29.9. Three workflows imported and
+published, one restart, and afterwards: 17 of 17 transition cases, 24 of 24 status
+cases and 13 of 13 escalation cases pass, and one incident was driven from `new`
+to `closed`.
+
+### Known boundaries of the lifecycle write path
+
+- **It notifies nobody and nothing calls it automatically.** The acknowledge and
+  close buttons charter 7.4 describes on the Telegram card still do not exist:
+  they need a Telegram Trigger node for callback handling, and there is now
+  something behind them for the first time. The unacknowledged-incident timer and
+  the manager notification are the same iteration.
+- **It cannot verify who the actor is.** The endpoint records the `actor` value
+  its caller sends, exactly as the escalation record does with `approved_by`. In
+  production this endpoint would check a signed token.
+- **No authentication**, on the LAN and Tailscale only, same as the rest.
+- **The whole transition log is parsed on every call**, on all three endpoints.
+  Correct at demo scale and wrong at plant scale; the fix is the move to a
+  queryable store, not a smarter parser.
+- **The assistant cannot call it.** It is not on the Langflow canvas as a tool and
+  that is deliberate for now: the canvas has been untouched since 2026-09-01 and
+  the assistant's one action stays the guarded escalation. What did change is what
+  it can *report*, because the status API it already reads now returns real
+  statuses and response times.
 
 ## Comparison slice (evaluation artifact, not Arkon infrastructure)
 

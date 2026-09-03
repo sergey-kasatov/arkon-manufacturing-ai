@@ -7,16 +7,22 @@ bodies stay readable and quoting stays under control.
 import json
 import pathlib
 
+from lifecycle import FOLD_JS, js_constants
+
 OUT = pathlib.Path(__file__).resolve().parent.parent / "incident_status_api_v1.json"
 
 STORE_PATH = "/data/arkon/incidents.jsonl"
+TRANSITION_STORE = "/data/arkon/incident_transitions.jsonl"
 
-PARSE_QUERY = r"""// Arkon Incident Status API - request parsing and validation.
+PARSE_QUERY = (
+    r"""// Arkon Incident Status API - request parsing and validation.
 // Every query parameter is optional; the contract is documented in n8n/README.md.
 // Invalid input is rejected here so the agent gets a precise reason instead of
 // an empty result it might read as "no incident exists".
+"""
+    + js_constants()
+    + r"""
 const PRIORITIES = ["P1", "P2", "P3", "P4"];
-const LIFECYCLE = ["new", "acknowledged", "in_containment", "resolved", "closed", "false_positive"];
 const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 5;
 
@@ -112,15 +118,24 @@ return [
   },
 ];
 """
+)
 
-FILTER_INCIDENTS = r"""// Arkon Incident Status API - answer the query from the JSONL incident store.
+FILTER_INCIDENTS = (
+    r"""// Arkon Incident Status API - answer the query from the JSONL incident store.
 // Response times come from charter 7.1, the status vocabulary from charter 7.2.
-const ACK_WINDOW_MINUTES = { P1: 15, P2: 60 };
-const OPEN_STATUSES = ["new", "acknowledged", "in_containment"];
-
+//
+// The incident line is written once, at new, and never rewritten, so a status
+// read off it is the status the incident was raised with. Every status below is
+// the fold of the transition log onto that line: current state, the three
+// milestone timestamps, and the response times computed from them.
+"""
+    + js_constants()
+    + FOLD_JS
+    + r"""
 const request = $("Parse Query").first().json;
 const filters = request.query;
-const storeText = $input.first().json.store_text ?? "";
+const storeText = $("Extract Store Text").first().json.store_text ?? "";
+const transitionsText = $("Extract Transitions Text").first().json.transitions_text ?? "";
 const now = new Date();
 
 const lines = storeText.split("\n").map((line) => line.trim()).filter(Boolean);
@@ -133,6 +148,16 @@ for (const line of lines) {
     unreadableLines += 1;
   }
 }
+
+// Fold once per incident, keyed by the parsed object rather than by id, so two
+// store lines carrying the same id cannot share one answer.
+const transitions = arkonTransitionsById(transitionsText);
+const folded = new Map();
+for (const incident of incidents) {
+  folded.set(incident, arkonFold(incident, transitions.byId));
+}
+const lifecycleOf = (incident) => folded.get(incident);
+const statusOf = (incident) => lifecycleOf(incident).status;
 
 const recordIdOf = (incident) => String(incident.event?.evidence?.record_id ?? "");
 
@@ -152,17 +177,20 @@ const ageMinutes = (incident) => {
   return Number.isNaN(created) ? null : Math.round((now.getTime() - created) / 60000);
 };
 
+// Overdue means still unacknowledged past the charter 7.1 window. Before the
+// transition log existed every incident read new for ever, so this counted the
+// whole store and meant nothing; it is a real measurement now.
 const isOverdue = (incident) => {
   const window = ACK_WINDOW_MINUTES[String(incident.priority ?? "").toUpperCase()];
   if (window === undefined) return false;
-  if (String(incident.status ?? "").toLowerCase() !== "new") return false;
+  if (statusOf(incident) !== "new") return false;
   const age = ageMinutes(incident);
   return age !== null && age > window;
 };
 
 const matches = (incident) => {
   if (filters.incident_id && incident.incident_id !== filters.incident_id) return false;
-  if (filters.status && String(incident.status ?? "").toLowerCase() !== filters.status) return false;
+  if (filters.status && statusOf(incident) !== filters.status) return false;
   if (filters.priority.length && !filters.priority.includes(String(incident.priority ?? "").toUpperCase())) {
     return false;
   }
@@ -196,7 +224,22 @@ const project = (incident) => ({
   incident_id: incident.incident_id,
   created_at: incident.created_at,
   age_minutes: ageMinutes(incident),
-  status: incident.status,
+  // The folded status, not the one on the store line. raised_as is the store
+  // line's own value and is always new; it is returned so a reader who opens the
+  // JSONL and sees a different word knows the two are not in conflict.
+  status: statusOf(incident),
+  raised_as: lifecycleOf(incident).stored_status,
+  lifecycle: {
+    transition_count: lifecycleOf(incident).transition_count,
+    is_terminal: lifecycleOf(incident).is_terminal,
+    acknowledged_at: lifecycleOf(incident).acknowledged_at,
+    resolved_at: lifecycleOf(incident).resolved_at,
+    closed_at: lifecycleOf(incident).closed_at,
+    minutes_to_acknowledge: lifecycleOf(incident).minutes_to_acknowledge,
+    minutes_to_resolve: lifecycleOf(incident).minutes_to_resolve,
+    minutes_to_close: lifecycleOf(incident).minutes_to_close,
+    history: lifecycleOf(incident).history,
+  },
   priority: incident.priority,
   unit: unitToken(incident),
   record_id: recordIdOf(incident) || null,
@@ -230,9 +273,40 @@ const project = (incident) => ({
 });
 
 const byPriority = {};
+const byStatus = {};
 for (const incident of incidents) {
   const key = String(incident.priority ?? "unknown").toUpperCase();
   byPriority[key] = (byPriority[key] ?? 0) + 1;
+  const state = statusOf(incident);
+  byStatus[state] = (byStatus[state] ?? 0) + 1;
+}
+
+// Response-time KPIs, charter 7.2. The median rather than the mean, because one
+// incident acknowledged the next morning would otherwise move the number more
+// than every incident acknowledged on time.
+const median = (values) => {
+  const sorted = values.filter((v) => v !== null && v !== undefined).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const middle = Math.floor(sorted.length / 2);
+  const value = sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  return Math.round(value * 10) / 10;
+};
+
+const ackMinutes = [];
+const closeMinutes = [];
+let acknowledgedInWindow = 0;
+let acknowledgedLate = 0;
+for (const incident of incidents) {
+  const life = lifecycleOf(incident);
+  if (life.minutes_to_acknowledge !== null) {
+    ackMinutes.push(life.minutes_to_acknowledge);
+    const window = ACK_WINDOW_MINUTES[String(incident.priority ?? "").toUpperCase()];
+    if (window !== undefined) {
+      if (life.minutes_to_acknowledge <= window) acknowledgedInWindow += 1;
+      else acknowledgedLate += 1;
+    }
+  }
+  if (life.minutes_to_close !== null) closeMinutes.push(life.minutes_to_close);
 }
 
 const hits = incidents
@@ -254,8 +328,23 @@ return [
         total_incidents: incidents.length,
         unreadable_lines: unreadableLines,
         incidents_by_priority: byPriority,
-        open_incidents: incidents.filter((i) => OPEN_STATUSES.includes(String(i.status ?? "").toLowerCase())).length,
+        incidents_by_status: byStatus,
+        open_incidents: incidents.filter((i) => OPEN_STATUSES.includes(statusOf(i))).length,
         overdue_incidents: incidents.filter(isOverdue).length,
+      },
+      transitions: {
+        path: "__TRANSITION_STORE__",
+        total_transitions: Object.values(transitions.byId).reduce((sum, list) => sum + list.length, 0),
+        incidents_with_transitions: Object.keys(transitions.byId).length,
+        unreadable_lines: transitions.unreadable,
+      },
+      response_times: {
+        acknowledged_incidents: ackMinutes.length,
+        median_minutes_to_acknowledge: median(ackMinutes),
+        acknowledged_within_window: acknowledgedInWindow,
+        acknowledged_late: acknowledgedLate,
+        closed_incidents: closeMinutes.length,
+        median_minutes_to_close: median(closeMinutes),
       },
       match_count: hits.length,
       returned: page.length,
@@ -263,7 +352,8 @@ return [
     },
   },
 ];
-""".replace("__STORE_PATH__", STORE_PATH)
+"""
+).replace("__STORE_PATH__", STORE_PATH).replace("__TRANSITION_STORE__", TRANSITION_STORE)
 
 
 def if_node(node_id, name, position, left_value):
@@ -402,17 +492,53 @@ workflow = {
             },
         },
         {
+            "id": "a1000000-0000-4000-8000-00000000000c",
+            "name": "Read Transition Store",
+            "type": "n8n-nodes-base.readWriteFile",
+            "typeVersion": 1.1,
+            "position": [16, 224],
+            "onError": "continueErrorOutput",
+            "parameters": {
+                "operation": "read",
+                "fileSelector": TRANSITION_STORE,
+                "options": {},
+            },
+        },
+        # An unreadable transition log is a 503, not an empty log. Reading it as
+        # empty would report every incident as new with a 200, and a wrong status
+        # served confidently is the one answer this endpoint exists to prevent.
+        respond_node(
+            "a1000000-0000-4000-8000-00000000000d",
+            "Respond Transition Log Unavailable",
+            [240, 416],
+            '={{ JSON.stringify({status: "unavailable", message: "The incident transition log could not be read, so no incident status could be determined."}) }}',
+            503,
+        ),
+        {
+            "id": "a1000000-0000-4000-8000-00000000000e",
+            "name": "Extract Transitions Text",
+            "type": "n8n-nodes-base.extractFromFile",
+            "typeVersion": 1.1,
+            "position": [240, 224],
+            "parameters": {
+                "operation": "text",
+                "binaryPropertyName": "data",
+                "destinationKey": "transitions_text",
+                "options": {},
+            },
+        },
+        {
             "id": "a1000000-0000-4000-8000-00000000000a",
             "name": "Filter Incidents",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
-            "position": [16, 224],
+            "position": [464, 224],
             "parameters": {"jsCode": FILTER_INCIDENTS},
         },
         respond_node(
             "a1000000-0000-4000-8000-00000000000b",
             "Respond Status",
-            [240, 224],
+            [688, 224],
             "={{ JSON.stringify($json) }}",
         ),
     ],
@@ -437,7 +563,14 @@ workflow = {
                 [{"node": "Respond Store Unavailable", "type": "main", "index": 0}],
             ]
         },
-        "Extract Store Text": {"main": [[{"node": "Filter Incidents", "type": "main", "index": 0}]]},
+        "Extract Store Text": {"main": [[{"node": "Read Transition Store", "type": "main", "index": 0}]]},
+        "Read Transition Store": {
+            "main": [
+                [{"node": "Extract Transitions Text", "type": "main", "index": 0}],
+                [{"node": "Respond Transition Log Unavailable", "type": "main", "index": 0}],
+            ]
+        },
+        "Extract Transitions Text": {"main": [[{"node": "Filter Incidents", "type": "main", "index": 0}]]},
         "Filter Incidents": {"main": [[{"node": "Respond Status", "type": "main", "index": 0}]]},
     },
     "settings": {"executionOrder": "v1", "binaryMode": "separate", "availableInMCP": False},

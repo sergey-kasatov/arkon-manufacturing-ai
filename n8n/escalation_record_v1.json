@@ -184,16 +184,65 @@
       }
     },
     {
+      "id": "b1000000-0000-4000-8000-000000000011",
+      "name": "Read Transition Store",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        16,
+        224
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "/data/arkon/incident_transitions.jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000012",
+      "name": "Respond Transition Log Unavailable",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        -16
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"unavailable\", message: \"The incident transition log could not be read, so the escalation was not recorded.\"}) }}",
+        "options": {
+          "responseCode": 503
+        }
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000013",
+      "name": "Extract Transitions Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        224
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "transitions_text",
+        "options": {}
+      }
+    },
+    {
       "id": "b1000000-0000-4000-8000-000000000008",
       "name": "Build Escalation Record",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        16,
+        464,
         224
       ],
       "parameters": {
-        "jsCode": "// Arkon Escalation Record - confirm the incident exists, then build the record.\n// An escalation against an incident that is not in the store is refused: it would\n// be an audit entry pointing at nothing.\nconst request = $(\"Validate Escalation\").first().json.request;\nconst storeText = $input.first().json.store_text ?? \"\";\n\nconst incidents = [];\nfor (const line of storeText.split(\"\\n\").map((l) => l.trim()).filter(Boolean)) {\n  try {\n    incidents.push(JSON.parse(line));\n  } catch (error) {\n    // A damaged line is not an escalation failure; the status API reports the count.\n  }\n}\n\nconst incident = incidents.find((item) => item.incident_id === request.incident_id) ?? null;\nif (!incident) {\n  return [{ json: { found: false, incident_id: request.incident_id } }];\n}\n\n// Escalation ids come from workflow static data, the same mechanism the intake\n// workflow uses for incident ids. Static data persists for production executions\n// of a published workflow, not for editor test runs.\nconst state = $getWorkflowStaticData(\"global\");\nstate.nextEscalationId = (state.nextEscalationId ?? 0) + 1;\nconst escalationId = \"ARK-ESC-\" + String(state.nextEscalationId).padStart(5, \"0\");\n\nconst record = {\n  escalation_id: escalationId,\n  created_at: new Date().toISOString(),\n  incident_id: incident.incident_id,\n  incident_priority: incident.priority,\n  incident_status_at_escalation: incident.status,\n  incident_summary: incident.summary,\n  reason: request.reason,\n  requested_by: request.requested_by,\n  approved_by: request.approved_by,\n  notification_channel: \"none\",\n  context_origin: \"simulated\",\n};\n\nreturn [\n  {\n    json: {\n      found: true,\n      escalation: record,\n      escalation_jsonl: JSON.stringify(record) + \"\\n\",\n    },\n  },\n];\n"
+        "jsCode": "// Arkon Escalation Record - confirm the incident exists, then build the record.\n// An escalation against an incident that is not in the store is refused: it would\n// be an audit entry pointing at nothing.\n//\n// The status captured here is the fold of the transition log, not the value on\n// the store line. Reading the line directly would write \"new\" into every\n// escalation record for ever, which is a false statement in an audit entry whose\n// whole purpose is to say what the incident was doing when somebody escalated it.\nconst LIFECYCLE = [\"new\", \"acknowledged\", \"in_containment\", \"resolved\", \"closed\", \"false_positive\"];\nconst OPEN_STATUSES = [\"new\", \"acknowledged\", \"in_containment\"];\nconst TERMINAL_STATUSES = [\"closed\", \"false_positive\"];\nconst REQUESTABLE_STATUSES = [\"acknowledged\", \"in_containment\", \"resolved\", \"closed\", \"false_positive\"];\nconst ALLOWED_TRANSITIONS = {\"new\": [\"acknowledged\", \"false_positive\"], \"acknowledged\": [\"in_containment\", \"resolved\", \"false_positive\"], \"in_containment\": [\"resolved\", \"false_positive\"], \"resolved\": [\"closed\", \"in_containment\", \"false_positive\"], \"closed\": [], \"false_positive\": []};\nconst ACK_WINDOW_MINUTES = {\"P1\": 15, \"P2\": 60};\n// Apply the transition log to one incident. The incident line in the store is\n// written once, at new, and never rewritten; the current status is therefore the\n// last transition recorded against it, and the KPI timestamps are the first time\n// each milestone was reached. Charter 7.2.\nfunction arkonFold(incident, transitionsById) {\n  const list = (transitionsById[incident.incident_id] ?? [])\n    .slice()\n    .sort((a, b) => String(a.recorded_at ?? \"\").localeCompare(String(b.recorded_at ?? \"\")));\n\n  const stored = String(incident.status ?? \"new\").toLowerCase();\n  const current = list.length ? String(list[list.length - 1].to_status).toLowerCase() : stored;\n\n  const firstAt = (status) => {\n    const hit = list.find((t) => String(t.to_status).toLowerCase() === status);\n    return hit ? hit.recorded_at : null;\n  };\n\n  const created = Date.parse(incident.created_at ?? \"\");\n  const minutesFromCreated = (iso) => {\n    if (!iso || Number.isNaN(created)) return null;\n    const at = Date.parse(iso);\n    return Number.isNaN(at) ? null : Math.round(((at - created) / 60000) * 10) / 10;\n  };\n\n  const acknowledgedAt = firstAt(\"acknowledged\");\n  const resolvedAt = firstAt(\"resolved\");\n  // A false_positive is a closing outcome: the incident is finished with, and a\n  // response time that counted only \"closed\" would silently drop those cases.\n  const closedAt = firstAt(\"closed\") ?? firstAt(\"false_positive\");\n\n  return {\n    status: current,\n    stored_status: stored,\n    transition_count: list.length,\n    is_terminal: TERMINAL_STATUSES.includes(current),\n    acknowledged_at: acknowledgedAt,\n    resolved_at: resolvedAt,\n    closed_at: closedAt,\n    minutes_to_acknowledge: minutesFromCreated(acknowledgedAt),\n    minutes_to_resolve: minutesFromCreated(resolvedAt),\n    minutes_to_close: minutesFromCreated(closedAt),\n    history: list.map((t) => ({\n      transition_id: t.transition_id ?? null,\n      recorded_at: t.recorded_at ?? null,\n      from_status: t.from_status ?? null,\n      to_status: t.to_status ?? null,\n      actor: t.actor ?? null,\n      note: t.note ?? null,\n    })),\n  };\n}\n\n// Parse a JSONL store into transitions grouped by incident id. Damaged lines are\n// counted rather than thrown: one bad line must not take the whole lifecycle out.\nfunction arkonTransitionsById(text) {\n  const byId = {};\n  let unreadable = 0;\n  for (const line of String(text ?? \"\").split(\"\\n\").map((l) => l.trim()).filter(Boolean)) {\n    try {\n      const record = JSON.parse(line);\n      const id = String(record.incident_id ?? \"\");\n      if (!id) {\n        unreadable += 1;\n        continue;\n      }\n      (byId[id] = byId[id] ?? []).push(record);\n    } catch (error) {\n      unreadable += 1;\n    }\n  }\n  return { byId, unreadable };\n}\n\nconst request = $(\"Validate Escalation\").first().json.request;\nconst storeText = $(\"Extract Store Text\").first().json.store_text ?? \"\";\nconst transitionsText = $(\"Extract Transitions Text\").first().json.transitions_text ?? \"\";\n\nconst incidents = [];\nfor (const line of storeText.split(\"\\n\").map((l) => l.trim()).filter(Boolean)) {\n  try {\n    incidents.push(JSON.parse(line));\n  } catch (error) {\n    // A damaged line is not an escalation failure; the status API reports the count.\n  }\n}\n\nconst incident = incidents.find((item) => item.incident_id === request.incident_id) ?? null;\nif (!incident) {\n  return [{ json: { found: false, incident_id: request.incident_id } }];\n}\n\n// Escalation ids come from workflow static data, the same mechanism the intake\n// workflow uses for incident ids. Static data persists for production executions\n// of a published workflow, not for editor test runs.\nconst state = $getWorkflowStaticData(\"global\");\nstate.nextEscalationId = (state.nextEscalationId ?? 0) + 1;\nconst escalationId = \"ARK-ESC-\" + String(state.nextEscalationId).padStart(5, \"0\");\n\nconst lifecycle = arkonFold(incident, arkonTransitionsById(transitionsText).byId);\n\nconst record = {\n  escalation_id: escalationId,\n  created_at: new Date().toISOString(),\n  incident_id: incident.incident_id,\n  incident_priority: incident.priority,\n  incident_status_at_escalation: lifecycle.status,\n  incident_transitions_at_escalation: lifecycle.transition_count,\n  incident_summary: incident.summary,\n  reason: request.reason,\n  requested_by: request.requested_by,\n  approved_by: request.approved_by,\n  notification_channel: \"none\",\n  context_origin: \"simulated\",\n};\n\nreturn [\n  {\n    json: {\n      found: true,\n      escalation: record,\n      escalation_jsonl: JSON.stringify(record) + \"\\n\",\n    },\n  },\n];\n"
       }
     },
     {
@@ -202,7 +251,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        240,
+        688,
         224
       ],
       "parameters": {
@@ -236,7 +285,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        464,
+        912,
         400
       ],
       "parameters": {
@@ -253,7 +302,7 @@
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
       "position": [
-        464,
+        912,
         160
       ],
       "parameters": {
@@ -268,7 +317,7 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        688,
+        1136,
         160
       ],
       "parameters": {
@@ -285,7 +334,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        912,
+        1360,
         160
       ],
       "parameters": {
@@ -355,6 +404,35 @@
       ]
     },
     "Extract Store Text": {
+      "main": [
+        [
+          {
+            "node": "Read Transition Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Transition Store": {
+      "main": [
+        [
+          {
+            "node": "Extract Transitions Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Transition Log Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Transitions Text": {
       "main": [
         [
           {
