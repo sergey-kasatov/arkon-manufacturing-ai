@@ -11,7 +11,7 @@ Arkon Manufacturing AI simulates an Industry 4.0 platform that combines
 Predictive Maintenance, Fault Detection and Visual Quality Control across three
 factory departments of a fictional heavy manufacturer.
 
-Three models are trained and measured, an n8n steering cell turns their
+Seven models are trained and measured, an n8n steering cell turns their
 predictions into incidents and alerts a human, and a grounded Langflow assistant
 answers questions over the result. The Streamlit cockpit and the Tableau
 executive views are still planned; what is built and what is not is listed
@@ -21,7 +21,7 @@ under [What's Built](#whats-built).
 
 ## Results
 
-Six modules are built, measured and documented. Every figure below is
+Seven modules are built, measured and documented. Every figure below is
 generated from the metrics file its own run wrote, by
 `python tools/make_result_plots.py` - no model is loaded and no dataset is read,
 so a clone reproduces the pictures in seconds. Those metrics files are the only
@@ -35,6 +35,7 @@ thing git keeps under `models/`.
 | **Defect classification** - NEU steel surface | **1.0000 accuracy** over six defect types, against 0.9750 for a nearest-neighbour classifier that does no training at all | 360 held-out images |
 | **Anomaly detection** - MVTec components | **mean image AUROC 0.9817** over four categories (0.9650 to 1.0000), pixel AUROC 0.9738, nothing trained | 453 held-out images, sound parts only in the bank |
 | **Defect localisation** - GC10 steel sheet | **mAP@0.5 0.6260** over ten defect classes, and the only module that says where a defect is | 339 held-out sheets from 83 coils no other split contains |
+| **Field quality** - NHTSA complaints | **micro F1 0.6867** over 24 component classes read from free text, and 25 of 3,080 complaint-rate movements published | 60,039 complaints received in 2024, after a taxonomy seam that splits the file in two |
 
 ### Remaining useful life: one model for a mixed fleet
 
@@ -291,13 +292,55 @@ And the metric is this repository's own, because the environment has neither
 `torchmetrics` nor `pycocotools`: VOC average precision in forty lines, validated in
 the notebook against six cases whose answers are known, two of them worked out by hand.
 
-**What these figures are not.** All six are held-out test splits of public
+### What a complaint says, and whether a rate really moved
+
+![NHTSA per-class F1, the support that does not explain it, and a priority band that carries no information](assets/nlp/nhtsa_field_quality_ledger.png)
+
+Six modules read something the platform measured. **This one reads what somebody
+wrote.** A complaint is an allegation about a vehicle, nobody verified it, and that
+changes what the module may claim: it says a text is about a component, never that the
+component failed.
+
+**The middle panel is the GC10 finding on a third architecture.** It looks as though
+per-class performance should follow how much training data stands behind each class,
+and it does not: Spearman 0.257. The best class has 1,637 training complaints and the worst
+has 5,495, three times as many. What appears to order it is how specific the component's
+vocabulary is, and that is offered as a reading rather than a measurement.
+
+**The right panel is the one worth stopping at, and no other Arkon module can draw
+it.** Every module here publishes a priority band, and nothing checks whether the band
+means anything, because nothing can. This one has a reference: run the identical trend
+procedure over the held-out labels instead of the model's predictions and you get the
+set of movements that genuinely happened. Scored against it, **the band carries no
+information at all** - correlation -0.056 - and above a 0.80 edge it inverts, so the
+largest apparent movements are the ones the labels do not confirm. The band therefore
+says how large a movement is and never how certain it is. That is written into the
+model card, into the event evidence as `band_basis`, and into the words of the P2
+recommended action.
+
+**The same reference measures the whole batch.** 25 cells published against 19 the
+labels flag, 13 in common: precision 0.520, recall 0.684. **About half of what this
+module publishes is not confirmed**, which is the number to quote about it.
+
+**The label column is two labellings and the seam is a single day.** On 2020-11-04 one
+component class stops and three start. That is an intake form changing, not a trend,
+and a temporal split that ignores it trains a model on two incompatible label systems
+at once. The window starts at the seam, which costs 50,170 complaints, and it is the GC10
+rule again: the label is whatever the file holds.
+
+**And the events are not independent, which is new for this platform.** 8 of the 25
+published cells share a manufacturer and a month with another, the largest group being
+4 events from one manufacturer in one month, none of which the labels confirm. One
+cause moves several cells and an operator receives them as separate alerts.
+
+**What these figures are not.** All seven are held-out test splits of public
 datasets, scored offline. Nothing here ran on a real production line, and the
 operational context around the numbers is fabricated. Each module's limitations
 are in its model card - [CMAPSS](docs/Model_Card_CMAPSS_RUL.md),
 [Scania](docs/Model_Card_Scania_APS.md), [casting](docs/Model_Card_Casting_CV.md),
 [NEU](docs/Model_Card_NEU_Surface.md), [MVTec](docs/Model_Card_MVTec_Anomaly.md),
-[GC10](docs/Model_Card_GC10_Detection.md) - and are not summarised away here.
+[GC10](docs/Model_Card_GC10_Detection.md),
+[NHTSA](docs/Model_Card_NHTSA_Field_Quality.md) - and are not summarised away here.
 
 ---
 
@@ -311,6 +354,8 @@ Arkon Manufacturing AI Platform
 ├── 🔍  CV Binary         Foundry Dept.          Casting Product   Defect Detection
 ├── 🔬  CV Multi-class    Rolling Mill Dept.     NEU Surface       Defect Type
 ├── 🧭  CV Anomaly        Component Inspection   MVTec AD          Anomaly + Region
+├── 📦  CV Detection      Stamping Dept.         GC10-DET          Located Defects
+├── 💬  NLP Multi-label   Field Quality Dept.    NHTSA Complaints  Component + Trend
 ├── 🤖  LLM / RAG         All Departments        -                 AI Chatbot
 └── 📊  BI Dashboard      Executive Level        Tableau           KPI Analytics
 ```
@@ -428,6 +473,7 @@ because of anything the assistant did.
 | CV | [NEU-DET Surface Defect Database](http://faculty.neu.edu.cn/songkechen/zh_CN/zdylm/263270/list/index.htm) | Northeastern University, China | Academic use | ~35 MB | 6-class classification (ships detection boxes too) |
 | CV | [MVTec Anomaly Detection](https://www.mvtec.com/company/research/datasets/mvtec-ad) | MVTec Software GmbH | Research only | ~4.9 GB | Anomaly detection (4 of 15 categories used) |
 | CV | [GC10-DET Surface Defects](https://github.com/lvxiaoming2019/GC10-DET-Metallic-Surface-Defect-Datasets) | Academic | Academic use | ~1 GB | Object detection |
+| NLP | [NHTSA Consumer Complaints 2020-2024](https://www.nhtsa.gov/nhtsa-datasets-and-apis) | NHTSA Office of Defects Investigation | US Government public domain | ~326 MB | Multi-label text classification and trend detection |
 
 > **Note:** NASA CMAPSS is a physics-based simulation (not raw sensor data),
 > but is the gold-standard benchmark for RUL prediction research.
@@ -488,7 +534,22 @@ pass**: this dataset holds no sheet anyone certified clean, so the module has ne
 sound steel and its silence is a failure to find
 - [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
 - [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of eight Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
-- [ ] NLP module - NHTSA complaint classification and field-quality trend detection
+- [x] **NLP module - NHTSA consumer-complaint field quality.** TF-IDF over unigrams and
+bigrams with a one-vs-rest linear classifier over 24 component classes, built from scratch
+as a notebook trio on 2026-09-03 (`notebooks/04_nlp/01_nhtsa_complaints/`,
+`docs/Model_Card_NHTSA_Field_Quality.md`). **micro F1 0.6867, macro F1 0.6306** on 60,039
+complaints received in 2024, read from the narrative text alone. **It is the first module
+whose input is not a measurement**: a complaint is what a member of the public wrote about
+their own vehicle, so nothing it publishes is evidence that a part failed. Four findings.
+**The component column is two labellings joined on 2020-11-04** - one day on which one class stops
+and three start, an intake form changing rather than a trend - so the window begins there
+and 50,170 complaints are discarded. **The row is not the complaint and the duplication is
+exact**: 418,884 rows carry 291,999 complaints and every extra row repeats its narrative byte for
+byte. **It is the first Arkon module that reproduces exactly**, a refit moving no predicted
+probability at all. And **its events are about a signal rather than a part**, so
+3,080 manufacturer-component-month cells were tested against their own trailing baselines and
+25 published - which is also the only Arkon batch whose worth is measured, at precision
+0.520 and recall 0.684 against the identical trend run on the held-out labels
 - [ ] Incident lifecycle - acknowledge and close callbacks, escalation timer, queryable store
 - [ ] Streamlit app and Tableau views - the operational cockpit and the executive KPI view
 
@@ -510,7 +571,9 @@ worth more than the twelve nodes cost.
 | BI Dashboard | All modules | Executive KPI analytics | Tableau |
 
 CV object detection on GC10-DET was the third row here until 2026-09-02, when it
-was built: `docs/Model_Card_GC10_Detection.md`.
+was built: `docs/Model_Card_GC10_Detection.md`. NLP on NHTSA complaints was the
+second until 2026-09-03: `docs/Model_Card_NHTSA_Field_Quality.md`. Tableau is
+what is left, and it is the one row that was never a model.
 
 ---
 
@@ -605,7 +668,8 @@ arkon-manufacturing-ai/
 ├── assets/                     Saved plots for README and Streamlit
 │   ├── timeseries/
 │   ├── ml/
-│   └── cv/
+│   ├── cv/
+│   └── nlp/
 ├── tools/
 │   └── make_result_plots.py    Regenerates the result figures from the metrics files
 ├── data/
@@ -614,15 +678,17 @@ arkon-manufacturing-ai/
 │   ├── 03_casting/             Casting Product images
 │   ├── 04_neu/                 NEU Steel Defect images
 │   ├── 05_mvtec/               MVTec Anomaly Detection images
-│   └── 06_gc10/                GC10-DET Steel Defect images
-├── models/                     Gitignored except the five *_meta.json metrics files
+│   ├── 06_gc10/                GC10-DET Steel Defect images
+│   └── 07_nhtsa_complaints/    NHTSA consumer complaints, one tab-delimited file
+├── models/                     Gitignored except the seven *_meta.json metrics files
 │   ├── checkpoints/            Training checkpoints (auto-saved, skip retraining)
 │   └── *.pkl / *.pt            Final saved models
 ├── notebooks/
 │   ├── utils/arkon_utils.py    Shared utilities (device, MLflow, timer, checkpoint)
 │   ├── 01_timeseries/          CMAPSS - RUL prediction
 │   ├── 02_ml/                  Scania APS - fault classification
-│   └── 03_cv/                  Computer Vision - casting, NEU, MVTec, GC10
+│   ├── 03_cv/                  Computer Vision - casting, NEU, MVTec, GC10
+│   └── 04_nlp/                 NLP - NHTSA complaints, field quality
 ├── mlflow.db                   MLflow experiment database
 ├── setup_windows_venv.bat      Windows venv + CUDA setup
 ├── requirements-windows.txt    Python dependencies

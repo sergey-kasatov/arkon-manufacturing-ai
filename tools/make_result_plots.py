@@ -27,15 +27,21 @@ What each figure is for:
            panel is for: the class with the most boxes scores nearly worst. Plus
            the box ledger - what a detector found, what it missed and what it
            claimed was there and was not, on one scale.
+  NHTSA    the priority band carries no information. Cells published from model
+           predictions are scored against the identical trend run on the true
+           labels, and agreement does not rise with the size of the movement -
+           at the top of the range it falls. Plus the per-class ledger.
 
 Deliberately not imported: `notebooks/utils/arkon_utils.save_figure`. That module
 imports joblib at module level and carries the training-time helpers with it;
 this script must run with matplotlib alone.
 
 Run from anywhere:  python tools/make_result_plots.py
+Or one figure only: python tools/make_result_plots.py gc10_figure nhtsa_figure
 """
 
 import json
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -594,15 +600,110 @@ def gc10_figure(meta):
                 "models/checkpoints/gc10/gc10_cv_meta.json")
 
 
-def main():
+def nhtsa_figure(meta):
+    """Three panels: what the classifier scores per class, whether the amount of
+    training data explains that, and whether the priority band means anything.
+
+    The third panel is the point. Every other module's band separates more urgent
+    from less urgent and nothing checks it, because nothing can. This module has a
+    reference - the identical trend procedure run on the held-out labels - so the
+    band can be scored, and it does not survive the scoring.
+    """
+    perf, op, tr = meta["performance"], meta["operating_point"], meta["trend"]
+    per_class = sorted(perf["per_class"], key=lambda r: r["f1"])
+    test = perf["test"]
+
+    fig, axes = plt.subplots(1, 3, figsize=(16.5, 6.2))
+
+    # Left: per-class F1, with the two classes the threshold rule gives up on marked.
+    left = axes[0]
+    names = [r["class"][:26] for r in per_class]
+    f1 = [r["f1"] for r in per_class]
+    colours = [ALERT if r["recall"] < 0.20 else ACCENT for r in per_class]
+    left.barh(range(len(per_class)), f1, color=colours)
+    left.set_yticks(range(len(per_class)))
+    left.set_yticklabels(names, fontsize=8)
+    left.axvline(test["macro_f1"], color=INK, linestyle="--", linewidth=1.1)
+    left.annotate("macro F1 %.3f" % test["macro_f1"],
+                  xy=(test["macro_f1"], 1.2),
+                  xytext=(4, 0), textcoords="offset points", fontsize=8.5, color=INK)
+    left.set_xlabel("F1 on the held-out year")
+    left.set_title("Per class, %d of them\nred: recall under 0.20, given up by the "
+                   "threshold rule" % len(per_class), loc="left")
+    tidy(left, grid_axis="x")
+
+    # Middle: does training support order the table. It does not.
+    mid = axes[1]
+    mid.scatter([r["train"] for r in per_class], f1, s=46, color=ACCENT, zorder=3)
+    mid.set_xscale("log")
+    mid.set_xlabel("training complaints (log scale)")
+    mid.set_ylabel("F1")
+    mid.set_title("Support does not explain the spread\nSpearman %.3f"
+                  % perf["support_f1_spearman"], loc="left")
+    for r in (per_class[0], per_class[-1]):
+        mid.annotate(r["class"][:24], (r["train"], r["f1"]), fontsize=8,
+                     xytext=(5, -3), textcoords="offset points", color=INK)
+    tidy(mid)
+
+    # Right: the band, scored against the label-driven trend.
+    right = axes[2]
+    probe = op["band_probe"]
+    edges = [r["edge"] for r in probe]
+    p2 = [r["p2_agreement"] if r["p2_agreement"] is not None else float("nan")
+          for r in probe]
+    p3 = [r["p3_agreement"] if r["p3_agreement"] is not None else float("nan")
+          for r in probe]
+    right.plot(edges, p2, marker="o", color=ALERT, linewidth=2, label="P2 band")
+    right.plot(edges, p3, marker="s", color=NEUTRAL, linewidth=2, label="P3 band")
+    right.axvline(op["band_edge"], color=INK, linestyle="--", linewidth=1.1)
+    right.annotate("shipped edge %.2f\n%s" % (op["band_edge"], op["band_basis"]),
+                   xy=(op["band_edge"], 0.20), xytext=(4, 0),
+                   textcoords="offset points", fontsize=8.5, color=INK)
+    right.set_ylim(0, 1)
+    right.set_xlabel("band edge on the risk score")
+    right.set_ylabel("share confirmed by the label-driven trend")
+    right.set_title("The band does not rank truth\nSpearman %.3f, and it inverts "
+                    "at the top" % op["band_score_agreement_spearman"], loc="left")
+    right.legend(fontsize=9, loc="upper left")
+    tidy(right)
+
+    fig.suptitle("NHTSA field quality: %d classes over %s held-out complaints, micro F1 "
+                 "%.4f; %d of %s trend cells published, %.0f%% confirmed"
+                 % (len(per_class), "{:,}".format(meta["dataset"]["splits"]["test"]),
+                    test["micro_f1"], tr["cells_published"],
+                    "{:,}".format(tr["cells_tested"]),
+                    100 * tr["agreement_precision"]),
+                 fontsize=15, x=0.045, ha="left", y=1.0)
+    fig.tight_layout()
+    return save(fig, "nhtsa_field_quality_ledger", "nlp",
+                "models/checkpoints/nhtsa/nhtsa_nlp_meta.json")
+
+
+# Every figure, with the metrics file it is built from. Named so a caller can
+# regenerate one without redrawing the other six, which is what two model cards
+# already tell a reader to do.
+FIGURES = {
+    "scania_figure": (scania_figure, "scania", "scania_aps_meta.json"),
+    "casting_figure": (casting_figure, "casting", "casting_cv_meta.json"),
+    "cmapss_figure": (cmapss_figure, "cmapss", "cmapss_full_fleet_meta.json"),
+    "neu_figure": (neu_figure, "neu", "neu_cv_meta.json"),
+    "mvtec_figure": (mvtec_figure, "mvtec", "mvtec_cv_meta.json"),
+    "gc10_figure": (gc10_figure, "gc10", "gc10_cv_meta.json"),
+    "nhtsa_figure": (nhtsa_figure, "nhtsa", "nhtsa_nlp_meta.json"),
+}
+
+
+def main(names=None):
+    names = list(names or FIGURES)
+    unknown = [name for name in names if name not in FIGURES]
+    if unknown:
+        raise SystemExit("unknown figure(s): %s\nknown: %s"
+                         % (", ".join(unknown), ", ".join(FIGURES)))
     print("Reading metrics from %s" % CKPT_DIR.relative_to(PROJECT_ROOT))
-    scania_figure(load("scania", "scania_aps_meta.json"))
-    casting_figure(load("casting", "casting_cv_meta.json"))
-    cmapss_figure(load("cmapss", "cmapss_full_fleet_meta.json"))
-    neu_figure(load("neu", "neu_cv_meta.json"))
-    mvtec_figure(load("mvtec", "mvtec_cv_meta.json"))
-    gc10_figure(load("gc10", "gc10_cv_meta.json"))
+    for name in names:
+        draw, module, filename = FIGURES[name]
+        draw(load(module, filename))
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

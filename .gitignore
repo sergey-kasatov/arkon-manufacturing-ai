@@ -12,7 +12,7 @@ mlflow.db
 # training scripts, so they stay out of git.
 models/**
 
-# Exception: the five metrics files. Every model card cites their numbers and
+# Exception: the seven metrics files. Every model card cites their numbers and
 # every README figure is generated from them by tools/make_result_plots.py, so
 # without them a clone carries a generator with no input. Named one by one and
 # not by pattern - the two small *_meta.json beside the CMAPSS one belong to the
@@ -25,6 +25,7 @@ models/**
 !models/checkpoints/neu/neu_cv_meta.json
 !models/checkpoints/mvtec/mvtec_cv_meta.json
 !models/checkpoints/gc10/gc10_cv_meta.json
+!models/checkpoints/nhtsa/nhtsa_nlp_meta.json
 
 # Python
 __pycache__/

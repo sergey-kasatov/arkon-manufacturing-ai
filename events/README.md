@@ -14,6 +14,7 @@ Cell. Contract owner: `docs/Project_Charter.md` sections 6 and 7.
 | `make_events_neu.py` | NEU steel surface adapter: the same, for the defect-type module |
 | `make_events_mvtec.py` | MVTec adapter: the same, for the four component anomaly detectors |
 | `make_events_gc10.py` | GC10 adapter: the same, for the detection module, and the first whose event carries a list |
+| `make_events_nhtsa.py` | NHTSA adapter: the same, for the text module, and the first whose event is about a signal rather than a part |
 | `out/` | Generated event batches (demo input for the n8n workflow) |
 
 ## Usage
@@ -25,12 +26,14 @@ python events/make_events_casting.py
 python events/make_events_neu.py
 python events/make_events_mvtec.py
 python events/make_events_gc10.py
+python events/make_events_nhtsa.py
 python events/validate_event.py events/out/cmapss_events_full_fleet.jsonl
 python events/validate_event.py events/out/scania_events.jsonl
 python events/validate_event.py events/out/casting_events.jsonl
 python events/validate_event.py events/out/neu_events.jsonl
 python events/validate_event.py events/out/mvtec_events.jsonl
 python events/validate_event.py events/out/gc10_events.jsonl
+python events/validate_event.py events/out/nhtsa_events.jsonl
 ```
 
 ## CMAPSS priority mapping (charter 7.1)
@@ -239,6 +242,93 @@ NEU and MVTec sections record gets one step worse: a query filtered by
 `business_domain=visual_inspection` now returns four modules across four departments,
 and the roster assigns all four to the same two QC Engineers. Filtering by
 `source_module` still separates them.
+
+**The `field_quality` domain below is the counter-example**, and it is worth naming
+because it is what the domain field was supposed to do: one module, one department,
+one role, so filtering by domain and filtering by module give the same answer.
+That is now true of exactly one of the four domains.
+
+
+## NHTSA field-quality priority mapping (charter 7.1)
+
+Two thresholds, like GC10, and for a different reason: one decides whether a movement
+is published at all and the second decides how urgent it is.
+
+    Poisson tail p < 3.25e-06   the movement is published
+    risk score >= 0.75                     P2
+    risk score <  0.75                     P3
+    otherwise                          nothing is published
+
+Risk score is `ratio / (ratio + 1)`, observed over expected: bounded, never
+saturating, and exactly 0.5 when a cell sits on its own baseline. That is the shape
+MVTec uses on an unbounded distance, reused here. No P1 and no P4.
+
+**The first module that needed no change to this contract at all.** `nhtsa_nlp` was
+already in the `source_module` enum of both `arkon_event_schema.json` and
+`validate_event.py`, and `field_quality` was already in `business_domain` with a role
+behind it in `roster.json`. Every module from NEU onward has added a name to that one
+closed enum; this one adds nothing, because the reservation was made when the enum was
+written.
+
+**The event is about a signal, not a part.** Every earlier adapter publishes a
+measurement of a physical thing the module inspected. A complaint is a report written
+by a member of the public about their own vehicle, and nothing in this dataset verifies
+any of it. `evidence.record_id` therefore names a manufacturer, a component and a
+month rather than a part, `context_origin` stays `real` because the complaints are
+real, and the summary says in words that these are public reports rather than an
+inspection.
+
+**One event per cell, not per complaint.** The held-out year holds
+60,039 complaints, and one event each would be more than
+four times everything the incident store has ever held. That is Scania's 15,222
+suppressed P4 events in another costume, and the same answer applies: a field-quality
+function does not act on one report, it acts when a rate moves.
+3,080 manufacturer-component-month cells were tested
+against their own trailing baselines and 25 published.
+
+**`evidence.prediction` and `evidence.threshold` are two counts here, not a score and
+a cut.** For every other module `threshold` is a decision boundary on a model output.
+Here `prediction` is the observed complaint count and `threshold` is what the cell's
+own history predicted. The contract permits it, since it constrains neither to a type
+beyond being present, and it is recorded because a consumer comparing `threshold`
+across modules would be comparing two different kinds of number.
+
+**The band edge is declared, and this is the third module in a row.** The rule could
+not be asked: it needs 30 flagged calibration cells and the
+calibration window produced 5. **The rule shape has
+now failed three times in three different directions** - NEU returned 0.0 because every
+threshold met the target, GC10 returned nothing because none did, and this one cannot
+run for want of a sample. That is a finding about the rule rather than about any of the
+three models.
+
+**And the ordering it produces was measured, which no other module can do.** This
+module has a reference: the identical trend procedure run over the held-out labels
+instead of the predictions. Scored against it, the Spearman correlation between the
+risk score and whether a cell is confirmed is
+**-0.056**, and above a 0.80 edge the ordering
+inverts. **So the priority says how large the movement is and never how certain it is
+that the movement is real**, which the P2 recommended action states in words.
+
+**Priority never comes from the reported harm.** Each complaint carries CRASH, FIRE,
+INJURED and DEATHS. Those look like a severity and are not: they are what the person
+filing said happened, verified by nobody, and they are an input to this module rather
+than an output of it. This is the third variant of the NEU and MVTec rule and the
+sharpest, because these fields are not even the module's own estimate.
+
+**What the batch is worth, and it is the only Arkon module that can say.** Precision
+0.520 and recall 0.684 against the
+label-driven trend, on 25 published cells against
+19 the labels flag. **About half of what it publishes is
+not confirmed.** It is a monitor that raises roughly two alarms to find one real
+movement.
+
+**The events are not independent, which is new for this platform.**
+8 of 25 share a manufacturer and a
+month with another event, and the largest group is 4 events from one
+manufacturer in one month, none of which the labels confirm. One cause moves several
+cells, and an operator receives them as separate alerts. Dedup on `record_id` plus
+priority does not merge them and should not, because they are different components.
+Reasoning in `docs/Model_Card_NHTSA_Field_Quality.md` section 5.
 
 ## Data integrity
 

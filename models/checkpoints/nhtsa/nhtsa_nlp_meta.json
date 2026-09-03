@@ -1,0 +1,524 @@
+{
+  "model_version": "nhtsa_tfidf_ovr_v1",
+  "created": "2026-09-03",
+  "seed": 42,
+  "python": "3.12.10",
+  "dataset": {
+    "name": "NHTSA consumer complaints 2020-2024",
+    "complaints": 215730,
+    "classes": [
+      "AIR BAGS",
+      "BACK OVER PREVENTION",
+      "ELECTRICAL SYSTEM",
+      "ENGINE",
+      "ENGINE AND ENGINE COOLING",
+      "EQUIPMENT",
+      "EXTERIOR LIGHTING",
+      "FORWARD COLLISION AVOIDANCE",
+      "FUEL SYSTEM, GASOLINE",
+      "FUEL/PROPULSION SYSTEM",
+      "LANE DEPARTURE",
+      "LATCHES/LOCKS/LINKAGES",
+      "POWER TRAIN",
+      "SEAT BELTS",
+      "SEATS",
+      "SERVICE BRAKES",
+      "SERVICE BRAKES, HYDRAULIC",
+      "STEERING",
+      "STRUCTURE",
+      "SUSPENSION",
+      "VEHICLE SPEED CONTROL",
+      "VISIBILITY",
+      "VISIBILITY/WIPER",
+      "WHEELS"
+    ],
+    "cutover": "20201104",
+    "splits": {
+      "train": 126154,
+      "selection": 29537,
+      "test": 60039
+    },
+    "split_windows": {
+      "train": [
+        "20201104",
+        "20230630"
+      ],
+      "selection": [
+        "20230701",
+        "20231231"
+      ],
+      "test": [
+        "20240101",
+        "20241231"
+      ]
+    },
+    "mean_labels_per_complaint": 1.3590553006072406
+  },
+  "features": {
+    "vectoriser": "TfidfVectorizer",
+    "ngram_range": [
+      1,
+      2
+    ],
+    "min_df": 5,
+    "sublinear_tf": true,
+    "vocabulary": 202240
+  },
+  "classifier": {
+    "estimator": "OneVsRestClassifier(LogisticRegression, liblinear, C=1.0)",
+    "fit_seconds": 76.7
+  },
+  "performance": {
+    "test": {
+      "arm": "model, per-class thresholds",
+      "micro_f1": 0.6866701791359325,
+      "macro_f1": 0.6305675125548881,
+      "micro_precision": 0.6036367341645515,
+      "micro_recall": 0.7961904063729444,
+      "exact_set": 0.40760172554506235,
+      "any_label_hit": 0.9261146921167908
+    },
+    "test_at_default_threshold": {
+      "arm": "model at 0.5",
+      "micro_f1": 0.6645235875442849,
+      "macro_f1": 0.5758556320513981,
+      "micro_precision": 0.852936108292328,
+      "micro_recall": 0.5442904967866481,
+      "exact_set": 0.49790969203351154,
+      "any_label_hit": 0.7081063975082863
+    },
+    "baseline_constant": {
+      "arm": "always \"ENGINE\"",
+      "micro_f1": 0.19817457800331253,
+      "macro_f1": 0.015811267960448776,
+      "micro_precision": 0.23416445976781758,
+      "micro_recall": 0.17177381912372017,
+      "exact_set": 0.12998217825080363,
+      "any_label_hit": 0.23416445976781758
+    },
+    "baseline_prevalence": {
+      "arm": "prevalence only, no text",
+      "micro_f1": 0.0,
+      "macro_f1": 0.0,
+      "micro_precision": 0.0,
+      "micro_recall": 0.0,
+      "exact_set": 0.0,
+      "any_label_hit": 0.0
+    },
+    "ablation_unigrams_only": {
+      "arm": "unigrams only",
+      "micro_f1": 0.6848040074077612,
+      "macro_f1": 0.6297267771098191,
+      "micro_precision": 0.6052811781811359,
+      "micro_recall": 0.7883830608704152,
+      "exact_set": 0.40650244008061426,
+      "any_label_hit": 0.9222671929912224
+    },
+    "ablation_unigram_vocabulary": 18225,
+    "refit": {
+      "arm": "refit",
+      "micro_f1": 0.6866701791359325,
+      "macro_f1": 0.6305675125548881,
+      "micro_precision": 0.6036367341645515,
+      "micro_recall": 0.7961904063729444,
+      "exact_set": 0.40760172554506235,
+      "any_label_hit": 0.9261146921167908
+    },
+    "refit_max_probability_delta": 0.0,
+    "per_class": [
+      {
+        "class": "FUEL SYSTEM, GASOLINE",
+        "train": 1637,
+        "test_support": 1703,
+        "predicted": 2005,
+        "precision": 0.8244389027431421,
+        "recall": 0.9706400469759249,
+        "f1": 0.8915857605177994,
+        "threshold": 0.06,
+        "basis": "calibrated"
+      },
+      {
+        "class": "ENGINE AND ENGINE COOLING",
+        "train": 2358,
+        "test_support": 3062,
+        "predicted": 3442,
+        "precision": 0.7704822777454968,
+        "recall": 0.8661005878510777,
+        "f1": 0.8154981549815498,
+        "threshold": 0.14,
+        "basis": "calibrated"
+      },
+      {
+        "class": "SERVICE BRAKES, HYDRAULIC",
+        "train": 1993,
+        "test_support": 1474,
+        "predicted": 2058,
+        "precision": 0.6715257531584062,
+        "recall": 0.937584803256445,
+        "f1": 0.7825594563986409,
+        "threshold": 0.05,
+        "basis": "calibrated"
+      },
+      {
+        "class": "SEAT BELTS",
+        "train": 1976,
+        "test_support": 980,
+        "predicted": 1221,
+        "precision": 0.6609336609336609,
+        "recall": 0.823469387755102,
+        "f1": 0.7333030440708769,
+        "threshold": 0.06,
+        "basis": "calibrated"
+      },
+      {
+        "class": "EXTERIOR LIGHTING",
+        "train": 5028,
+        "test_support": 1943,
+        "predicted": 2658,
+        "precision": 0.627915726109857,
+        "recall": 0.8589809572825527,
+        "f1": 0.7254944577265812,
+        "threshold": 0.07,
+        "basis": "calibrated"
+      },
+      {
+        "class": "STRUCTURE",
+        "train": 7324,
+        "test_support": 3582,
+        "predicted": 4864,
+        "precision": 0.6291118421052632,
+        "recall": 0.8542713567839196,
+        "f1": 0.7246033625384798,
+        "threshold": 0.12,
+        "basis": "calibrated"
+      },
+      {
+        "class": "STEERING",
+        "train": 13677,
+        "test_support": 5970,
+        "predicted": 9796,
+        "precision": 0.5714577378521846,
+        "recall": 0.9376884422110553,
+        "f1": 0.7101357351262211,
+        "threshold": 0.06,
+        "basis": "calibrated"
+      },
+      {
+        "class": "SERVICE BRAKES",
+        "train": 11947,
+        "test_support": 5788,
+        "predicted": 8261,
+        "precision": 0.6012589274906186,
+        "recall": 0.858154803040774,
+        "f1": 0.7070965905046623,
+        "threshold": 0.11,
+        "basis": "calibrated"
+      },
+      {
+        "class": "ENGINE",
+        "train": 28364,
+        "test_support": 14059,
+        "predicted": 22756,
+        "precision": 0.5695201265600282,
+        "recall": 0.9218294331033502,
+        "f1": 0.7040608447643624,
+        "threshold": 0.15,
+        "basis": "calibrated"
+      },
+      {
+        "class": "POWER TRAIN",
+        "train": 18779,
+        "test_support": 9199,
+        "predicted": 12249,
+        "precision": 0.6148257000571475,
+        "recall": 0.8186759430372866,
+        "f1": 0.7022566206639314,
+        "threshold": 0.17,
+        "basis": "calibrated"
+      },
+      {
+        "class": "AIR BAGS",
+        "train": 8791,
+        "test_support": 3676,
+        "predicted": 6487,
+        "precision": 0.540773855403114,
+        "recall": 0.9542981501632208,
+        "f1": 0.6903473383843353,
+        "threshold": 0.05,
+        "basis": "calibrated"
+      },
+      {
+        "class": "VISIBILITY/WIPER",
+        "train": 4888,
+        "test_support": 1524,
+        "predicted": 2150,
+        "precision": 0.5855813953488372,
+        "recall": 0.8261154855643045,
+        "f1": 0.6853565596080566,
+        "threshold": 0.1,
+        "basis": "calibrated"
+      },
+      {
+        "class": "SUSPENSION",
+        "train": 6501,
+        "test_support": 1933,
+        "predicted": 2376,
+        "precision": 0.617003367003367,
+        "recall": 0.7584066218313502,
+        "f1": 0.6804362961243908,
+        "threshold": 0.14,
+        "basis": "calibrated"
+      },
+      {
+        "class": "ELECTRICAL SYSTEM",
+        "train": 24395,
+        "test_support": 11475,
+        "predicted": 14015,
+        "precision": 0.6114163396361042,
+        "recall": 0.7467538126361656,
+        "f1": 0.6723420949391918,
+        "threshold": 0.24,
+        "basis": "calibrated"
+      },
+      {
+        "class": "SEATS",
+        "train": 1916,
+        "test_support": 776,
+        "predicted": 961,
+        "precision": 0.5775234131113424,
+        "recall": 0.7152061855670103,
+        "f1": 0.6390328151986183,
+        "threshold": 0.11,
+        "basis": "calibrated"
+      },
+      {
+        "class": "FORWARD COLLISION AVOIDANCE",
+        "train": 7933,
+        "test_support": 3751,
+        "predicted": 4510,
+        "precision": 0.5840354767184035,
+        "recall": 0.7022127432684617,
+        "f1": 0.637695194286406,
+        "threshold": 0.13,
+        "basis": "calibrated"
+      },
+      {
+        "class": "BACK OVER PREVENTION",
+        "train": 1771,
+        "test_support": 1048,
+        "predicted": 1288,
+        "precision": 0.562111801242236,
+        "recall": 0.6908396946564885,
+        "f1": 0.6198630136986301,
+        "threshold": 0.08,
+        "basis": "calibrated"
+      },
+      {
+        "class": "FUEL/PROPULSION SYSTEM",
+        "train": 8361,
+        "test_support": 4275,
+        "predicted": 4253,
+        "precision": 0.6150952268986598,
+        "recall": 0.6119298245614035,
+        "f1": 0.6135084427767356,
+        "threshold": 0.18,
+        "basis": "calibrated"
+      },
+      {
+        "class": "VISIBILITY",
+        "train": 1850,
+        "test_support": 552,
+        "predicted": 645,
+        "precision": 0.4945736434108527,
+        "recall": 0.5778985507246377,
+        "f1": 0.5329991645781119,
+        "threshold": 0.18,
+        "basis": "calibrated"
+      },
+      {
+        "class": "WHEELS",
+        "train": 2239,
+        "test_support": 776,
+        "predicted": 666,
+        "precision": 0.575075075075075,
+        "recall": 0.49355670103092786,
+        "f1": 0.5312066574202496,
+        "threshold": 0.12,
+        "basis": "calibrated"
+      },
+      {
+        "class": "LATCHES/LOCKS/LINKAGES",
+        "train": 1144,
+        "test_support": 414,
+        "predicted": 218,
+        "precision": 0.7477064220183486,
+        "recall": 0.39371980676328505,
+        "f1": 0.5158227848101266,
+        "threshold": 0.43,
+        "basis": "calibrated"
+      },
+      {
+        "class": "LANE DEPARTURE",
+        "train": 1910,
+        "test_support": 1253,
+        "predicted": 695,
+        "precision": 0.6460431654676259,
+        "recall": 0.3583399840383081,
+        "f1": 0.4609856262833676,
+        "threshold": 0.19,
+        "basis": "calibrated"
+      },
+      {
+        "class": "EQUIPMENT",
+        "train": 526,
+        "test_support": 161,
+        "predicted": 19,
+        "precision": 0.9473684210526315,
+        "recall": 0.11180124223602485,
+        "f1": 0.19999999999999998,
+        "threshold": 0.22,
+        "basis": "calibrated"
+      },
+      {
+        "class": "VEHICLE SPEED CONTROL",
+        "train": 5495,
+        "test_support": 2472,
+        "predicted": 361,
+        "precision": 0.6177285318559557,
+        "recall": 0.09021035598705501,
+        "f1": 0.15743028591599012,
+        "threshold": 0.52,
+        "basis": "calibrated"
+      }
+    ],
+    "support_f1_spearman": 0.2565217391304348
+  },
+  "operating_point": {
+    "class_thresholds": {
+      "AIR BAGS": 0.05,
+      "BACK OVER PREVENTION": 0.08,
+      "ELECTRICAL SYSTEM": 0.24,
+      "ENGINE": 0.15,
+      "ENGINE AND ENGINE COOLING": 0.14,
+      "EQUIPMENT": 0.22,
+      "EXTERIOR LIGHTING": 0.07,
+      "FORWARD COLLISION AVOIDANCE": 0.13,
+      "FUEL SYSTEM, GASOLINE": 0.06,
+      "FUEL/PROPULSION SYSTEM": 0.18,
+      "LANE DEPARTURE": 0.19,
+      "LATCHES/LOCKS/LINKAGES": 0.43,
+      "POWER TRAIN": 0.17,
+      "SEAT BELTS": 0.06,
+      "SEATS": 0.11,
+      "SERVICE BRAKES": 0.11,
+      "SERVICE BRAKES, HYDRAULIC": 0.05,
+      "STEERING": 0.06,
+      "STRUCTURE": 0.12,
+      "SUSPENSION": 0.14,
+      "VEHICLE SPEED CONTROL": 0.52,
+      "VISIBILITY": 0.18,
+      "VISIBILITY/WIPER": 0.1,
+      "WHEELS": 0.12
+    },
+    "class_threshold_basis": {
+      "AIR BAGS": "calibrated",
+      "BACK OVER PREVENTION": "calibrated",
+      "ELECTRICAL SYSTEM": "calibrated",
+      "ENGINE": "calibrated",
+      "ENGINE AND ENGINE COOLING": "calibrated",
+      "EQUIPMENT": "calibrated",
+      "EXTERIOR LIGHTING": "calibrated",
+      "FORWARD COLLISION AVOIDANCE": "calibrated",
+      "FUEL SYSTEM, GASOLINE": "calibrated",
+      "FUEL/PROPULSION SYSTEM": "calibrated",
+      "LANE DEPARTURE": "calibrated",
+      "LATCHES/LOCKS/LINKAGES": "calibrated",
+      "POWER TRAIN": "calibrated",
+      "SEAT BELTS": "calibrated",
+      "SEATS": "calibrated",
+      "SERVICE BRAKES": "calibrated",
+      "SERVICE BRAKES, HYDRAULIC": "calibrated",
+      "STEERING": "calibrated",
+      "STRUCTURE": "calibrated",
+      "SUSPENSION": "calibrated",
+      "VEHICLE SPEED CONTROL": "calibrated",
+      "VISIBILITY": "calibrated",
+      "VISIBILITY/WIPER": "calibrated",
+      "WHEELS": "calibrated"
+    },
+    "target_precision": 0.6,
+    "classes_on_fallback": 0,
+    "band_edge": 0.75,
+    "band_basis": "declared",
+    "band_rule": "lowest risk score at which a model-flagged cell is also flagged from the labels at least 80% of the time, on the calibration months",
+    "target_agreement": 0.8,
+    "min_calibration_cells": 30,
+    "calibration_cells_available": 5,
+    "band_score_agreement_spearman": -0.05551444896054094,
+    "band_probe": [
+      {
+        "edge": 0.6,
+        "p2": 23,
+        "p3": 2,
+        "p2_agreement": 0.5217391304347826,
+        "p3_agreement": 0.5
+      },
+      {
+        "edge": 0.65,
+        "p2": 19,
+        "p3": 6,
+        "p2_agreement": 0.5789473684210527,
+        "p3_agreement": 0.3333333333333333
+      },
+      {
+        "edge": 0.7,
+        "p2": 11,
+        "p3": 14,
+        "p2_agreement": 0.5454545454545454,
+        "p3_agreement": 0.5
+      },
+      {
+        "edge": 0.75,
+        "p2": 9,
+        "p3": 16,
+        "p2_agreement": 0.4444444444444444,
+        "p3_agreement": 0.5625
+      },
+      {
+        "edge": 0.8,
+        "p2": 4,
+        "p3": 21,
+        "p2_agreement": 0.25,
+        "p3_agreement": 0.5714285714285714
+      },
+      {
+        "edge": 0.85,
+        "p2": 2,
+        "p3": 23,
+        "p2_agreement": 0.5,
+        "p3_agreement": 0.5217391304347826
+      }
+    ]
+  },
+  "trend": {
+    "cell": "manufacturer x component x month",
+    "baseline": "trailing 6 months, minimum 3",
+    "baseline_source": "model predictions on months the model was not fitted on",
+    "min_expected": 3.0,
+    "family_alpha": 0.01,
+    "corrected_alpha": 3.246753246753247e-06,
+    "cells_tested": 3080,
+    "cells_published": 25,
+    "label_reference_flagged": 19,
+    "agreement_precision": 0.52,
+    "agreement_recall": 0.6842105263157895,
+    "priority_counts": {
+      "P3": 16,
+      "P2": 9
+    },
+    "manufacturer_month_groups": 20,
+    "events_sharing_a_group": 8,
+    "largest_group": 4,
+    "events_from_repeating_pairs": 5
+  }
+}
