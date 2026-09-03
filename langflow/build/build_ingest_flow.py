@@ -76,6 +76,12 @@ DOCUMENTS = [
     # either: the collection was dropped first.
     ("docs/Model_Card_GC10_Detection.md", "GC10_Detection_Model_Card.md",
      "GC10 Defect Detection Model Card"),
+    # Phase 2, added 2026-09-03. Seventh module, the only one in the field_quality
+    # domain, and the tenth document in the store. The charter and the event
+    # contract both changed in the same commit, so this ingest is not additive
+    # either: the collection was dropped first.
+    ("docs/Model_Card_NHTSA_Field_Quality.md", "NHTSA_Field_Quality_Model_Card.md",
+     "NHTSA Field Quality Model Card"),
     ("events/README.md", "Arkon_Event_Contract.md", "Arkon Event Contract"),
 ]
 

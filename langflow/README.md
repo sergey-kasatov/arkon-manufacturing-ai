@@ -248,24 +248,31 @@ claim, and it now has one measurement behind it instead of none.
 
 ## Known gaps
 
-- **The document store holds eight documents and is not coverage.** Charter, SOP,
-  the five model cards and the event contract. The chunk count is deliberately not
+- **The document store holds 10 documents and is not coverage.** Charter, SOP,
+  the 7 model cards and the event contract. The chunk count is deliberately not
   repeated here: it changes on every re-ingest and
   `GET /collections/arkon-knowledge` is the only place that knows it. The
   validation questions span the documents and one is deliberately unanswerable,
   which shows retrieval works and shows the refusal path holds. It does not show
   the store answers everything an operator will ask. A question outside those
-  eight documents gets the fallback sentence, which is the correct behaviour and
+  10 documents gets the fallback sentence, which is the correct behaviour and
   still a gap in the knowledge base.
 - **The model cards dominate the store by volume, and by more than before.**
-  Measured on the live collection on 2026-09-02 after the MVTec ingest: 152 chunks
-  over the eight documents, of which the five model cards are 104, or 68 per cent,
-  against 65 per cent when there were four. Charter, SOP and event contract
-  together are the other 48. A question spanning two documents was measured again
+  Measured on the live collection on 2026-09-03 after the NHTSA ingest: 236 chunks
+  over the 10 documents, of which the 7 model cards are 162, or 69 per cent,
+  against 68 per cent when there were five and 65 per cent when there were four.
+  Charter, SOP and event contract together are the other 74. A question spanning two documents was measured again
   on this store and answered from the event contract and the MVTec card together,
   naming all three modules in `visual_inspection` and the field that separates
   them, so the shift has not broken cross-document retrieval at this size. It is
   still a trend rather than a bound: nothing here says where it stops working.
+- **A rebuild is verified by the documents that did not change.** The NHTSA ingest
+  of 2026-09-03 dropped the collection and rebuilt it from ten documents. The seven
+  untouched documents came back at byte-identical chunk counts, and the growth is
+  entirely the new card plus the two documents that were edited in the same commit,
+  so 196 plus 9 plus 31 closes on 236 with nothing left over. That arithmetic is the
+  check for orphans, and it only works because the counts are taken by scrolling
+  every point rather than from the ingest flow's own report.
 - **Re-ingestion is idempotent only while the documents are unchanged.** Point ids
   are a hash of chunk text plus metadata, so an edited document leaves its old
   chunks behind as orphans. Editing a source document means dropping the

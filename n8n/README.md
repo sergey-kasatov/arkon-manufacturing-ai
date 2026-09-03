@@ -34,9 +34,39 @@ Counted from the incident store on 2026-09-02, not from memory:
 | `mvtec_anomaly` | 6 | `ARK-INC-00019` to `00023`, and `00029` | 2026-09-02, a five-event slice plus the one that verified the alert fix |
 | `neu_surface` | 5 | `ARK-INC-00024` to `00028` | 2026-09-02, the run that found the alert defect |
 | `gc10_detect` | 5 | `ARK-INC-00030` to `00034` | 2026-09-02, the sixth module, and the first whose events carry a list. **From the batch notebook 03 produced before it was re-run on 2026-09-03**, so these five are a record of a superseded batch: the module does not reproduce, and the re-run moved the detection threshold and with it which sheets publish. The record ids on them still name real sheets |
+| `nhtsa_nlp` | 5 | `ARK-INC-00035` to `00039` | 2026-09-03, the seventh module, the only one in `field_quality`, and the first that needed no contract change at all. Three P2 answered `incident_created_alert_sent` and two P3 `incident_recorded` |
 
-**All six modules that publish the section 6 event contract have now been through
-this webhook.** Only NHTSA, which is not built, has not.
+**All seven modules that publish the section 6 event contract have now been through
+this webhook, and Phase 2 is closed.** There is no module left that has not.
+
+**The seventh module cost the platform nothing either, and it is the first that
+needed no contract change at all.** Every module from NEU onward has added a name to
+the one closed enum in the section 6 contract. `nhtsa_nlp` was already in
+`source_module` in both the schema and the validator, `field_quality` already in
+`business_domain`, and the Field Quality Analyst already in `roster.json`, because
+the reservation was made when the contract was written. Three P2 answered
+`incident_created_alert_sent` and two P3 `incident_recorded`, with no workflow
+touched.
+
+**The status API needed nothing, for the third module running, and it carried a shape
+it has not seen before.** A NHTSA incident is about a manufacturer-component-month
+cell rather than a part, so its evidence carries `manufacturer`, `component`, `month`,
+a trailing baseline and `label_reference_agrees`, and all of it comes back through
+`GET /webhook/arkon-incident-status?source_module=nhtsa_nlp` exactly as published.
+That is the Scania fix still paying: before it, the API projected
+`evidence.prediction` into a named field and everything else was lost.
+
+**And `evidence.prediction` and `evidence.threshold` are two counts on this module,
+where every earlier one puts a model output and a decision boundary there.** 155
+complaints observed against 65.5 the cell's own history predicted. The contract
+permits it and the API passes it through unchanged, and it is worth knowing before
+anybody compares `threshold` across modules. Charter section 6 records it.
+
+**The alert bodies were tested before the batch was sent rather than after.**
+`alert_body_probe.js` renders every alerting event in every batch through the real
+Code node, and the NHTSA batch's 9 alerting events passed with the other 801. That
+ordering is the whole point of the probe: the defect it exists for was found by
+sending a batch and losing three alerts to an HTTP 200.
 
 **The sixth module cost the platform nothing at all, and it was the one expected to
 cost something.** GC10 is a detector, so its `evidence` carries `detections`, a list
@@ -103,8 +133,8 @@ the same thing, and it is only as good as the identity the adapter builds.
 had been written but never posted. Its two P3 events were recorded as
 `ARK-INC-00027` and `ARK-INC-00028` with nothing touched. Its three P2 events
 created `ARK-INC-00024` to `00026` and **their alerts were refused by Telegram**,
-which is the next section and is not a NEU problem. All six modules have now
-published into this webhook.
+which is the next section and is not a NEU problem. All modules built at that point
+had then published into this webhook; GC10 and NHTSA followed.
 
 ## The alert branch was rejecting its own data, and answering 200
 
@@ -278,7 +308,7 @@ workflow static data does not grow without bound.
 | `incident_status_probe.py` | Contract test for the status API |
 | `alert_body_probe.js` | Contract test for the Telegram alert body, over every alerting event |
 
-Six modules publish into this one webhook. Every batch is replayed by the same
+Seven modules publish into this one webhook. Every batch is replayed by the same
 script, and the priority mix is the module's own, not a setting:
 
 | Batch | Events | Priorities |
@@ -289,6 +319,7 @@ script, and the priority mix is the module's own, not a setting:
 | `neu_events.jsonl` | 360 | 3 P2, 357 P3 |
 | `mvtec_events.jsonl` | 309 | 262 P2, 47 P3 |
 | `gc10_events.jsonl` | 310 | 63 P2, 247 P3 |
+| `nhtsa_events.jsonl` | 25 | 9 P2, 16 P3 |
 
 The earlier `cmapss_events_FD001.jsonl` is kept because it is what the first
 deployment was verified against; it comes from the superseded FD001-only model
@@ -297,8 +328,9 @@ and should not be used for new demos.
 **Replay a slice, never a batch.** Every P1 and P2 sends a Telegram card to the
 alert group, and the incident store is append-only with the counter in workflow
 static data, so nothing here can be undone. `mvtec_events.jsonl` is the sharpest
-case, 262 of its 309 events being P2. The MVTec, NEU and GC10 runs of 2026-09-02 were five events
-each in two commands, and that is the size a new module should go in at:
+case, 262 of its 309 events being P2. The MVTec, NEU and GC10 runs of 2026-09-02 and the NHTSA run of
+2026-09-03 were five events each in two commands, and that is the size a new module
+should go in at:
 
 ```bash
 python n8n/replay_events.py http://AK2101:5678/webhook/arkon-event events/out/mvtec_events.jsonl --priority P2 --limit 3 --delay 1
