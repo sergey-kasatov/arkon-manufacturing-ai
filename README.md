@@ -380,23 +380,30 @@ flowchart TB
     W1["(1) POST /webhook/arkon-event<br/>Quality Steering Cell<br/>validate, dedup 24h, record"]
     ASSIST["Arkon Quality Assistant<br/>Langflow, 19 nodes"]
     W2["(2) GET /webhook/arkon-incident-status<br/>200 ok, 200 no_match,<br/>400 rejected, 503 unavailable"]
-    W3["(3) POST /webhook/arkon-escalation<br/>the only write"]
-    QD[("Qdrant<br/>arkon-knowledge<br/>6 documents, 77 chunks")]
+    W3["(3) POST /webhook/arkon-escalation<br/>the assistant's only write"]
+    W4["(4) POST /webhook/arkon-incident-transition<br/>the lifecycle<br/>200, 400, 404, 409, 503"]
+    QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 245 chunks")]
     INC[("incidents.jsonl")]
+    TRN[("incident_transitions.jsonl")]
     ESC[("escalations.jsonl")]
     TG["Telegram<br/>P1 and P2 only"]
 
     W1 -- alerts --> TG
-    W1 -- writes --> INC
+    W1 -- "writes, once, at new" --> INC
     ASSIST -- retrieval --> QD
     ASSIST -- lookup --> W2
     ASSIST -- escalate --> W3
     W2 -- reads --> INC
+    W2 -- "folds" --> TRN
     W3 -- appends --> ESC
+    W3 -- "folds" --> TRN
+    W4 -- appends --> TRN
+    W4 -- reads --> INC
   end
 
   EV -- "HTTP POST, one per event" --> W1
   OP -- "asks" --> ASSIST
+  OP -- "acknowledges, closes" --> W4
 ```
 
 The assistant reaches the incident store only through endpoint 2, so it cannot
@@ -550,12 +557,28 @@ probability at all. And **its events are about a signal rather than a part**, so
 3,080 manufacturer-component-month cells were tested against their own trailing baselines and
 25 published - which is also the only Arkon batch whose worth is measured, at precision
 0.520 and recall 0.684 against the identical trend run on the held-out labels
-- [ ] Incident lifecycle - acknowledge and close callbacks, escalation timer, queryable store
+- [x] **Incident lifecycle write path** - `POST /webhook/arkon-incident-transition`, built
+2026-09-03 (`n8n/README.md`). The Steering Cell wrote an incident once, at `new`, and
+nothing could ever move it: no response-time KPI could exist, because a KPI needs two
+timestamps and one was recorded, and all 29 incidents in the store read `new`. Transitions
+are **appended to a second log rather than rewriting the incident line**, so the store stays
+append-only and cannot race the intake workflow, and the current status of an incident is
+the fold of that log onto its line - performed identically by the three workflows that
+report a status, from one source in `n8n/build/lifecycle.py`. The machine refuses as well
+as records: an illegal move answers 409 naming the current status and what is allowed from
+it, which is a different answer from a malformed request. **One incident has now gone from
+model output to human-reviewed closure**, the Phase 4 criterion of charter section 9 and the
+last one in that document that could not be met at all
+- [ ] Alert-card callbacks - acknowledge and close buttons on the Telegram card, the
+escalation timer and the manager notification. All three need a Telegram Trigger node, and
+all three are buildable for the first time now that there is something behind the buttons
+- [ ] Queryable incident store - the charter 7.5 move to the n8n Data Table node, now paced
+by the Streamlit cockpit rather than by the lifecycle
 - [ ] Streamlit app and Tableau views - the operational cockpit and the executive KPI view
 
 ### One deployed piece that is not an Arkon feature
 
-Seven pieces are deployed: three Langflow flows and four n8n workflows. Six of
+Eight pieces are deployed: three Langflow flows and five n8n workflows. Seven of
 them run the plant. The exception is the twelve-node
 `n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
 rather than to serve an operator, and could be deleted without loss. It is kept

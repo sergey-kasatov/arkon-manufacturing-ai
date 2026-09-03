@@ -85,14 +85,25 @@ A reviewed incident may instead be marked false_positive. That outcome is kept
 rather than deleted, because false positives are the input to threshold tuning. A
 false positive rate that is never recorded cannot be improved.
 
-Every transition carries a timestamp in the incident record, and response-time
-figures are computed from those timestamps rather than estimated.
+Every transition carries a timestamp, and response-time figures are computed from
+those timestamps rather than estimated. The incident record itself is written once
+and never rewritten: transitions are appended to a separate log, and an incident's
+current state is that log applied to its record. An operator reading the raw store
+therefore sees `new` on every incident; the status API is what reports the current
+state, and it labels the raised state `raised_as` so the two cannot be confused.
 
-**In version 1 only the `new` state is written automatically.** Acknowledge and
-close actions, the escalation timer, and the daily digest are the next iteration;
-they need callback handling on the alert channel. An operator working with
-version 1 therefore tracks the later states outside the system, and this gap must
-be stated whenever the system is demonstrated.
+Not every move is allowed. `closed` and `false_positive` are final, `new` cannot
+be re-entered, and the one step backwards is `resolved` to `in_containment`, for a
+containment that did not hold. A request the lifecycle does not permit is refused
+and names what is permitted from where the incident actually is.
+
+**The operator makes a transition by calling the endpoint; nothing does it for
+them.** The alert card carries no acknowledge or close buttons, because callback
+handling on the alert channel is not built. The escalation timer, the manager
+notification for a lapsed window and the daily digest are the same next iteration.
+That is the gap to state when the system is demonstrated. What is no longer true,
+and was true until 2026-09-03, is that the later states go unrecorded: they are
+recorded, timestamped and reportable.
 
 ## 6. Ownership and assignment
 
@@ -123,14 +134,21 @@ the priority levels exist to prevent.
 ## 8. What the operator does when an alert arrives
 
 1. Read the card. Note the priority and the acknowledgement window it carries.
-2. Open the incident record and read the evidence: the model prediction, the
+2. Acknowledge the incident. This is the step the window is measured against, and
+   it is a transition like any other, so it is recorded with the time it happened
+   and with who made it.
+3. Open the incident record and read the evidence: the model prediction, the
    threshold it crossed, and the record identifier of the affected unit.
-3. Decide whether the condition is real. The model provides evidence, not a
+4. Decide whether the condition is real. The model provides evidence, not a
    verdict, and the operator may have context the model does not.
-4. If real, follow the recommended action and move the incident into
-   containment. If not real, mark it false_positive with a short reason.
-5. If a P1 cannot be acknowledged within 15 minutes, or a P2 within one hour,
+5. If real, follow the recommended action and move the incident into containment,
+   then to resolved when the work is done and to closed once it has been reviewed.
+   If not real, mark it false_positive with a short reason; that outcome is kept
+   and is the input to threshold tuning.
+6. If a P1 cannot be acknowledged within 15 minutes, or a P2 within one hour,
    escalate to the Quality Manager rather than letting the window lapse silently.
+   An escalation is a separate record and does not move the incident: an escalated
+   incident is still whatever state it was in.
 
 ## 9. Boundaries the operator must know
 
