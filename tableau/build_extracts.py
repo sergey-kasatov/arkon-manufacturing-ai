@@ -71,13 +71,20 @@ def collect(api):
     return incidents, summary, truncated
 
 
+def _typed(row):
+    """Write booleans as TRUE and FALSE, which is the form Tableau's CSV
+    connector types as Boolean rather than as a two-value string. None stays an
+    empty cell, which it reads as Null."""
+    return {k: ("TRUE" if v is True else "FALSE" if v is False else v) for k, v in row.items()}
+
+
 def write(name, rows, fields):
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / name
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(_typed(row) for row in rows)
     print("  %-24s %4d rows" % (name, len(rows)))
     return path
 

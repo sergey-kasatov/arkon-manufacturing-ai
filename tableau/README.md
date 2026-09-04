@@ -76,7 +76,34 @@ deliberately small demo slices, so every rate on it is a rate over a sample chos
 to be small. The response times are real measurements of real delays and the
 delays are days, because nobody was watching a demo store.
 
-## What is blocked, and it is Sergey's call rather than a missing step
+Booleans are written `TRUE` and `FALSE` and nulls as empty cells, which is the
+form Tableau's CSV connector types as Boolean and Null rather than as a two-value
+string and the word "None".
+
+## Publishing, decided 2026-09-04
+
+**Sergey's decision is to publish to Tableau Public.** So the shape is settled:
+the workbook lives at a public URL that this repository and `kasatov.de` can link,
+and the extracts are committed here so the published view and the repository can
+be checked against each other.
+
+**The sign-in is his and cannot be delegated.** An agent does not enter a password
+into any field, so the sequence is: build the workbook against these CSVs, then he
+signs in to Tableau Public and saves, which is the publish. Everything before that
+step is ordinary work.
+
+**A reference for whoever builds it.** `~/Downloads/P3_Unicorn_SK_Draft_v2025.2.twbx`
+is Sergey's own working Tableau file, a real 23-sheet, 2-dashboard workbook at
+version 18.1. A `.twbx` is a zip holding a `.twb`, which is XML, so the schema can
+be learned from a file that works rather than invented. Tableau Public opens a
+local workbook even though it cannot save one, so an authored `.twb` is a route to
+a version-controlled workbook rather than a GUI-only artifact. Whether that is
+worth it against building in the application is a judgement for that session.
+
+**Load the `dataviz` skill before drawing anything.** This file specifies fields
+and stops; the visual design has not been done.
+
+## The constraint behind that decision
 
 **The installed application is Tableau Public 2026.1, not Tableau Desktop.**
 Tableau Public is understood to save workbooks only to the Tableau Public cloud,
