@@ -1,0 +1,12 @@
+transition_id,incident_id,recorded_at,from_status,to_status,actor,note,priority,source_module,business_domain
+ARK-TRN-00001,ARK-INC-00013,2026-09-03T19:46:11.291Z,new,acknowledged,M. Brandt,picked up by the assigned planner,P1,cmapss_rul,asset_reliability
+ARK-TRN-00002,ARK-INC-00013,2026-09-03T19:46:11.473Z,acknowledged,in_containment,M. Brandt,unit pulled from the schedule pending inspection,P1,cmapss_rul,asset_reliability
+ARK-TRN-00003,ARK-INC-00013,2026-09-03T19:46:11.672Z,in_containment,resolved,M. Brandt,"inspection completed, part replaced",P1,cmapss_rul,asset_reliability
+ARK-TRN-00004,ARK-INC-00013,2026-09-03T19:46:11.887Z,resolved,closed,M. Brandt,reviewed and closed,P1,cmapss_rul,asset_reliability
+ARK-TRN-00005,ARK-INC-00016,2026-09-03T19:46:42.884Z,new,false_positive,S. Kasatov,"attribution test record, not a real engine; kept for threshold tuning",P1,cmapss_rul,asset_reliability
+ARK-TRN-00006,ARK-INC-00032,2026-09-03T19:46:56.749Z,new,acknowledged,T. Vogel,picked up by the assigned planner,P2,gc10_detect,visual_inspection
+ARK-TRN-00007,ARK-INC-00032,2026-09-03T19:47:21.927Z,acknowledged,in_containment,T. Vogel,unit pulled from the schedule pending inspection,P2,gc10_detect,visual_inspection
+ARK-TRN-00008,ARK-INC-00032,2026-09-03T19:47:47.094Z,in_containment,resolved,T. Vogel,"inspection completed, part replaced",P2,gc10_detect,visual_inspection
+ARK-TRN-00009,ARK-INC-00032,2026-09-03T19:48:12.283Z,resolved,in_containment,T. Vogel,unit pulled from the schedule pending inspection,P2,gc10_detect,visual_inspection
+ARK-TRN-00010,ARK-INC-00032,2026-09-03T19:48:37.455Z,in_containment,resolved,T. Vogel,"inspection completed, part replaced",P2,gc10_detect,visual_inspection
+ARK-TRN-00011,ARK-INC-00032,2026-09-03T19:49:02.634Z,resolved,closed,T. Vogel,reviewed and closed,P2,gc10_detect,visual_inspection

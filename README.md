@@ -587,7 +587,7 @@ so the cockpit and the assistant cannot disagree. It trains, loads and scores no
 image carries no model weight. The one rule in it that is not presentation is that a failed
 lookup and an empty result render differently, because a dashboard that draws an empty table for
 both teaches its operator that an outage looks like a quiet plant
-- [ ] Tableau executive view - the last Phase 3 item, and the response times it needs now exist
+- [~] **Tableau executive view** - the extract layer is built and verified (`tableau/README.md`): four tidy fact tables refreshed from the same status API the cockpit and the assistant read, so all three report one state. It sweeps one lifecycle state at a time, because every incident is in exactly one, and it reports itself incomplete rather than silently short if the API's 50-row cap is ever hit. **The workbook is not built**: the installed application is Tableau Public, which saves only to the public cloud, so building the view is also publishing it
 
 ### One deployed piece that is not an Arkon feature
 

@@ -1,0 +1,43 @@
+module,title,source_module,business_domain,metric,value
+cmapss,Engine remaining useful life,cmapss_rul,asset_reliability,"RMSE, benchmark task",11.01
+cmapss,Engine remaining useful life,cmapss_rul,asset_reliability,"MAE, benchmark task",7.62
+cmapss,Engine remaining useful life,cmapss_rul,asset_reliability,"R2, benchmark task",0.932
+cmapss,Engine remaining useful life,cmapss_rul,asset_reliability,Engines scored,707
+cmapss,Engine remaining useful life,cmapss_rul,asset_reliability,"RMSE, all test rows",10.05
+cmapss,Engine remaining useful life,cmapss_rul,asset_reliability,Rows scored,"104,897"
+scania,Truck air pressure system faults,scania_aps,fleet_reliability,"Total cost, the dataset's own metric","10,660"
+scania,Truck air pressure system faults,scania_aps,fleet_reliability,Recall,0.9653
+scania,Truck air pressure system faults,scania_aps,fleet_reliability,ROC AUC,0.9952
+scania,Truck air pressure system faults,scania_aps,fleet_reliability,Needless checks,416
+scania,Truck air pressure system faults,scania_aps,fleet_reliability,Missed failures,13
+scania,Truck air pressure system faults,scania_aps,fleet_reliability,Best of the 2016 challenge,"9,920"
+casting,Casting defect inspection,casting_cv,visual_inspection,Recall at the shipped operating point,1.0000
+casting,Casting defect inspection,casting_cv,visual_inspection,Defects missed,0
+casting,Casting defect inspection,casting_cv,visual_inspection,Good parts rejected,7
+casting,Casting defect inspection,casting_cv,visual_inspection,ROC AUC,0.9999
+casting,Casting defect inspection,casting_cv,visual_inspection,Test images,715
+casting,Casting defect inspection,casting_cv,visual_inspection,Decision threshold,0.0637
+neu,Steel surface defect classification,neu_surface,visual_inspection,Accuracy,1.0000
+neu,Steel surface defect classification,neu_surface,visual_inspection,Macro F1,1.0000
+neu,Steel surface defect classification,neu_surface,visual_inspection,Errors,0
+neu,Steel surface defect classification,neu_surface,visual_inspection,Images scored,360
+neu,Steel surface defect classification,neu_surface,visual_inspection,1-NN on un-finetuned features,0.9750
+neu,Steel surface defect classification,neu_surface,visual_inspection,Chance,0.1667
+mvtec,Component anomaly detection,mvtec_anomaly,visual_inspection,Mean image AUROC,0.9817
+mvtec,Component anomaly detection,mvtec_anomaly,visual_inspection,Mean pixel AUROC,0.9738
+mvtec,Component anomaly detection,mvtec_anomaly,visual_inspection,Categories,"grid, metal_nut, screw, transistor"
+mvtec,Component anomaly detection,mvtec_anomaly,visual_inspection,False-alarm budget,5%
+mvtec,Component anomaly detection,mvtec_anomaly,visual_inspection,Reproduces exactly,yes
+mvtec,Component anomaly detection,mvtec_anomaly,visual_inspection,Trained,no
+gc10,Steel sheet defect detection,gc10_detect,visual_inspection,mAP at 0.5,0.6260
+gc10,Steel sheet defect detection,gc10_detect,visual_inspection,mAP at 0.75,0.2129
+gc10,Steel sheet defect detection,gc10_detect,visual_inspection,Boxes located,350
+gc10,Steel sheet defect detection,gc10_detect,visual_inspection,Boxes present,544
+gc10,Steel sheet defect detection,gc10_detect,visual_inspection,Boxes claimed that are not there,231
+gc10,Steel sheet defect detection,gc10_detect,visual_inspection,Detection threshold,0.60
+nhtsa,Consumer complaint field quality,nhtsa_nlp,field_quality,Micro F1,0.6867
+nhtsa,Consumer complaint field quality,nhtsa_nlp,field_quality,Macro F1,0.6306
+nhtsa,Consumer complaint field quality,nhtsa_nlp,field_quality,At least one component right,92.61%
+nhtsa,Consumer complaint field quality,nhtsa_nlp,field_quality,Exact set right,40.76%
+nhtsa,Consumer complaint field quality,nhtsa_nlp,field_quality,Cells tested for a trend,"3,080"
+nhtsa,Consumer complaint field quality,nhtsa_nlp,field_quality,Cells published as events,25
