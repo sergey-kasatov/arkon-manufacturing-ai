@@ -379,6 +379,7 @@ flowchart TB
   subgraph NAS["NAS AK2101, docker network msit"]
     W1["(1) POST /webhook/arkon-event<br/>Quality Steering Cell<br/>validate, dedup 24h, record"]
     ASSIST["Arkon Quality Assistant<br/>Langflow, 19 nodes"]
+    COCK["Arkon cockpit<br/>Streamlit, 9 pages<br/>AK2101:8303"]
     W2["(2) GET /webhook/arkon-incident-status<br/>200 ok, 200 no_match,<br/>400 rejected, 503 unavailable"]
     W3["(3) POST /webhook/arkon-escalation<br/>the assistant's only write"]
     W4["(4) POST /webhook/arkon-incident-transition<br/>the lifecycle<br/>200, 400, 404, 409, 503"]
@@ -395,6 +396,8 @@ flowchart TB
     ASSIST -- escalate --> W3
     W2 -- reads --> INC
     W2 -- "folds" --> TRN
+    COCK -- lookup --> W2
+    COCK -- chat --> ASSIST
     W3 -- appends --> ESC
     W3 -- "folds" --> TRN
     W4 -- appends --> TRN
@@ -403,6 +406,7 @@ flowchart TB
 
   EV -- "HTTP POST, one per event" --> W1
   OP -- "asks" --> ASSIST
+  OP -- "watches" --> COCK
   OP -- "acknowledges, closes" --> W4
 ```
 
@@ -574,12 +578,21 @@ escalation timer and the manager notification. All three need a Telegram Trigger
 all three are buildable for the first time now that there is something behind the buttons
 - [ ] Queryable incident store - the charter 7.5 move to the n8n Data Table node, now paced
 by the Streamlit cockpit rather than by the lifecycle
-- [ ] Streamlit app and Tableau views - the operational cockpit and the executive KPI view
+- [x] **Streamlit cockpit** - nine pages over the two live services and the repository's own
+tracked metrics, deployed on the NAS at `http://AK2101:8303` (`app/README.md`). The Steering Cell
+page is charter 7.5: counts by priority and lifecycle state, the response-time KPIs, and any
+incident with the history of who moved it when. **It computes no status of its own**: an
+incident's state is the transition log folded onto its record and the n8n API performs that fold,
+so the cockpit and the assistant cannot disagree. It trains, loads and scores nothing, and the
+image carries no model weight. The one rule in it that is not presentation is that a failed
+lookup and an empty result render differently, because a dashboard that draws an empty table for
+both teaches its operator that an outage looks like a quiet plant
+- [ ] Tableau executive view - the last Phase 3 item, and the response times it needs now exist
 
 ### One deployed piece that is not an Arkon feature
 
-Eight pieces are deployed: three Langflow flows and five n8n workflows. Seven of
-them run the plant. The exception is the twelve-node
+Nine pieces are deployed: three Langflow flows, five n8n workflows and the
+Streamlit cockpit. Eight of them run the plant. The exception is the twelve-node
 `n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
 rather than to serve an operator, and could be deleted without loss. It is kept
 because the claim it settles is documented in `n8n/README.md` and the evidence is
@@ -684,10 +697,16 @@ never been created.
 
 ```
 arkon-manufacturing-ai/
-├── app/                        Streamlit application
-│   ├── main.py                 Entry point
-│   ├── pages/                  One file per module
-│   └── utils/                  Shared utilities
+├── app/                        Streamlit cockpit (app/README.md)
+│   ├── main.py                 Entry page and the live pulse
+│   ├── pages/                  Steering Cell, assistant, one per module
+│   ├── utils/                  Config, the two API clients, the module registry
+│   ├── Dockerfile              Built from the repository root
+│   └── docker-compose.yml      Deploys to the NAS on 8303
+├── docs/                       Charter, SOP and one model card per module
+├── events/                     The shared event contract and the adapters
+├── langflow/                   The assistant canvas, its prompts and build scripts
+├── n8n/                        The five workflows, their generators and probes
 ├── assets/                     Saved plots for README and Streamlit
 │   ├── timeseries/
 │   ├── ml/

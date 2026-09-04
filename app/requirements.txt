@@ -1,0 +1,12 @@
+# The cockpit's own dependencies, pinned to what it was built and tested against.
+#
+# Deliberately short. The pages read metrics files, tracked figures and two HTTP
+# APIs, so nothing here trains, loads or scores a model: the container needs no
+# torch, no scikit-learn and no model weights, which is what keeps it small
+# enough to run beside the services it reads.
+#
+# Pinned rather than floating because the app uses arguments that arrived in
+# recent versions (`width="stretch"`, `horizontal=` on charts), and a container
+# resolving an older Streamlit would fail at render time rather than at build.
+streamlit==1.58.0
+pandas==2.3.3

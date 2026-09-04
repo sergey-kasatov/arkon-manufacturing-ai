@@ -1,0 +1,39 @@
+# The Arkon cockpit on the NAS. Deploy from the repository root:
+#
+#   docker compose -f app/docker-compose.yml up -d --build
+#
+# LAN and Tailscale only, like everything else in this stack. Never port-forward
+# this on the router: the cockpit has no authentication, and neither do the two
+# services behind it.
+services:
+  cockpit:
+    build:
+      context: ..
+      dockerfile: app/Dockerfile
+    image: arkon-cockpit
+    container_name: arkon-cockpit
+    restart: unless-stopped
+    environment:
+      # Reached by container alias on the shared network rather than by host
+      # name, so the traffic never leaves the docker bridge. The dotted alias is
+      # required for Langflow's own outbound calls, not for these; it is used
+      # here too so one name works from both directions.
+      ARKON_STATUS_API: http://n8n.arkon.internal:5678/webhook/arkon-incident-status
+      ARKON_TRANSITION_API: http://n8n.arkon.internal:5678/webhook/arkon-incident-transition
+      ARKON_LANGFLOW_URL: http://langflow:7860
+      # From the .env beside this file on the NAS, which is not in the
+      # repository. Without it every page still works except the assistant, and
+      # that page says why rather than failing.
+      ARKON_LANGFLOW_API_KEY: ${ARKON_LANGFLOW_API_KEY}
+      TZ: ${TZ:-Europe/Berlin}
+    ports:
+      - "8303:8501"
+    networks:
+      - msit
+
+networks:
+  msit:
+    # The network n8n and Langflow are already attached to. External, because
+    # this stack joins theirs rather than creating one.
+    name: msit-flowise_msit
+    external: true

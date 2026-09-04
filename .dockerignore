@@ -1,0 +1,20 @@
+# Keep the cockpit image small and free of anything it cannot use.
+#
+# The heavy directories are excluded outright. models/ is the one that needs a
+# rule rather than a line: it holds the trained weights, which this image must
+# never contain, and the tracked *_meta.json metrics files, which are the only
+# thing the module pages read. Everything under it is excluded and the metrics
+# files are put back.
+data/
+notebooks/
+mlflow.db
+.git/
+.venv/
+venv/
+.streamlit/secrets.toml
+**/__pycache__/
+**/*.pyc
+**/*.bak
+
+models/**
+!models/checkpoints/**/*_meta.json
