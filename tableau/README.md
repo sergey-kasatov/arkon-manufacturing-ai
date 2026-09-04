@@ -1,8 +1,9 @@
 # Tableau executive view
 
 The last Phase 3 item of charter 7.5. This directory holds the **extract layer**,
-which is built and verified; the workbook itself is not built, and the reason is
-in "What is blocked" below rather than being an omission.
+which is built and verified. The workbook is not built yet; publishing it to
+Tableau Public was decided on 2026-09-04 and the sections below say what that
+settles and what it leaves.
 
 Charter 7.5: "Tableau reads periodic extracts and serves as the executive KPI
 view: open incidents by priority, response times, and trend Pareto. A live
@@ -111,25 +112,18 @@ where they are visible to anyone: there is no local `.twb` or `.twbx` save. That
 needs confirming in the application rather than taken from this note, and it
 decides the shape of everything after it.
 
-If it holds, publishing this workbook puts it on the public internet. Nothing in
-the extracts is private - the model outputs come from public datasets and the
-operational context is generated and labelled `simulated` - so the question is not
-data safety. It is that publishing is an outward-facing act on Sergey's own
-account, and it is his.
+That constraint is why building the view and publishing it are one action here
+rather than two, and it is why the decision had to be taken before the work
+instead of after it. Nothing in the extracts is private - the model outputs come
+from public datasets and the operational context is generated and labelled
+`simulated` - so the question was never data safety, only whose account it goes
+out from. It goes out from his, and he decided that on 2026-09-04.
 
-There is an upside on the other side of that decision. A published Tableau Public
-view is a portfolio artifact with a link, and Tableau is a listed skill on his CV
-with nothing behind it yet in this project.
+The alternative, kept because it explains the constraint rather than because it is
+open: a workbook that saves locally needs Tableau Desktop, a paid licence. The
+charter's own boundary sentence already says a live connection needs a paid
+Tableau Server, and a local save is the same class of constraint arriving one step
+earlier.
 
-Two paths, and they are not equivalent:
-
-1. **Publish to Tableau Public.** The workbook lives at a public URL that the
-   repository and `kasatov.de` can link. The extracts are committed here, so the
-   published view and the repository can be checked against each other.
-2. **Keep it local.** Needs Tableau Desktop, which is a paid licence, or a
-   different tool. The charter's own boundary sentence already says a live
-   connection needs a paid Tableau Server; a local-save workbook is the same class
-   of constraint arriving one step earlier.
-
-Until that is decided, the extract layer stands on its own: it is refreshed by one
-command, it verifies its own completeness, and any BI tool can read four CSVs.
+Whatever happens to the workbook, the extract layer stands on its own: one command
+refreshes it, it verifies its own completeness, and any BI tool can read four CSVs.
