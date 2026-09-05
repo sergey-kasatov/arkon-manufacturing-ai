@@ -104,26 +104,36 @@ worth it against building in the application is a judgement for that session.
 **Load the `dataviz` skill before drawing anything.** This file specifies fields
 and stops; the visual design has not been done.
 
-## The constraint behind that decision
+## The constraint that turned out not to be one
 
-**The installed application is Tableau Public 2026.1, not Tableau Desktop.**
-Tableau Public is understood to save workbooks only to the Tableau Public cloud,
-where they are visible to anyone: there is no local `.twb` or `.twbx` save. That
-needs confirming in the application rather than taken from this note, and it
-decides the shape of everything after it.
+**Corrected 2026-09-05, by reading the application instead of assuming.** This
+file said Tableau Public saves only to the public cloud, with no local `.twb`, and
+flagged it as needing confirmation in the app. The app answered: its own What's
+New panel reads "You can now save your work locally or publish to your Tableau
+Public profile. Local save is available on Tableau Desktop Public Edition
+2026.2.2." The installed build is 2026.1, with an "Update to 2026.2.2 Now" button
+in the window.
 
-That constraint is why building the view and publishing it are one action here
-rather than two, and it is why the decision had to be taken before the work
-instead of after it. Nothing in the extracts is private - the model outputs come
-from public datasets and the operational context is generated and labelled
-`simulated` - so the question was never data safety, only whose account it goes
-out from. It goes out from his, and he decided that on 2026-09-04.
+**So local save exists, behind one update, and the two actions come apart.**
+Building the view is no longer the same act as publishing it. Three consequences,
+and the middle one is the reason this correction is worth more than the paragraph
+it replaces:
 
-The alternative, kept because it explains the constraint rather than because it is
-open: a workbook that saves locally needs Tableau Desktop, a paid licence. The
-charter's own boundary sentence already says a live connection needs a paid
-Tableau Server, and a local save is the same class of constraint arriving one step
-earlier.
+- The workbook can be a tracked file in this repository, versioned beside the
+  extracts it reads, rather than a GUI-only artifact living in a cloud account.
+- **Publishing becomes a separate decision taken after seeing the result**, rather
+  than a precondition for starting. Sergey's decision of 2026-09-04 to publish
+  still stands; it simply no longer has to be taken blind.
+- The paid-licence argument was wrong for this step. It remains true for a live
+  connection, which is charter 7.5's own boundary sentence and needs Tableau
+  Server, but it does not apply to saving a workbook.
+
+**The first step for whoever builds it is therefore the update to 2026.2.2**, and
+then a local save, and only then the publish.
+
+Nothing in the extracts is private either way: the model outputs come from public
+datasets and the operational context is generated and labelled `simulated`. The
+question was never data safety, only whose account it goes out from and when.
 
 Whatever happens to the workbook, the extract layer stands on its own: one command
 refreshes it, it verifies its own completeness, and any BI tool can read four CSVs.
