@@ -2,10 +2,10 @@
 
 Operational layer of the Arkon platform: one workflow raises incidents and
 alerts, one moves them along their lifecycle, one answers questions about them,
-one records an approved escalation, and one, on a timer, tells the Quality
-Manager about a P1 or P2 that nobody acknowledged inside its window. Process owner:
-`docs/Project_Charter.md` sections 7 and 8. All of them run on a self-hosted n8n
-instance, pinned to `n8nio/n8n:2.29.9`.
+one records an approved escalation, and two run on timers: one tells the Quality
+Manager about a P1 or P2 that nobody acknowledged inside its window, one sends the
+daily digest. Process owner: `docs/Project_Charter.md` sections 7 and 8. All of
+them run on a self-hosted n8n instance, pinned to `n8nio/n8n:2.29.9`.
 
 | Workflow | Direction | Endpoint | Deployed |
 |---|---|---|---|
@@ -15,8 +15,9 @@ instance, pinned to `n8nio/n8n:2.29.9`.
 | `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30, folds transitions since 2026-09-03 |
 | `comparison_slice_v1.json` | read | `POST /webhook/arkon-slice` | 2026-08-30 |
 | `overdue_escalation_v1.json` | scheduled | every 15 minutes, no endpoint | 2026-09-06, record fix the same evening |
+| `daily_digest_v1.json` | scheduled | daily at 07:05 Europe/Berlin, no endpoint | 2026-09-06 |
 
-**Three of the five that run the plant share one piece of code.** The incident line is written once,
+**Three of the six that run the plant share one piece of code.** The incident line is written once,
 at `new`, and never rewritten, so the current status of an incident is the fold of
 the transition log onto that line. That fold lives in `n8n/build/lifecycle.py` and
 is injected verbatim into the three workflows that report a status; a state
@@ -259,8 +260,8 @@ anything but CMAPSS.
 ## Workflow ids, and the one that is not readable
 
 Every workflow file carries a fixed `id`, so `n8n import:workflow` updates the
-existing workflow instead of creating another copy. Four of them read like
-names. The fifth does not, and the reason is worth keeping:
+existing workflow instead of creating another copy. Five of them read like
+names. The sixth does not, and the reason is worth keeping:
 
 | File | id |
 |---|---|
@@ -268,6 +269,7 @@ names. The fifth does not, and the reason is worth keeping:
 | `escalation_record_v1.json` | `arkonEscalate01` |
 | `comparison_slice_v1.json` | `arkonSlice001` |
 | `overdue_escalation_v1.json` | `arkonOverdue01` |
+| `daily_digest_v1.json` | `arkonDigest001` |
 | `quality_steering_cell_v1.json` | **`o0vXtlRWIs9yFrUJ`** |
 
 **The steering cell keeps the id n8n generated for it, because that row is where
@@ -1048,10 +1050,118 @@ lack.
   fixed, as above.
 - **Its log and the intake ledger are two notification sources**, not one log
   (`live_plant/README.md`); charter 7.6's one-node change would unify them.
-- **The charter and the SOP still describe the timer as unbuilt** (charter 7.4's
-  deployment paragraph, SOP section 5). Both are ingested into the assistant's
-  knowledge store, so that edit and the store rebuild go together and are not
-  done here.
+- **The charter and the SOP describe the timer since 2026-09-06** (charter 7.4's
+  deployment paragraph, SOP section 5 and step 6), edited together with the daily
+  digest's arrival and followed by one rebuild of the assistant's knowledge store:
+  245 to 246 chunks, the eight untouched documents back at identical counts, the
+  retired sentences returning no chunk (`langflow/README.md`).
+
+## Daily digest (scheduled reader)
+
+Seventh workflow, `daily_digest_v1.json`, built and **deployed 2026-09-06**,
+workflow id `arkonDigest001`. It is the digest half of charter 7.4: once a day,
+at 07:05 plant time, one card to the alert group with what is open, what is
+overdue, how fast the cell has been responding, and the P3 queue that step 4 of
+`docs/Incident_Process.md` promises to the daily review. A scheduled reader like
+the timer: it answers nobody and writes one file.
+
+```text
+Schedule, daily at 07:05 Europe/Berlin (pinned in the workflow settings)
+  -> GET /webhook/arkon-incident-status?status=new&limit=500       (halt on an unavailable API)
+  -> the same for status=acknowledged and status=in_containment
+  -> Read /data/arkon/incident_notifications.jsonl                  (halt if unreadable)
+  -> Compose: counts per state and priority, the API's overdue count and medians,
+     the overdue list and the P3 queue oldest first, capped rows, one item always
+  -> Telegram card to the alert group
+  -> Append one record, carrying Telegram's own message_id
+```
+
+Four decisions, and the generator `n8n/build/build_digest_workflow.py` carries
+them in its header.
+
+- **Three reads, one per open lifecycle state, rather than one read of the whole
+  store.** `status` takes a single value, and an unfiltered read is ranked by
+  recency and capped at 500, so on a store the live plant grows by about 144
+  incidents a day it would start dropping the oldest incidents within days, the
+  very P3s the queue exists to surface. A state is bounded by how fast the crew
+  works it, every incident is in exactly one, and `tableau/build_extracts.py`
+  already sweeps the store the same way. A page that truncates is recorded on
+  the digest (`pages_truncated`) and named on the card, not fixed here.
+- **Nothing is decided here that the API already decides.** `overdue` is the
+  API's flag and the response-time medians are its summary; the digest counts,
+  sorts and formats. Per state the count is the page's `match_count`, which is
+  right even when the page is short; the split by priority and the two lists
+  come from the returned incidents.
+- **One log for every notification sent.** The record goes into
+  `/data/arkon/incident_notifications.jsonl` beside the timer's, under
+  `trigger: daily_digest` and with no incident id, so `docs/Incident_Process.md`
+  has one place to point at for who was told what, when. The two writers cannot
+  confuse each other: the timer's dedup is keyed on `incident_id`, which a digest
+  record does not carry, and both take the next `ARK-NTF` number from the
+  highest in the log, so the sequence is shared; and they never write in the same
+  minute, the timer on the quarter hour and the digest at five past.
+  `n8n/build/check_digest_js.py` runs the timer's own selection node against a
+  log holding a digest record to hold that.
+- **07:05 Europe/Berlin is pinned in the workflow settings**, because the
+  container runs in UTC and n8n's default timezone with `GENERIC_TIMEZONE` unset
+  is `America/New_York` (read out of `@n8n/config` in the running image): an
+  unpinned 07:05 would have fired at 13:05 plant time. The Schedule Trigger reads
+  `workflow.settings.timezone`, and the trigger item of a run prints the timezone
+  it resolved, which is how the pin was verified.
+
+The card: the open count with its priority split and its state split, the
+overdue count with the longest waits (at most five rows), the response-time line
+from the API's summary, the P3 queue with its oldest rows (at most ten) and "and
+N more", a note if a page truncated, and the digest's own `ARK-NTF` id. Rows are
+shed, overdue first, until the text is under Telegram's 4,096-character cap; the
+counts never are. The record: the digest id, `trigger: daily_digest`, the API's
+`as_of`, open per state and per priority beside the summary's own open count,
+the overdue count and split, the response times, the queue size and how many rows
+were listed, `pages_truncated`, and Telegram's `message_id` and `date`.
+
+### Deploying it
+
+Same recipe as the timer: the credential bound by id in a deploy copy under
+`/volume1/docker/arkon/_deploy/`, `import:workflow`, `publish:workflow
+--id=arkonDigest001`, `docker restart n8n`; the log already exists. Rollback is
+`unpublish:workflow --id=arkonDigest001` and a restart. A manual run for a check
+is the editor's "Execute workflow" button (recorded as `mode = manual`, a real
+card); the CLI's `n8n execute` cannot start a schedule-triggered workflow, see
+the first-run note below.
+
+### The first run
+
+**Not run yet when this was written, 2026-09-06 22:50.** The first scheduled run is
+07:05 on 2026-09-07 Europe/Berlin, which the execution table will show as 05:05
+UTC. **The CLI cannot start it.** `n8n execute --id=arkonDigest001` refuses with
+"Missing node to start execution ... contains an Execute Workflow Trigger node":
+in n8n 2.x that command starts only from an Execute Workflow Trigger, never from a
+schedule. Beside the live instance it also has to be given its own task-broker port
+(`docker exec -e N8N_RUNNERS_BROKER_PORT=5680 n8n n8n execute ...`), or it dies on
+5679 being in use before saying anything else; both measured 2026-09-06. A manual
+run is therefore the editor's "Execute workflow" button, which n8n records with
+`mode = manual` and which sends a real card. What was verified before the first
+tick: both Code nodes under node against 65 cases including the timer's own
+selection over a shared log (`n8n/build/check_digest_js.py`); the credential bound
+by the same id that delivered the timer's fourteen cards that evening; the
+activation line `Activated workflow "Arkon Daily Digest v1"` after the restart at
+22:42; and `settings.timezone` read back as `Europe/Berlin` from `workflow_entity`.
+Read the first execution out of `execution_entity` and its record out of the log
+before trusting this paragraph; the timer's first run is why.
+
+### Known boundaries
+
+- **It reports the store as the API reports it**, all incidents to date: the
+  response-time medians are cumulative rather than yesterday's, because the API
+  has no time filter and a digest computing its own window from `created_at`
+  would be one more copy of a rule.
+- **It sees only the first 500 per state.** Recorded on the digest and named on
+  the card rather than fixed, as with the timer.
+- **One card, one group, one fixed hour.** The hour is a constant in the
+  generator; a second recipient or a per-role digest is a routing decision
+  before it is a node.
+- **Its log is still one of two notification sources**, with the live plant's
+  ledger for the intake cards (`live_plant/README.md`).
 
 ## The live plant: the demo engine, a mini-project of its own
 
@@ -1070,7 +1180,8 @@ What it asks of this layer: nothing new. Every event it sends passes the section
 `operational_context`, and is answered by the same four intake outcomes as a
 replayed batch. The one thing worth knowing here is that its ledger is the second
 notification source on the platform, beside `/data/arkon/incident_notifications.jsonl`,
-which the overdue timer writes since 2026-09-06, and the two are not one log yet.
+which the overdue timer and the daily digest write since 2026-09-06, and the two are
+not one log yet.
 
 ## Comparison slice (evaluation artifact, not Arkon infrastructure)
 

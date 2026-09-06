@@ -19,7 +19,7 @@ flowchart TD
     M[1. A model scores a real record<br>risk score, priority band] --> E[2. The module publishes an Arkon risk event<br>one contract for all seven modules]
     E --> I[3. Steering Cell intake<br>validate, suppress duplicates, record, assign a role]
     I -- P1 or P2 --> C[4. Alert card to the assignee<br>Telegram group]
-    I -- P3 --> Q[4. Queued for daily review<br>no push alert]
+    I -- P3 --> Q[4. Queued for daily review<br>no push alert, listed in the 07:05 digest]
     I -- P4 --> D4[4. Dashboard only]
     C --> A[5. Acknowledged inside the window<br>P1 15 min, P2 60 min]
     C -. window lapses .-> O[6. Overdue<br>escalation to the Quality Manager]
@@ -43,7 +43,7 @@ flowchart TD
 | 1. Detect | A model scores one real record: an engine's remaining life, a truck's failure probability, a photograph of a casting, a strip, a component or a sheet, or a month of complaints about one component. The score falls into a priority band that the module declares next to its model. | The module, on real held-out data | Each module documents its own band edges and says whether they were calibrated or declared (model cards, section 5) | The model card and the notebook that produced the number |
 | 2. Publish | The module writes one Arkon risk event: twelve mandatory fields, the model's evidence with the record id, and simulated operational context labelled as such. Every module publishes the same contract, so the rest of the chain never knows or cares which model it came from. | The event adapter in `events/` | Charter section 6; `events/validate_event.py` refuses anything else | `events/out/*.jsonl`; on the live plant, the ledger line and the `arkon-2026-9` event id |
 | 3. Intake | The Quality Steering Cell validates the contract (a violation is refused with 400 and no incident), suppresses a repeat of the same record and priority inside 24 hours, writes the incident once with an `ARK-INC` id, and assigns a role by business domain: maintenance planner, fleet reliability engineer, QC engineer or field quality analyst. | n8n, `POST /webhook/arkon-event` | Charter 7.3 and 7.6; SOP sections 2, 4 and 6 | The n8n execution list; the incident line in the store; the status API |
-| 4. Alert | P1 and P2 put a card in the Telegram group naming the priority, the incident, the summary, the assignee, the recommended action and the event id, and carrying a link that opens the next step on that one incident. P3 is queued for the daily review with no push, so the channel keeps its meaning. P4 is recorded for the dashboard only. | n8n, Telegram | Charter 7.1 and 7.4; SOP sections 3 and 7 | The Telegram group; on the live plant, the ledger's notification block |
+| 4. Alert | P1 and P2 put a card in the Telegram group naming the priority, the incident, the summary, the assignee, the recommended action and the event id, and carrying a link that opens the next step on that one incident. P3 is queued for the daily review with no push, so the channel keeps its meaning; since 2026-09-06 the daily digest at 07:05 plant time lists that queue, oldest first, with the open and overdue counts and the response-time medians. P4 is recorded for the dashboard only. | n8n, Telegram | Charter 7.1 and 7.4; SOP sections 3 and 7 | The Telegram group; on the live plant, the ledger's notification block; the digest card and its line in `/data/arkon/incident_notifications.jsonl` |
 | 5. Acknowledge | The assignee reads the card and acknowledges: a P1 within 15 minutes, a P2 within the hour. The acknowledgement is a transition, recorded with the time and the person, and the response-time KPI is measured from that timestamp against the raise time. **Where the assignee does it:** the cockpit's Steering Cell page, "Move this incident" under the incident detail, which offers only the moves allowed from the current state. The card's own link opens that page on the incident it announced, so step 4 reaches step 5 in one tap; the card carries no buttons, because Telegram cannot call back into n8n on this deployment. A terminal route also exists, `n8n/drive_incident.py`. | The assignee, `POST /webhook/arkon-incident-transition` | Charter 7.1 and 7.2; SOP section 8 | The transition log; `minutes_to_acknowledge` and `acknowledged_within_window` on the status API; the cockpit |
 | 6. Overdue | If the window lapses with no acknowledgement the incident is overdue. The status API says so on every read, the cockpit and the executive view count it in red, and the Quality Manager is told rather than the window lapsing silently. | The Steering Cell, the escalation contact | Charter 7.1 and 7.4; SOP section 8 step 6 | `overdue` on the status API; the OVERDUE card on both dashboards; the manager card and its line in `/data/arkon/incident_notifications.jsonl`, since 2026-09-06 |
 | 7. Work | The assignee decides whether the condition is real, moves the incident into containment, then to resolved when the work is done. Every step is timestamped and carries a note, so the record reads as an account rather than a sequence of words. A containment that does not hold reopens. | The assignee | Charter 7.2; SOP section 8 steps 3 to 5 | The incident's history on the cockpit; the transition log |
@@ -141,9 +141,10 @@ side: an alert budget, because every card is real.
 Not built, and said plainly so the chain is read as it is: the acknowledge and
 close buttons on the card itself (on this deployment Telegram cannot call back
 into n8n; the operator's controls are on the cockpit instead, since 2026-09-05),
-the daily digest, and one unified log of every notification sent. The manager
-notification for a lapsed window left this list on 2026-09-06: built as
-`n8n/overdue_escalation_v1.json` and deployed (`../n8n/README.md`, "Overdue escalation"). The assistant can report every state and
+and one unified log of every notification sent. The manager notification for a
+lapsed window and the daily digest both left this list on 2026-09-06: built as
+`n8n/overdue_escalation_v1.json` and `n8n/daily_digest_v1.json` and deployed
+(`../n8n/README.md`, "Overdue escalation" and "Daily digest"). The assistant can report every state and
 can escalate through its approval gate; it cannot acknowledge or close, by
 design.
 

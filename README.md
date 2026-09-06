@@ -131,7 +131,7 @@ flowchart TB
     W3["(3) POST /webhook/arkon-escalation<br/>the assistant's only write"]
     W4["(4) POST /webhook/arkon-incident-transition<br/>the lifecycle<br/>200, 400, 404, 409, 503"]
     LP["Live plant<br/>one re-timed real event<br/>every ~10 min, plus a crew"]
-    QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 245 chunks")]
+    QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 246 chunks")]
     INC[("incidents.jsonl")]
     TRN[("incident_transitions.jsonl")]
     ESC[("escalations.jsonl")]
@@ -371,10 +371,15 @@ Funnel is possible and is an internet exposure, so it is a decision rather than 
 manager notification and its timer are built** as `n8n/overdue_escalation_v1.json`: a
 scheduled reader that takes the overdue decision from the status API rather than recomputing
 it, dedups from its own notification log rather than from workflow static data, and writes
-Telegram's own `message_id` on the record. Offline-checked, and **deployed 2026-09-06**: two
-runs, six cards, and the first run found that the record read the message id off the Bot API
-envelope rather than its `result`, fixed and re-deployed the same evening (`n8n/README.md`,
-"Overdue escalation"). What the card does
+Telegram's own `message_id` on the record. Offline-checked, and **deployed 2026-09-06**: the
+first run found that the record read the message id off the Bot API envelope rather than its
+`result`, fixed and re-deployed the same evening, and five runs that evening drained the
+fourteen overdue P2 of the replayed batches (`n8n/README.md`, "Overdue escalation"). **The
+daily digest is deployed as well, since 2026-09-06** (`n8n/daily_digest_v1.json`): one card at
+07:05 plant time with the open incidents by priority and state, the overdue count, the
+response-time medians and the P3 queue for the daily review, under the same discipline and
+into the same notification log (`n8n/README.md`, "Daily digest"), so charter 7.4 is complete
+except for the buttons. What the card does
 carry instead, since 2026-09-05, is **a link that opens the cockpit's Steering Cell page on
 that one incident**, which is the same tap the buttons would have saved without the exposure
 - [ ] Queryable incident store - the charter 7.5 move to the n8n Data Table node, now paced
@@ -443,8 +448,8 @@ live incident traced through all of them with its evidence
 
 ### One deployed piece that is not an Arkon feature
 
-Eleven pieces are deployed: three Langflow flows, six n8n workflows, the Streamlit
-cockpit and the live plant. Ten of them run the plant. The exception is the twelve-node
+Twelve pieces are deployed: three Langflow flows, seven n8n workflows, the Streamlit
+cockpit and the live plant. Eleven of them run the plant. The exception is the twelve-node
 `n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
 rather than to serve an operator, and could be deleted without loss. It is kept
 because the claim it settles is documented in `n8n/README.md` and the evidence is
@@ -811,8 +816,9 @@ What is left is not a module. It is depth on what exists:
 
 - **Callback buttons on the Telegram card**, the half of charter 7.4 that stays closed
   on this deployment: n8n's `WEBHOOK_URL` is tailnet-only, so a button has nothing
-  reachable to call. The other half, the manager-notification timer, is deployed since
-  2026-09-06 (`n8n/README.md`, "Overdue escalation").
+  reachable to call. The rest of 7.4, the manager-notification timer and the daily
+  digest, is deployed since 2026-09-06 (`n8n/README.md`, "Overdue escalation" and
+  "Daily digest").
 - **Charter 7.6 intake outcomes.** The webhook has three and writes one down, so
   duplicate suppression cannot be counted and a validation regression looks exactly
   like a quiet plant from every screen.
@@ -932,8 +938,8 @@ the repository's typography rule.
 **What is not covered, and honestly**: the deployed n8n workflows, the Langflow
 assistant and the live plant's transport all need the running NAS, so they are checked
 by `live_plant/check_plant.py` (48 assertions against a fake Steering Cell),
-`n8n/build/check_lifecycle_js.py` and `n8n/build/check_overdue_js.py`, which are run by
-hand. Model training is not tested at all; the model cards carry the held-out numbers
+`n8n/build/check_lifecycle_js.py`, `n8n/build/check_overdue_js.py` and
+`n8n/build/check_digest_js.py`, which are run by hand. Model training is not tested at all; the model cards carry the held-out numbers
 and the notebooks reproduce them.
 
 ---
@@ -983,7 +989,7 @@ arkon-manufacturing-ai/
 ├── docs/                       Charter, SOP and one model card per module
 ├── events/                     The shared event contract and the adapters
 ├── langflow/                   The assistant canvas, its prompts and build scripts
-├── n8n/                        The six workflows, their generators and probes
+├── n8n/                        The seven workflows, their generators and probes
 ├── live_plant/                 The demo engine, a mini-project: real-model incidents on a clock plus the crew (live_plant/README.md)
 ├── tableau/                    The executive view: the extract layer, the workbook generator and its design specification (tableau/README.md)
 ├── assets/                     Saved plots for README and Streamlit

@@ -380,6 +380,9 @@ model unless `--keep` is passed.
   naming all three modules in `visual_inspection` and the field that separates
   them, so the shift has not broken cross-document retrieval at this size. It is
   still a trend rather than a bound: nothing here says where it stops working.
+  Rebuilt again on the evening of 2026-09-06, after the charter 7.4 and SOP edits for
+  the escalation timer and the daily digest: 246, the cards still 162, charter 47,
+  SOP 12, contract 25, every untouched document back at its previous count.
 - **A rebuild is verified by the documents that did not change.** The NHTSA ingest
   of 2026-09-03 dropped the collection and rebuilt it from ten documents. The seven
   untouched documents came back at byte-identical chunk counts, and the growth is

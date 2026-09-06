@@ -97,13 +97,19 @@ be re-entered, and the one step backwards is `resolved` to `in_containment`, for
 containment that did not hold. A request the lifecycle does not permit is refused
 and names what is permitted from where the incident actually is.
 
-**The operator makes a transition by calling the endpoint; nothing does it for
-them.** The alert card carries no acknowledge or close buttons, because callback
-handling on the alert channel is not built. The escalation timer, the manager
-notification for a lapsed window and the daily digest are the same next iteration.
-That is the gap to state when the system is demonstrated. What is no longer true,
-and was true until 2026-09-03, is that the later states go unrecorded: they are
-recorded, timestamped and reportable.
+**The operator makes a transition on the cockpit's Steering Cell page or by
+calling the endpoint; nothing does it for them.** The alert card carries no
+acknowledge or close buttons, because callback handling on the alert channel
+cannot be built on this deployment (the workflow's webhook address is reachable
+only inside the private network); the card carries a link that opens the
+incident on the cockpit instead. That is the gap to state when the system is
+demonstrated. What is no longer true, and was true until 2026-09-06, is that a
+lapsed window goes unnoticed: an escalation timer checks every fifteen minutes
+for a P1 or P2 still unacknowledged past its window and sends the Quality
+Manager one card per incident (section 8, step 6), and a daily digest at 07:05
+plant time summarises the open incidents, the overdue count, the response times
+and the P3 queue for the daily review. What has been true since 2026-09-03 is
+that the later states are recorded, timestamped and reportable.
 
 ## 6. Ownership and assignment
 
@@ -129,7 +135,10 @@ changing anything else in the workflow.
 
 Alerts are sent for P1 and P2 only. If every priority alerted, the channel would
 become noise and the operator would stop reading it, which is the failure mode
-the priority levels exist to prevent.
+the priority levels exist to prevent. Two further cards use the same group
+without diluting it: the Quality Manager's card for a P1 or P2 that nobody
+acknowledged inside its window, and the daily digest at 07:05 plant time, which
+carries the P3 queue so that P3 needs no push of its own.
 
 ## 8. What the operator does when an alert arrives
 
@@ -147,8 +156,12 @@ the priority levels exist to prevent.
    and is the input to threshold tuning.
 6. If a P1 cannot be acknowledged within 15 minutes, or a P2 within one hour,
    escalate to the Quality Manager rather than letting the window lapse silently.
-   An escalation is a separate record and does not move the incident: an escalated
-   incident is still whatever state it was in.
+   Since 2026-09-06 the platform does not wait for the operator here: a timer
+   sends the Quality Manager a card for every P1 or P2 still unacknowledged past
+   its window, once per incident, so a lapsed window is never silent. The
+   operator's own escalation is still theirs to record. An escalation is a
+   separate record and does not move the incident: an escalated incident is
+   still whatever state it was in.
 
 ## 9. Boundaries the operator must know
 

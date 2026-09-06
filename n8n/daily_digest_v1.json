@@ -1,0 +1,400 @@
+{
+  "id": "arkonDigest001",
+  "name": "Arkon Daily Digest v1",
+  "nodes": [
+    {
+      "id": "d1000000-0000-4000-8000-000000000001",
+      "name": "Digest Timer",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -880,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 7,
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000002",
+      "name": "Read New Incidents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -656,
+        0
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "url": "http://127.0.0.1:5678/webhook/arkon-incident-status",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "new"
+            },
+            {
+              "name": "limit",
+              "value": "500"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000003",
+      "name": "Read Acknowledged Incidents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -432,
+        0
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "url": "http://127.0.0.1:5678/webhook/arkon-incident-status",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "acknowledged"
+            },
+            {
+              "name": "limit",
+              "value": "500"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000004",
+      "name": "Read In-Containment Incidents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -208,
+        0
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "url": "http://127.0.0.1:5678/webhook/arkon-incident-status",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "in_containment"
+            },
+            {
+              "name": "limit",
+              "value": "500"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000005",
+      "name": "Halt: Status API Unavailable",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        208
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000006",
+      "name": "Read Notification Log",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        16,
+        -32
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "/data/arkon/incident_notifications.jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000007",
+      "name": "Halt: Notification Log Unreadable",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        240,
+        208
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000008",
+      "name": "Extract Notification Log",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        -32
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "notifications_text",
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000009",
+      "name": "Compose Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        -32
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Daily Digest - compose.\n// Three status API pages, one per open lifecycle state, plus the notification\n// log for the next ARK-NTF number. Counts, sorts and formats; decides nothing the\n// API already decides: `overdue` is the API's flag, the medians are its summary.\nconst P3_ROWS = 10;\nconst OVERDUE_ROWS = 5;\nconst MAX_TEXT = 3900; // Telegram rejects a message over 4096 characters\nconst TIMEZONE = \"Europe/Berlin\";\n\nconst pages = {\n  new: $('Read New Incidents').first().json,\n  acknowledged: $('Read Acknowledged Incidents').first().json,\n  in_containment: $('Read In-Containment Incidents').first().json,\n};\nconst logText = $input.first().json.notifications_text ?? \"\";\n\n// A page that is not a straight answer to the question asked stops the run. A\n// digest composed from a rejected or foreign page would be wrong with\n// confidence, and a failed execution is visible where a wrong card is not.\nfor (const [state, page] of Object.entries(pages)) {\n  const answer = page ? page.status : undefined;\n  const asked = page && page.query ? page.query.status : undefined;\n  if ((answer !== \"ok\" && answer !== \"no_match\") || asked !== state) {\n    throw new Error(\"status API page for \" + state + \" is not usable: status=\" + answer + \", query.status=\" + asked);\n  }\n}\n\n// The next notification number is shared with the overdue timer: the highest\n// in the log plus one, whichever workflow wrote it. A damaged line may hide the\n// highest id, so it is counted onto the record rather than passed over.\nlet nextId = 1;\nlet unreadableLines = 0;\nfor (const line of logText.split(\"\\n\")) {\n  const trimmed = line.trim();\n  if (!trimmed) continue;\n  let record;\n  try {\n    record = JSON.parse(trimmed);\n  } catch (error) {\n    unreadableLines += 1;\n    continue;\n  }\n  const digits = String(record.notification_id ?? \"\").replace(/[^0-9]/g, \"\");\n  if (digits) nextId = Math.max(nextId, parseInt(digits, 10) + 1);\n}\nconst notificationId = \"ARK-NTF-\" + String(nextId).padStart(5, \"0\");\n\nconst incidentsOf = (page) => (Array.isArray(page.incidents) ? page.incidents : []);\nconst countByPriority = (list) => {\n  const out = { P1: 0, P2: 0, P3: 0 };\n  for (const incident of list) {\n    const priority = String(incident.priority ?? \"\");\n    out[priority] = (out[priority] ?? 0) + 1;\n  }\n  return out;\n};\n\n// Per state the count is the page's match_count, which is right even when the\n// page is short; the split by priority and the two lists come from the returned\n// incidents, so a truncated page makes them short, and the record says so.\nconst openByStatus = {};\nlet pagesTruncated = false;\nfor (const [state, page] of Object.entries(pages)) {\n  openByStatus[state] = page.match_count ?? 0;\n  if ((page.match_count ?? 0) > (page.returned ?? 0)) pagesTruncated = true;\n}\nconst openIncidents = Object.values(openByStatus).reduce((a, b) => a + b, 0);\nconst allOpen = [].concat(incidentsOf(pages.new), incidentsOf(pages.acknowledged), incidentsOf(pages.in_containment));\nconst openByPriority = countByPriority(allOpen);\n\n// The store summary rides on every page and is computed over the whole store;\n// the three copies agree unless the plant moved between the reads, which is why\n// the record keeps the summary's open count beside the page sum.\nconst summary = pages.new.store ?? {};\nconst responseTimes = pages.new.response_times ?? {};\n\n// Overdue is the API's flag and it only ever applies to `new`: an acknowledged\n// incident has met its window by definition.\nconst overdue = incidentsOf(pages.new).filter((incident) => incident.overdue === true);\noverdue.sort((a, b) => (b.age_minutes ?? 0) - (a.age_minutes ?? 0));\nconst overdueByPriority = countByPriority(overdue);\n\n// P3 has no push alert and no window; what is queued is what is still `new`.\nconst p3Queue = incidentsOf(pages.new).filter((incident) => String(incident.priority) === \"P3\");\np3Queue.sort((a, b) => (b.age_minutes ?? 0) - (a.age_minutes ?? 0));\n\n// Telegram parses the body, so every value out of an incident is escaped before\n// it meets the markup. HTML rather than Markdown, as on every other card here.\nconst esc = (value) => String(value === null || value === undefined ? \"\" : value)\n  .replace(/&/g, \"&amp;\")\n  .replace(/</g, \"&lt;\")\n  .replace(/>/g, \"&gt;\");\nconst age = (minutes) => {\n  if (minutes === null || minutes === undefined) return \"?\";\n  const m = Math.round(minutes);\n  if (m < 60) return m + \" min\";\n  const h = Math.floor(m / 60);\n  if (h < 24) return h + \" h \" + (m % 60) + \" min\";\n  return Math.floor(h / 24) + \" d \" + (h % 24) + \" h\";\n};\nconst clip = (text, max) => {\n  const s = String(text ?? \"\");\n  return s.length > max ? s.slice(0, max - 3) + \"...\" : s;\n};\nconst num = (value) => (value === null || value === undefined ? \"n/a\" : String(value));\n\nconst now = new Date();\nconst parts = new Intl.DateTimeFormat(\"en-GB\", {\n  timeZone: TIMEZONE, year: \"numeric\", month: \"2-digit\", day: \"2-digit\",\n  hour: \"2-digit\", minute: \"2-digit\", hourCycle: \"h23\",\n}).formatToParts(now);\nconst part = (type) => (parts.find((p) => p.type === type) || {}).value ?? \"\";\nconst localStamp = part(\"year\") + \"-\" + part(\"month\") + \"-\" + part(\"day\") + \" \" + part(\"hour\") + \":\" + part(\"minute\");\n\nconst compose = (p3Rows, overdueRows) => {\n  const lines = [\n    \"\\u{1F4CB} <b>Arkon: daily digest</b>, \" + esc(localStamp) + \" (\" + esc(TIMEZONE) + \")\",\n    \"\",\n    \"<b>Open: \" + openIncidents + \"</b> (P1 \" + openByPriority.P1 + \", P2 \" + openByPriority.P2 + \", P3 \" + openByPriority.P3 + \")\",\n    \"new \" + openByStatus.new + \", acknowledged \" + openByStatus.acknowledged + \", in containment \" + openByStatus.in_containment,\n    \"<b>Overdue: \" + num(summary.overdue_incidents) + \"</b> unacknowledged past the window (P1 \" + overdueByPriority.P1 + \", P2 \" + overdueByPriority.P2 + \")\",\n  ];\n  for (const incident of overdue.slice(0, overdueRows)) {\n    lines.push(\"- \" + esc(incident.incident_id) + \" \" + esc(incident.priority) + \", waiting \" + age(incident.age_minutes) + \", \" + esc(incident.assigned_role));\n  }\n  if (overdue.length > overdueRows) lines.push(\"  and \" + (overdue.length - overdueRows) + \" more\");\n  lines.push(\"\");\n  lines.push(\n    \"<b>Response times, all incidents to date:</b> \" + num(responseTimes.acknowledged_incidents)\n      + \" acknowledged, median \" + num(responseTimes.median_minutes_to_acknowledge) + \" min (\"\n      + num(responseTimes.acknowledged_within_window) + \" within the window, \"\n      + num(responseTimes.acknowledged_late) + \" late); \" + num(responseTimes.closed_incidents)\n      + \" closed, median \" + num(responseTimes.median_minutes_to_close) + \" min\"\n  );\n  lines.push(\"\");\n  lines.push(\"<b>P3 queue for today's review: \" + p3Queue.length + \"</b>\" + (p3Queue.length ? \", oldest first\" : \"\"));\n  for (const incident of p3Queue.slice(0, p3Rows)) {\n    lines.push(\"- \" + esc(incident.incident_id) + \" \" + esc(incident.source_module) + \", \" + age(incident.age_minutes) + \": \" + esc(clip(incident.summary, 90)));\n  }\n  if (p3Queue.length > p3Rows) lines.push(\"  and \" + (p3Queue.length - p3Rows) + \" more\");\n  if (pagesTruncated) {\n    lines.push(\"\");\n    lines.push(\"Note: a state exceeded the status API page of \" + 500 + \", so the priority split and the lists above are short; the state counts are the API's own.\");\n  }\n  lines.push(\"\");\n  lines.push(\"Digest: <code>\" + esc(notificationId) + \"</code>\");\n  return lines.join(\"\\n\");\n};\n\n// Shed overdue rows first, then queue rows, until the card fits Telegram's cap:\n// every overdue incident already has its own card from the timer, the P3 queue\n// has nothing else. The counts stay; only the rows go.\nlet p3Rows = P3_ROWS;\nlet overdueRows = OVERDUE_ROWS;\nlet text = compose(p3Rows, overdueRows);\nwhile (text.length > MAX_TEXT && (p3Rows > 0 || overdueRows > 0)) {\n  if (overdueRows > 0) overdueRows -= 1;\n  else p3Rows -= 1;\n  text = compose(p3Rows, overdueRows);\n}\n\nreturn [\n  {\n    json: {\n      digest_text: text,\n      notification: {\n        notification_id: notificationId,\n        sent_at: null,\n        incident_id: null,\n        trigger: \"daily_digest\",\n        notified_role: \"Quality Steering Cell\",\n        channel: \"telegram\",\n        telegram_chat_id: \"-5481573875\",\n        telegram_message_id: null,\n        run_at: now.toISOString(),\n        as_of: pages.new.as_of ?? null,\n        open_incidents: openIncidents,\n        store_open_incidents: summary.open_incidents ?? null,\n        open_by_priority: openByPriority,\n        open_by_status: openByStatus,\n        overdue_incidents: summary.overdue_incidents ?? null,\n        overdue_by_priority: overdueByPriority,\n        overdue_listed: Math.min(overdue.length, overdueRows),\n        response_times: responseTimes,\n        p3_queue: p3Queue.length,\n        p3_listed: Math.min(p3Queue.length, p3Rows),\n        pages_truncated: pagesTruncated,\n        log_unreadable_lines: unreadableLines,\n        // The people behind the roles are simulated under charter section 5.\n        // The counts, the timestamps and the delivery are not.\n        context_origin: \"simulated\",\n      },\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000a",
+      "name": "Send Digest",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        688,
+        -32
+      ],
+      "parameters": {
+        "chatId": "-5481573875",
+        "text": "={{ $json.digest_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Arkon Telegram Bot"
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000b",
+      "name": "Build Digest Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        -32
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Daily Digest - the record, written after the card was sent.\n// The Telegram node returns the Bot API envelope, `{ ok, result }`, with\n// `message_id`, `chat` and `date` inside `result`; execution 7800 of the overdue\n// timer on 2026-09-06 is why this unwraps the envelope rather than reading it. A\n// reply that already is the result object still reads.\nconst raw = ($input.first() || {}).json ?? {};\nconst reply = raw.result && typeof raw.result === \"object\" ? raw.result : raw;\nconst record = { ...$('Compose Digest').first().json.notification };\nrecord.telegram_message_id = reply.message_id ?? null;\nrecord.telegram_chat_id = String((reply.chat || {}).id ?? record.telegram_chat_id);\nrecord.sent_at = reply.date ? new Date(reply.date * 1000).toISOString() : new Date().toISOString();\n\nreturn [{ json: { notifications_jsonl: JSON.stringify(record) + \"\\n\", notified: 1 } }];\n"
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000c",
+      "name": "Build Digest Line",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1136,
+        -32
+      ],
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "notifications_jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000d",
+      "name": "Append Notification Log",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1360,
+        -32
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "/data/arkon/incident_notifications.jsonl",
+        "options": {
+          "append": true
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Digest Timer": {
+      "main": [
+        [
+          {
+            "node": "Read New Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read New Incidents": {
+      "main": [
+        [
+          {
+            "node": "Read Acknowledged Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Halt: Status API Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Acknowledged Incidents": {
+      "main": [
+        [
+          {
+            "node": "Read In-Containment Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Halt: Status API Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read In-Containment Incidents": {
+      "main": [
+        [
+          {
+            "node": "Read Notification Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Halt: Status API Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Notification Log": {
+      "main": [
+        [
+          {
+            "node": "Extract Notification Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Halt: Notification Log Unreadable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Notification Log": {
+      "main": [
+        [
+          {
+            "node": "Compose Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Digest": {
+      "main": [
+        [
+          {
+            "node": "Send Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Digest": {
+      "main": [
+        [
+          {
+            "node": "Build Digest Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Digest Record": {
+      "main": [
+        [
+          {
+            "node": "Build Digest Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Digest Line": {
+      "main": [
+        [
+          {
+            "node": "Append Notification Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}
