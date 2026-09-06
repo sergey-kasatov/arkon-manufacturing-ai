@@ -10,10 +10,10 @@
   <preferences>
     <color-palette name="Arkon status" type="regular">
       <color>#C0392B</color>
-      <color>#1F3A63</color>
-      <color>#3D6394</color>
-      <color>#8AA6C8</color>
-      <color>#B9C6D8</color>
+      <color>#15304F</color>
+      <color>#2B5180</color>
+      <color>#46709E</color>
+      <color>#5F86AF</color>
     </color-palette>
   </preferences>
 </workbook>

@@ -15,10 +15,10 @@
   <preferences>
     <color-palette custom='true' name='Arkon status' type='regular'>
       <color>#C0392B</color>
-      <color>#1F3A63</color>
-      <color>#3D6394</color>
-      <color>#8AA6C8</color>
-      <color>#B9C6D8</color>
+      <color>#15304F</color>
+      <color>#2B5180</color>
+      <color>#46709E</color>
+      <color>#5F86AF</color>
     </color-palette>
   </preferences>
   <datasources>
@@ -897,16 +897,16 @@
             <map to='#C0392B'>
               <bucket>&quot;Overdue&quot;</bucket>
             </map>
-            <map to='#1F3A63'>
+            <map to='#15304F'>
               <bucket>&quot;P1&quot;</bucket>
             </map>
-            <map to='#3D6394'>
+            <map to='#2B5180'>
               <bucket>&quot;P2&quot;</bucket>
             </map>
-            <map to='#8AA6C8'>
+            <map to='#46709E'>
               <bucket>&quot;P3&quot;</bucket>
             </map>
-            <map to='#B9C6D8'>
+            <map to='#5F86AF'>
               <bucket>&quot;P4&quot;</bucket>
             </map>
           </encoding>
@@ -914,16 +914,16 @@
             <map to='#C0392B'>
               <bucket>&quot;Late&quot;</bucket>
             </map>
-            <map to='#1F3A63'>
+            <map to='#15304F'>
               <bucket>&quot;P1&quot;</bucket>
             </map>
-            <map to='#3D6394'>
+            <map to='#2B5180'>
               <bucket>&quot;P2&quot;</bucket>
             </map>
-            <map to='#8AA6C8'>
+            <map to='#46709E'>
               <bucket>&quot;P3&quot;</bucket>
             </map>
-            <map to='#B9C6D8'>
+            <map to='#5F86AF'>
               <bucket>&quot;P4&quot;</bucket>
             </map>
           </encoding>
@@ -2260,7 +2260,7 @@
                 <format attr='font-size' value='14' />
               </style-rule>
               <style-rule element='mark'>
-                <format attr='mark-color' value='#1F3A63' />
+                <format attr='mark-color' value='#15304F' />
                 <format attr='size' value='0.88' />
                 <format attr='mark-labels-show' value='true' />
                 <format attr='mark-labels-cull' value='false' />
