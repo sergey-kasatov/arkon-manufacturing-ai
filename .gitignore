@@ -73,6 +73,8 @@ hyperd.log
 # Tableau's own recovery copies, written beside an open workbook and left behind when
 # the process dies instead of closing.
 tableau/~*.twbr
+# The refresh loop's own log: runtime state of one machine, one line per tick.
+tableau/refresh_loop.log
 
 # The live plant's ledger: what live_plant/plant.py sent, what intake answered and
 # what the crew moved. Runtime state of one machine, like the n8n counters.

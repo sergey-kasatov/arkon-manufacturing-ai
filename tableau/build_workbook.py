@@ -70,6 +70,7 @@ from pathlib import Path
 from tableauhyperapi import (
     Connection,
     CreateMode,
+    HyperException,
     HyperProcess,
     Inserter,
     SqlType,
@@ -356,11 +357,22 @@ class Datasource:
                 for name, datatype in self.columns
             ],
         )
-        with Connection(
-            endpoint=hyper.endpoint,
-            database=str(self.hyper),
-            create_mode=CreateMode.CREATE_AND_REPLACE,
-        ) as connection:
+        # The writability check above is not enough on Windows: a file Tableau's
+        # hyperd holds open can still be written to and cannot be deleted, and
+        # CREATE_AND_REPLACE deletes. Measured 2026-09-06, when a refresh tick died
+        # with "unable to drop database: could not delete the file".
+        try:
+            connection = Connection(
+                endpoint=hyper.endpoint,
+                database=str(self.hyper),
+                create_mode=CreateMode.CREATE_AND_REPLACE,
+            )
+        except HyperException as err:
+            raise SystemExit(
+                "%s is held open by another process (%s). Close the workbook in Tableau "
+                "first, or pass --skip-extracts." % (self.hyper.name, str(err).splitlines()[0])
+            )
+        with connection:
             connection.catalog.create_schema("Extract")
             connection.catalog.create_table(table)
             with Inserter(connection, table) as inserter:

@@ -307,25 +307,37 @@ string and the word "None".
 ## Running it live for a demo
 
 Tableau Public has no API and no live connection, so "live" means a refresh you can
-run in seconds and a view that never lies about its age.
+run in seconds and a view that never lies about its age. `tableau/refresh_loop.py`
+runs that refresh on a timer and leaves the one step a script cannot do to a person:
 
-1. **Refresh the extracts from the running store** (the NAS must be reachable):
-   `python tableau/build_extracts.py`. It stops with a non-zero exit if the API
-   returned fewer rows than it matched.
-2. **Rebuild the workbook**: `python tableau/build_workbook.py`. The title band
-   takes its "as of" stamp from the store's own `as_of`, and the generator refuses
-   to build if the recomputed KPIs disagree with the API summary.
-3. **Open `tableau/Arkon_Executive_View.twbx`** in Tableau Public (double-click, or
-   `Start-Process`) and present from there, or **Save to Tableau Public** from the
-   File menu to refresh the published view. The sign-in is Sergey's step.
+```bash
+python tableau/refresh_loop.py --every 5
+```
 
-For a demo that shows the platform moving, run the Steering Cell slice first (an
-event batch through n8n raises new incidents and Telegram cards), acknowledge or
-close one through `POST /webhook/arkon-incident-transition`, then run steps 1 to 3:
-the overdue count, the acknowledged card and the lifecycle view all change, and the
-"as of" stamp proves the refresh. The Streamlit cockpit at `http://AK2101:8303` is
-the truly live surface and reads the same API, so the two can be shown side by side:
-the cockpit for the operator, the Tableau view for the executive.
+Every five minutes (ten by default, about the plant's own pace) it reads the store
+(`build_extracts.py`; the NAS must answer), rebuilds the `.twb` and the `.twbx`
+(`build_workbook.py`), and writes one line to stdout and to `tableau/refresh_loop.log`
+with the store's as-of stamp, the facts the generator printed, and the seconds it took.
+The workbook is rebuilt only on a good extract: a store that does not answer writes
+nothing, and an extract the builder reports as incomplete is not drawn into a
+dashboard that would be short without saying so, so the last good workbook stays on
+disk either way. `--once` runs a single refresh and exits; Ctrl+C stops the loop with a
+count of ticks. Measured 2026-09-06: one tick takes about ten seconds end to end.
+
+Two rules for the demo. **Open the packaged `.twbx`, never the `.twb`**: the `.twb`
+reads the `.hyper` files in `tableau/extracts/` by path and holds them open, so every
+tick would fail on a locked file with the builder's own message. And Tableau does not
+reload a file it has open: after a tick, open the `.twbx` again (File > Open Recent) to
+see the new stamp, then **File > Save to Tableau Public** to refresh the published
+view. The sign-in is Sergey's step.
+
+For a demo that shows the platform moving, leave the live plant running (it raises an
+incident every eight to twelve minutes and its crew works them), or acknowledge one
+yourself through the cockpit's Steering Cell page; the next tick moves the overdue
+count, the acknowledged card and the feed, and the "as of" stamp proves the refresh.
+The Streamlit cockpit at `http://AK2101:8303` is the truly live surface and reads the
+same API, so the two can be shown side by side: the cockpit for the operator, the
+Tableau view for the executive.
 
 ## Publishing, decided 2026-09-04
 
