@@ -19,6 +19,13 @@ COPY app/ /srv/arkon/app/
 COPY assets/ /srv/arkon/assets/
 COPY models/checkpoints/ /srv/arkon/models/checkpoints/
 
+# The live plant (the `live-plant` service in docker-compose.yml) runs from the
+# same image: the emitter, the event contract it validates against, the roster
+# and the seven published batches it draws real model output from. Stdlib only,
+# so nothing is added to requirements.
+COPY live_plant/plant.py /srv/arkon/live_plant/plant.py
+COPY events/ /srv/arkon/events/
+
 EXPOSE 8501
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

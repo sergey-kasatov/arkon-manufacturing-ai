@@ -31,6 +31,47 @@ services:
     networks:
       - msit
 
+  # The live plant, live_plant/plant.py: one real-model incident every ~10 minutes
+  # across all seven modules, plus a simulated crew moving them. Behind a profile
+  # on purpose: every P1 and P2 it raises is a real Telegram card, so a plain
+  # `up -d` of the cockpit never starts it. Start it for a demo, stop it after,
+  # from /volume1/docker/arkon-cockpit on the NAS:
+  #
+  #   docker compose -f app/docker-compose.yml --env-file .env --profile live up -d live-plant
+  #   docker compose -f app/docker-compose.yml --env-file .env --profile live stop live-plant
+  #   docker compose -f app/docker-compose.yml --env-file .env --profile live logs -f live-plant
+  #
+  # The ledger (who was told what, when) persists on the NAS beside the store.
+  live-plant:
+    image: arkon-cockpit
+    container_name: arkon-live-plant
+    profiles: ["live"]
+    restart: unless-stopped
+    command: ["python", "-u", "live_plant/plant.py", "run",
+              "--interval", "600", "--max-alerts-per-hour", "6"]
+    environment:
+      ARKON_EVENT_API: http://n8n.arkon.internal:5678/webhook/arkon-event
+      ARKON_STATUS_API: http://n8n.arkon.internal:5678/webhook/arkon-incident-status
+      ARKON_TRANSITION_API: http://n8n.arkon.internal:5678/webhook/arkon-incident-transition
+      ARKON_LIVE_PLANT_STATE: /srv/arkon/live_plant/state
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - /volume1/docker/arkon/live_plant:/srv/arkon/live_plant/state
+    # The image's own healthcheck probes Streamlit, which this service does not
+    # run. Health here is the emitter's pulse: state.json is rewritten on every
+    # tick, so a file older than three intervals means the loop has stalled.
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import os,sys,time; p='/srv/arkon/live_plant/state/state.json'; sys.exit(0 if os.path.exists(p) and time.time()-os.path.getmtime(p) < 1800 else 1)"]
+      interval: 2m
+      timeout: 5s
+      start_period: 90s
+      retries: 3
+    # `docker stop` sends SIGTERM; the loop finishes the tick in flight and exits.
+    stop_grace_period: 30s
+    networks:
+      - msit
+
 networks:
   msit:
     # The network n8n and Langflow are already attached to. External, because

@@ -1,0 +1,305 @@
+{
+  "id": "arkonOverdue01",
+  "name": "Arkon Overdue Escalation v1",
+  "nodes": [
+    {
+      "id": "c1000000-0000-4000-8000-000000000001",
+      "name": "Overdue Timer",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -880,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000002",
+      "name": "Read Alerting Incidents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -656,
+        0
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "url": "http://127.0.0.1:5678/webhook/arkon-incident-status",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "new"
+            },
+            {
+              "name": "priority",
+              "value": "P1,P2"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000003",
+      "name": "Halt: Status API Unavailable",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        176
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000004",
+      "name": "Read Notification Log",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        -32
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "/data/arkon/incident_notifications.jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000005",
+      "name": "Halt: Notification Log Unreadable",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        176
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000006",
+      "name": "Extract Notification Log",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        -32
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "notifications_text",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000007",
+      "name": "Select Overdue Incidents",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -32
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Overdue Escalation - selection.\n// What is overdue is NOT decided here. The status API computes it from the\n// charter 7.1 windows held in lifecycle.py and returns `overdue` on every\n// incident, so this reads that flag. This node decides only two further things:\n// whether the incident has been notified before, and how many cards one run may\n// send.\nconst MAX_PER_RUN = 3;\n\nconst api = $('Read Alerting Incidents').first().json;\nconst logText = $input.first().json.notifications_text ?? \"\";\n\n// The notification log is the dedup state, deliberately rather than workflow\n// static data: an import rewrites staticData, and the two counters this project\n// keeps there have both had to be carried across a deploy by hand. Reading the\n// log back costs one file read and cannot be rewound by a deploy.\nconst notified = new Set();\nlet nextId = 1;\nlet unreadableLines = 0;\nfor (const line of logText.split(\"\\n\")) {\n  const trimmed = line.trim();\n  if (!trimmed) continue;\n  let record;\n  try {\n    record = JSON.parse(trimmed);\n  } catch (error) {\n    // A damaged line loses one dedup entry and possibly the highest id, so it is\n    // counted onto every record this run writes rather than passed over.\n    unreadableLines += 1;\n    continue;\n  }\n  if (record.incident_id) notified.add(record.incident_id);\n  const digits = String(record.notification_id ?? \"\").replace(/[^0-9]/g, \"\");\n  if (digits) nextId = Math.max(nextId, parseInt(digits, 10) + 1);\n}\n\nconst incidents = Array.isArray(api.incidents) ? api.incidents : [];\nconst overdue = incidents.filter((i) => i.overdue === true && !notified.has(i.incident_id));\n\n// Oldest first. The subject of the notification is the wait, so when a run is\n// capped the longest wait is the one that goes out.\noverdue.sort((a, b) => (b.age_minutes ?? 0) - (a.age_minutes ?? 0));\nconst selected = overdue.slice(0, MAX_PER_RUN);\n\n// The API pages at 50 and ranks by recency, so a store with more than 50 open\n// alerting incidents would hide the oldest ones - the very ones this workflow\n// exists to surface. It cannot be fixed from this side, so it is recorded on\n// every record written by a truncated run instead of being left silent.\nconst selectionTruncated = (api.match_count ?? 0) > (api.returned ?? 0);\n\n// Telegram parses the message body, so every value out of an incident is escaped\n// before it meets the markup. HTML rather than Markdown for the reason the intake\n// workflow records: an underscore in a record id made Telegram reject a whole\n// message after the incident had already been written.\nconst esc = (value) => String(value === null || value === undefined ? \"\" : value)\n  .replace(/&/g, \"&amp;\")\n  .replace(/</g, \"&lt;\")\n  .replace(/>/g, \"&gt;\");\n\nconst runAt = new Date().toISOString();\n\nreturn selected.map((incident, index) => {\n  const window = incident.acknowledge_due_minutes ?? null;\n  const age = incident.age_minutes ?? null;\n  const overdueBy = window === null || age === null ? null : Math.round((age - window) * 10) / 10;\n  const notificationId = \"ARK-NTF-\" + String(nextId + index).padStart(5, \"0\");\n\n  const alertText = [\n    \"\\u{23F0} <b>Arkon: unacknowledged incident</b>\",\n    \"<b>\" + esc(incident.priority) + \"</b> incident <b>\" + esc(incident.incident_id) + \"</b>\"\n      + \" has not been acknowledged.\",\n    \"\",\n    esc(incident.summary),\n    \"\",\n    \"Raised: \" + esc(incident.created_at),\n    \"Acknowledge window: \" + esc(window) + \" min, overdue by \" + esc(overdueBy) + \" min\",\n    \"Assigned: \" + esc(incident.assigned_to) + \" (\" + esc(incident.assigned_role) + \")\",\n    \"Escalation contact: \" + esc(incident.escalation_contact),\n    \"Notification: <code>\" + esc(notificationId) + \"</code>\",\n  ].join(\"\\n\");\n\n  return {\n    json: {\n      alert_text: alertText,\n      notification: {\n        notification_id: notificationId,\n        sent_at: null,\n        incident_id: incident.incident_id,\n        incident_priority: incident.priority,\n        incident_created_at: incident.created_at,\n        incident_status: incident.status,\n        minutes_unacknowledged: age,\n        acknowledge_window_minutes: window,\n        minutes_overdue: overdueBy,\n        notified_role: \"Quality Manager\",\n        escalation_contact: incident.escalation_contact ?? null,\n        trigger: \"unacknowledged_window_elapsed\",\n        channel: \"telegram\",\n        telegram_chat_id: \"-5481573875\",\n        telegram_message_id: null,\n        run_at: runAt,\n        candidates_overdue: overdue.length,\n        selection_capped: overdue.length > MAX_PER_RUN,\n        selection_truncated: selectionTruncated,\n        log_unreadable_lines: unreadableLines,\n        // The person is simulated under charter section 5. The timestamps, the\n        // window and the delivery are not.\n        context_origin: \"simulated\",\n      },\n    },\n  };\n});\n"
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000008",
+      "name": "Notify Quality Manager",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        -32
+      ],
+      "parameters": {
+        "chatId": "-5481573875",
+        "text": "={{ $json.alert_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Arkon Telegram Bot"
+        }
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000009",
+      "name": "Build Notification Records",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        -32
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Overdue Escalation - the record, written after the card was sent.\n// The Telegram node returns the Bot API's `result` object as the item, so\n// `message_id` is what Telegram itself assigned. Recording it here is what makes\n// this log evidence that a card exists rather than a note that one was composed.\nconst sent = $input.all();\nconst selected = $('Select Overdue Incidents').all();\n\nconst lines = [];\nfor (let i = 0; i < selected.length; i += 1) {\n  const record = { ...selected[i].json.notification };\n  const reply = sent[i]?.json ?? {};\n  record.telegram_message_id = reply.message_id ?? null;\n  record.telegram_chat_id = String(reply.chat?.id ?? record.telegram_chat_id);\n  record.sent_at = reply.date ? new Date(reply.date * 1000).toISOString() : new Date().toISOString();\n  lines.push(JSON.stringify(record));\n}\n\nreturn [\n  {\n    json: {\n      notifications_jsonl: lines.length ? lines.join(\"\\n\") + \"\\n\" : \"\",\n      notified: lines.length,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-00000000000a",
+      "name": "Build Notification Lines",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        -32
+      ],
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "notifications_jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-00000000000b",
+      "name": "Append Notification Log",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        912,
+        -32
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "/data/arkon/incident_notifications.jsonl",
+        "options": {
+          "append": true
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Overdue Timer": {
+      "main": [
+        [
+          {
+            "node": "Read Alerting Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Alerting Incidents": {
+      "main": [
+        [
+          {
+            "node": "Read Notification Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Halt: Status API Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Notification Log": {
+      "main": [
+        [
+          {
+            "node": "Extract Notification Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Halt: Notification Log Unreadable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Notification Log": {
+      "main": [
+        [
+          {
+            "node": "Select Overdue Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Overdue Incidents": {
+      "main": [
+        [
+          {
+            "node": "Notify Quality Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Quality Manager": {
+      "main": [
+        [
+          {
+            "node": "Build Notification Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Notification Records": {
+      "main": [
+        [
+          {
+            "node": "Build Notification Lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Notification Lines": {
+      "main": [
+        [
+          {
+            "node": "Append Notification Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {}
+}

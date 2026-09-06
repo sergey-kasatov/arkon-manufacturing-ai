@@ -45,6 +45,7 @@ Counted from the incident store on 2026-09-02, not from memory:
 | `neu_surface` | 5 | `ARK-INC-00024` to `00028` | 2026-09-02, the run that found the alert defect |
 | `gc10_detect` | 5 | `ARK-INC-00030` to `00034` | 2026-09-02, the sixth module, and the first whose events carry a list. **From the batch notebook 03 produced before it was re-run on 2026-09-03**, so these five are a record of a superseded batch: the module does not reproduce, and the re-run moved the detection threshold and with it which sheets publish. The record ids on them still name real sheets |
 | `nhtsa_nlp` | 5 | `ARK-INC-00035` to `00039` | 2026-09-03, the seventh module, the only one in `field_quality`, and the first that needed no contract change at all. Three P2 answered `incident_created_alert_sent` and two P3 `incident_recorded` |
+| live plant, all seven | 7 | `ARK-INC-00040` to `00046` | 2026-09-05, the first run of `live_plant/plant.py`: one real-model event per module, re-timed and labelled, two of them alerting (`00042`, `00045`), **both cards read by Sergey off the Telegram group at 17:38 and 17:39**; the crew then moved four of them. `live_plant/README.md` |
 
 **All seven modules that publish the section 6 event contract have now been through
 this webhook, and Phase 2 is closed.** There is no module left that has not.
@@ -327,6 +328,7 @@ workflow static data does not grow without bound.
 | `replay_events.py` | Posts an events JSONL to the webhook for demos |
 | `incident_status_probe.py` | Contract test for the status API |
 | `alert_body_probe.js` | Contract test for the Telegram alert body, over every alerting event |
+| `../live_plant/plant.py` | The demo engine, a mini-project of its own: real-model events on a clock, round-robin over the modules, plus the crew that moves them (`live_plant/README.md`) |
 
 Seven modules publish into this one webhook. Every batch is replayed by the same
 script, and the priority mix is the module's own, not a setting:
@@ -928,6 +930,25 @@ to `closed`.
   the assistant's one action stays the guarded escalation. What did change is what
   it can *report*, because the status API it already reads now returns real
   statuses and response times.
+
+## The live plant: the demo engine, a mini-project of its own
+
+`live_plant/` (built 2026-09-05) raises one real-model incident every ten minutes
+or so across all seven modules and runs a simulated crew that moves them through
+the transition endpoint, so this Steering Cell, the Telegram group, the cockpit
+and the executive view can be watched moving rather than described. It is not an
+n8n workflow and deliberately so: it is a Python service beside the cockpit that
+calls the three endpoints above like any other client, and what n8n shows of it
+is its executions. Design, ledger contract, reset, deployment and the first run
+with its confirmed cards are in `live_plant/README.md`; the offline suite is
+`live_plant/check_plant.py`.
+
+What it asks of this layer: nothing new. Every event it sends passes the section
+6 contract, carries the `arkon-2026-9xxxxx` id series and an `emitter` label in
+`operational_context`, and is answered by the same four intake outcomes as a
+replayed batch. The one thing worth knowing here is that its ledger is the second
+notification source on the platform, beside `/data/arkon/incident_notifications.jsonl`
+once the overdue timer is deployed, and the two are not one log yet.
 
 ## Comparison slice (evaluation artifact, not Arkon infrastructure)
 
