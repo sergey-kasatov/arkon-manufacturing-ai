@@ -321,7 +321,7 @@ pass**: this dataset holds no sheet anyone certified clean, so the module has ne
 sound steel and its silence is a failure to find
 - [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
 - [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six
-routes, retrieval over a Qdrant store of eight Arkon documents, a live incident lookup, a human
+routes, retrieval over a Qdrant store of ten Arkon documents, a live incident lookup, a human
 approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open
 MVP criterion of charter section 10, an operational interface (`langflow/README.md`). **Since
 2026-09-05 it also hands the operator over**: an answer about a named incident ends with the
@@ -840,7 +840,7 @@ Assistant   Langflow 1.11.5, Qdrant, OpenRouter (deployed)
 Automation  n8n (webhooks, incident store, lifecycle endpoint, Telegram alerts) (deployed)
 App         Streamlit cockpit, 9 pages, on the NAS at AK2101:8303 (deployed)
 Demo engine Python service, one re-timed real incident every 8 to 12 min (deployed)
-Tests       pytest, 116 offline tests, GitHub Actions on every push
+Tests       pytest, 130 offline tests, GitHub Actions on every push
 BI          Tableau Public 2026.2, workbook generated from XML by tableau/build_workbook.py
 Infra       Docker Compose on a Ugreen NAS, one network, Tailscale for remote access
 Utilities   pandas, numpy, matplotlib, seaborn, plotly
@@ -894,7 +894,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-116 tests, under a second, and **offline by design**: no NAS, no Steering Cell, no
+130 tests, under a second, and **offline by design**: no NAS, no Steering Cell, no
 trained weights, no datasets. That is what makes them worth running on a laptop and in
 CI on every push, and it is also the constraint that decided what they cover. They test
 the two things a regression could break silently everywhere else:
