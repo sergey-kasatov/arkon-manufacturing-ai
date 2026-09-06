@@ -9,7 +9,6 @@
 [![tests](https://github.com/sergey-kasatov/arkon-manufacturing-ai/actions/workflows/tests.yml/badge.svg)](https://github.com/sergey-kasatov/arkon-manufacturing-ai/actions/workflows/tests.yml)
 
 ---
-
 ## Overview
 
 Arkon Manufacturing AI is a working Industry 4.0 quality platform for a fictional
@@ -51,6 +50,187 @@ to write what, is under [Architecture](#architecture).
 
 ---
 
+
+## Architecture
+
+The wiring is drawn under [Runtime wiring](#runtime-wiring-as-deployed-2026-09-05)
+below, down to the four webhooks and their status codes. Three properties of it are
+worth stating before the diagram, because they are what the boxes are arranged to
+protect.
+
+Every module publishes the same event and nothing downstream knows which model
+spoke. Every status change goes through one endpoint, so the store is an audit trail
+rather than a set of rows someone edited. And the assistant deliberately cannot move
+an incident: the response-time KPI is measured from that timestamp, and an agent
+making it turns a measurement of the plant into a measurement of the agent.
+
+| Capability | Department | Dataset | What it publishes |
+|---|---|---|---|
+| Time series | Engine testing | NASA CMAPSS | Remaining useful life |
+| ML classification | Truck fleet | Scania APS | Component fault |
+| CV binary | Foundry | Casting product | Defect present |
+| CV multi-class | Rolling mill | NEU surface | Defect type |
+| CV anomaly | Component inspection | MVTec AD | Anomaly and its region |
+| CV detection | Stamping | GC10-DET | Where the defect is |
+| NLP multi-label | Field quality | NHTSA complaints | Component, and whether a rate moved |
+| LLM and retrieval | All | - | Answers about the store and the rules |
+| BI | Executive | Tableau | The executive view |
+
+### Runtime wiring, as deployed 2026-09-05
+
+The map above is the capability plan. This is what actually runs, and how the
+pieces reach each other. Three things put work into the system - a batch of risk
+events scored on the laptop, the live plant emitting one re-timed real event
+every ten minutes or so on the NAS itself, and an operator asking a question -
+and every one of them lands on the NAS, which owns every store.
+
+**The division of labour between the two operator surfaces is the thing to read
+off this diagram.** The cockpit is where an incident is moved: it is the only
+consumer that writes a transition, and it writes nothing else. The assistant
+never touches the store; it reads through the same status endpoint the screens
+read, answers from the ten documents in Qdrant, and holds exactly one write of
+its own, the escalation record, behind a human approval gate. So the cockpit
+answers what and who, the assistant answers why and what the rule says, and
+neither can contradict the other about a status because neither computes one.
+
+**The assistant hands the operator to the cockpit rather than acting for them,
+and that boundary was decided rather than inherited (2026-09-05).** The obvious
+next feature is to let the assistant acknowledge and close, and it is declined
+for a reason that is a measurement rather than a preference: an acknowledgement
+is the claim that a named person has seen an incident and taken it, and the
+response-time KPI this platform puts in red is measured from that timestamp. An
+agent that acknowledges turns a median response time into a measurement of the
+agent, and the number survives while its meaning does not, which is the failure
+mode this project keeps naming. The quality-management reading is the same one:
+a nonconformance disposition has a human owner, and an agent closing one is what
+an IATF audit writes up. There is a build cost as well, recorded in
+`langflow/README.md`: a canvas holding a Human Input node cannot be run through
+`/api/v1/run` at all, so a second gated write breaks every existing v1 caller.
+
+So the assistant does the half it is good at and stops there. It answers what the
+rule says and what the model can and cannot claim, then hands over **the link
+that opens that incident on the cockpit and a drafted note for the transition
+form**. The operator arrives with the form already filled and puts their own name
+on it. The agent prepares the decision; the person signs it, and the timestamp
+still measures the plant.
+
+```mermaid
+flowchart TB
+  subgraph LAPTOP["Laptop, offline and on demand"]
+    direction LR
+    DATA[("CMAPSS / Scania<br/>Casting images")] --> MODEL["Model<br/>XGBoost, ResNet-18"] --> EV["Risk events<br/>events/out/*.jsonl"]
+  end
+
+  OP(["Operator, in a browser"])
+
+  subgraph NAS["NAS AK2101, docker network msit"]
+    W1["(1) POST /webhook/arkon-event<br/>Quality Steering Cell<br/>validate, dedup 24h, record"]
+    ASSIST["Arkon Quality Assistant<br/>Langflow, 19 nodes"]
+    COCK["Arkon cockpit<br/>Streamlit, 9 pages<br/>AK2101:8303"]
+    W2["(2) GET /webhook/arkon-incident-status<br/>200 ok, 200 no_match,<br/>400 rejected, 503 unavailable"]
+    W3["(3) POST /webhook/arkon-escalation<br/>the assistant's only write"]
+    W4["(4) POST /webhook/arkon-incident-transition<br/>the lifecycle<br/>200, 400, 404, 409, 503"]
+    LP["Live plant<br/>one re-timed real event<br/>every ~10 min, plus a crew"]
+    QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 245 chunks")]
+    INC[("incidents.jsonl")]
+    TRN[("incident_transitions.jsonl")]
+    ESC[("escalations.jsonl")]
+    TG["Telegram<br/>P1 and P2 only"]
+
+    W1 -- alerts --> TG
+    W1 -- "writes, once, at new" --> INC
+    LP -- "emits" --> W1
+    LP -- "the crew moves them" --> W4
+    ASSIST -- retrieval --> QD
+    ASSIST -- lookup --> W2
+    ASSIST -- escalate --> W3
+    W2 -- reads --> INC
+    W2 -- "folds" --> TRN
+    COCK -- lookup --> W2
+    COCK -- "acknowledge, contain,<br/>resolve, close" --> W4
+    COCK -- chat --> ASSIST
+    W3 -- appends --> ESC
+    W3 -- "folds" --> TRN
+    W4 -- appends --> TRN
+    W4 -- reads --> INC
+  end
+
+  subgraph EXEC["Executive view, refreshed on demand"]
+    TAB["tableau/build_extracts.py<br/>then build_workbook.py"]
+  end
+
+  EV -- "HTTP POST, one per event" --> W1
+  TG -- "the card links to<br/>this one incident" --> COCK
+  OP -- "asks why, and what the rule says" --> ASSIST
+  OP -- "watches, and moves incidents" --> COCK
+  W2 -- "extract refresh" --> TAB
+```
+
+The assistant reaches the incident store only through endpoint 2, so it cannot
+invent a status: it has no other source. Inside the canvas, one classification
+picks one branch and the rest are deactivated.
+
+```mermaid
+flowchart TD
+  IN["Chat Input"] --> R{{"Intent Router<br/>one LLM call, six routes"}}
+
+  R -->|Quality procedure| PS["Procedure Specialist"]
+  PS -.->|tool| QD[("Qdrant<br/>arkon-knowledge")]
+  PS --> O1["Procedure Answer"]
+
+  R -->|Incident status| IS["Incident Specialist"]
+  IS -.->|tool| API2["(2) incident status API"]
+  IS --> O2["Incident Answer"]
+
+  R -->|Shift briefing| SUB["Arkon_Shift_Briefing<br/>sub-flow, no agent on this canvas"]
+  SUB -.->|tool| API2
+  SUB --> O3["Briefing Answer"]
+
+  R -->|Escalation request| GATE{"HUMAN APPROVAL GATE<br/>Approve / Reject"}
+  GATE -->|Approve| ES["Escalation Specialist"]
+  ES -.->|tool| API3["(3) escalation record API"]
+  ES --> O4["Escalation Answer"]
+  GATE -->|Reject| DEC["Escalation Declined"] --> O5["Declined Answer"]
+
+  R -->|Out of scope| O6["What I can help with"]
+  R -->|Unclear request| O7["Unclear Answer"]
+```
+
+**The last two routes carry a fixed message on the router itself**, so each
+reaches its output with no agent in between and no second model call. They are
+two routes rather than one because the operator is owed the right reason: out of
+scope means the subject is not covered, unclear means it is Arkon work with a
+piece missing, and answering the second as the first teaches people to stop
+asking.
+
+**The briefing has its own branch for a different reason.** Reaching it as a
+tool of the incident specialist put a fixed four-block format inside an agent
+whose job is to answer in its own words: the operator got the briefing twice,
+and the paraphrase relabelled an incident's age as an overdue figure. A
+component whose value is its exact output must not be reached through something
+that rewords.
+
+**Where the two systems meet is one file and three URLs.** n8n owns the incident
+store; Langflow never touches it. The assistant only ever sees what an endpoint
+chooses to return, which is why the store can change shape without touching the
+canvas, and why the assistant cannot invent a status: it has no other source.
+
+**Two host settings make the arrows work**, and neither is obvious from an error
+message. n8n carries the Docker network alias `n8n.arkon.internal`, because
+Langflow's API Request component validates URLs with `validators.url()` and
+rejects any hostname without a dot. And Langflow runs with
+`LANGFLOW_SSRF_ALLOWED_HOSTS=n8n.arkon.internal`, because it blocks outbound
+calls into private IP ranges by default. Details in `n8n/README.md` and
+`langflow/README.md`.
+
+**Direction of trust.** Everything the assistant can change goes through
+endpoint 3, and endpoint 3 is reachable only from the Approve branch of the
+human gate. Telegram is wired to endpoint 1 only, so no message reaches a person
+because of anything the assistant did.
+
+---
+
+
 ## What it looks like running
 
 Photographs of the deployment, not mockups. `py tools/make_ui_screenshots.py`
@@ -86,6 +266,182 @@ opens that incident on the page above, and a drafted note for the transition for
 ![The cockpit entry page](assets/ui/cockpit_home.png)
 
 ---
+
+
+## What's Built
+
+- [x] Project structure & environment setup
+- [x] Dataset downloads (all 7 datasets)
+- [x] Project Charter - risk events, P1-P4 priorities, steering-cell rules (`docs/Project_Charter.md`)
+- [x] Time Series module, first pass - CMAPSS on FD001 alone, one subset of four (LR RMSE 20.79, XGBoost RMSE 17.11). Superseded by the full-fleet model below; its metrics are kept at `models/checkpoints/cmapss/cmapss_xgb_v1_meta.json` and the notebooks that produced it were rebuilt on the fleet on 2026-08-31
+- [x] Time Series module, full fleet - all four CMAPSS subsets, 709 training engines, six operating regimes, two fault modes, with temporal features over a 20-cycle window. XGBoost RMSE 11.01 on the benchmark task over 707 held-out engines, scoring the hardest subset about as well as the easiest (`notebooks/01_timeseries/cmapss_full_fleet.py`, `docs/Model_Card_CMAPSS_RUL.md`). Also built as a notebook trio that reproduces the deployed model without importing from the training script: nine measurements compared, none moved
+- [x] Risk-event layer - schema, validator and six adapters, one per built module, all publishing the same contract (`events/`)
+- [x] n8n Quality Steering Cell - deployed on the NAS and verified end to end: contract validation, 24 h duplicate suppression, JSONL incident store, Telegram cards for P1 and P2 (`n8n/`)
+- [x] Operating documentation - CMAPSS model card and Steering Cell SOP (`docs/`)
+- [x] **Tabular module - Scania APS fault classifier.** XGBoost over 170 anonymised counters, total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure, which lands between first and second of the IDA 2016 challenge's published top three on the same test set. The decision threshold is worth a factor of 3.8; every structural choice is inside the noise of the selection (`notebooks/02_ml/scania_aps.py`, `docs/Model_Card_Scania_APS.md`). Rebuilt as a notebook pair on 2026-09-01, which reproduces the deployed model exactly - 22 measurements compared, none moved - and adds the one measurement the script never ran: the textbook pipeline of median imputation, MinMax scaling and SMOTE costs 11,820 against 10,660, and the threshold grid it uses starts above the optimum of both pipelines
+- [x] **CV module - casting defect inspection.** ResNet-18 fine-tuned end to end, 0 defects missed and 7 good parts rejected on 715 test images, ROC AUC 0.9999. Its priority bands run the opposite way to the other modules, and the reason is measured (`notebooks/03_cv/01_casting_defects/casting_cv.py`, `docs/Model_Card_Casting_CV.md`). Rebuilt as a notebook trio on 2026-09-01, which found two things the script never checked. **The published train and test folders share 64 byte-identical images, all of them good parts**, 55 of which were fitted on: recall is untouched because no defect is duplicated, and the false-alarm rate on genuinely unseen good parts is 3.03 percent against the 2.67 percent reported. **And the experiment does not reproduce itself** - four runs from the same seed on the same machine put the operating point anywhere from 0.0436 to 0.2203, the missed defects from 0 to 2 and the good parts rejected from 2 to 11, while the frozen-backbone ablation, which trains no convolution, comes back bit-identical every time. The instability is cuDNN's convolution backward pass reaching a decision threshold that is chosen on a cost curve with no well-determined minimum
+- [x] **CV module - NEU steel surface defect types.** ResNet-18 fine-tuned end to end over six defect classes, built from scratch as a notebook trio on 2026-09-01 with no training script behind it (`notebooks/03_cv/02_neu_steel_defects/`, `docs/Model_Card_NEU_Surface.md`). **1.0000 accuracy on 360 held-out images, and the notebook is what qualifies it**: a 1-nearest-neighbour classifier over un-finetuned ImageNet features already reaches 0.9750 on the same folder, so the benchmark is close to saturated and a perfect score is evidence about the dataset before it is evidence about the model. The dataset ships no test folder, so the shipped `validation/` folder is held out and scored once, and every number says which folder produced it. Two further findings: **6.8 per cent of the images carry a second defect class the folder label discards**, which is a ceiling on any single-label model, and **the confidence band could not be calibrated at all** because the model classified all 216 selection images correctly, so its band edge is declared as an Arkon assumption rather than measured. Unlike casting the split is clean - no image crosses it on either byte equality or feature similarity, with the control measured
+- [x] **CV module - MVTec component anomaly detection.** Four detectors, one per
+component category, built from scratch as a notebook trio on 2026-09-01 with no
+training script behind it (`notebooks/03_cv/03_mvtec_anomaly/`,
+`docs/Model_Card_MVTec_Anomaly.md`). **Nothing is trained**: a frozen ImageNet
+ResNet-18, a greedy coreset of 56,960 patch vectors taken from sound parts only,
+and a nearest-neighbour distance. Mean image AUROC
+0.9817 and mean pixel AUROC
+0.9738, spanning
+0.9650 in screw to 1.0000 in
+metal_nut, and the four numbers are reported as four results because the categories
+are four imaging setups. Three findings. **The skeleton design that shipped in the
+folder reaches 0.7810 against
+0.9817**, and notebook 02 predicted that from the
+mask geometry before either was run. **The threshold is declared on sound parts
+rather than searched on scores**, which is the casting lesson applied: run twice
+from one seed the banks come back bit-identical, no test score moves and no
+decision changes, with the four thresholds shifting only in their fifth decimal,
+because there is no backward pass for the non-determinism to enter through. And
+**the benchmark ships no anomalous validation data**, so every design choice that
+reasons about defects reasons from the folder the module is scored on; the
+threshold and the memory-bank size are the two that escaped that, and the card
+names the rest
+- [x] **CV module - GC10 steel sheet defect detection.** `fasterrcnn_resnet50_fpn_v2`
+fine-tuned from COCO weights over ten defect classes, built from scratch as a notebook
+trio on 2026-09-02 (`notebooks/03_cv/04_gc10_steel_defects/`,
+`docs/Model_Card_GC10_Detection.md`). **mAP@0.5 0.6260** on 339 held-out
+sheets, and it is the only module that answers where: 350 of 544 annotated
+boxes located, 231 claimed that are not there. Four findings. **The ten folders
+are not a labelling** - one in five annotated sheets carries a class its folder never
+names, so the boxes are the label and the folder is used for nothing. **The sheet is not
+a safe split unit and the standard duplicate check cannot say so**: nothing here is
+identical, but similarity is a continuum with no gap, and the file name's middle field
+turns out to be the coil, which explains 93 per cent of the closest pairs; splitting by
+coil cut the pairs straddling the split from 777 to 53. **The event carries a list and
+the contract did not have to change**, because `evidence` was already open beyond its
+four required keys. And **a sheet with no detection publishes nothing, which is not a
+pass**: this dataset holds no sheet anyone certified clean, so the module has never seen
+sound steel and its silence is a failure to find
+- [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
+- [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six
+routes, retrieval over a Qdrant store of eight Arkon documents, a live incident lookup, a human
+approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open
+MVP criterion of charter section 10, an operational interface (`langflow/README.md`). **Since
+2026-09-05 it also hands the operator over**: an answer about a named incident ends with the
+link that opens that incident on the cockpit and a drafted note for the transition form, so the
+operator arrives with the form filled and signs it with their own name. It still cannot
+acknowledge, contain, resolve or close, and the reason is in the architecture section above: the
+timestamp has to measure the plant, not the agent. **It needs an OpenRouter credential to run at
+all** - eight nodes across the three flows hold one, and without it retrieval stops too, because a
+question is embedded at query time even though Qdrant holds the vectors. The key this deployment
+uses was issued by the course and ends with it in September 2026; replacing it is one credential
+and no node changes (`langflow/README.md`). Nothing else in the platform depends on it: the
+Steering Cell, the cockpit, the executive view, the live plant and the Tableau layer all keep
+running
+- [x] **NLP module - NHTSA consumer-complaint field quality.** TF-IDF over unigrams and
+bigrams with a one-vs-rest linear classifier over 24 component classes, built from scratch
+as a notebook trio on 2026-09-03 (`notebooks/04_nlp/01_nhtsa_complaints/`,
+`docs/Model_Card_NHTSA_Field_Quality.md`). **micro F1 0.6867, macro F1 0.6306** on 60,039
+complaints received in 2024, read from the narrative text alone. **It is the first module
+whose input is not a measurement**: a complaint is what a member of the public wrote about
+their own vehicle, so nothing it publishes is evidence that a part failed. Four findings.
+**The component column is two labellings joined on 2020-11-04** - one day on which one class stops
+and three start, an intake form changing rather than a trend - so the window begins there
+and 50,170 complaints are discarded. **The row is not the complaint and the duplication is
+exact**: 418,884 rows carry 291,999 complaints and every extra row repeats its narrative byte for
+byte. **It is the first Arkon module that reproduces exactly**, a refit moving no predicted
+probability at all. And **its events are about a signal rather than a part**, so
+3,080 manufacturer-component-month cells were tested against their own trailing baselines and
+25 published - which is also the only Arkon batch whose worth is measured, at precision
+0.520 and recall 0.684 against the identical trend run on the held-out labels
+- [x] **Incident lifecycle write path** - `POST /webhook/arkon-incident-transition`, built
+2026-09-03 (`n8n/README.md`). The Steering Cell wrote an incident once, at `new`, and
+nothing could ever move it: no response-time KPI could exist, because a KPI needs two
+timestamps and one was recorded, and all 29 incidents in the store read `new`. Transitions
+are **appended to a second log rather than rewriting the incident line**, so the store stays
+append-only and cannot race the intake workflow, and the current status of an incident is
+the fold of that log onto its line - performed identically by the three workflows that
+report a status, from one source in `n8n/build/lifecycle.py`. The machine refuses as well
+as records: an illegal move answers 409 naming the current status and what is allowed from
+it, which is a different answer from a malformed request. **One incident has now gone from
+model output to human-reviewed closure**, the Phase 4 criterion of charter section 9 and the
+last one in that document that could not be met at all
+- [~] Alert-card callbacks - charter 7.4, and it has split into a half that cannot be built
+here and a half that is built. **The buttons cannot exist on this deployment**: a Telegram
+Trigger needs a callback URL Telegram can reach, and n8n's `WEBHOOK_URL` on this NAS is the
+tailnet name, which resolves through MagicDNS only. Exposing one path through a Tailscale
+Funnel is possible and is an internet exposure, so it is a decision rather than a task. **The
+manager notification and its timer are built** as `n8n/overdue_escalation_v1.json`: a
+scheduled reader that takes the overdue decision from the status API rather than recomputing
+it, dedups from its own notification log rather than from workflow static data, and writes
+Telegram's own `message_id` on the record. Offline-checked, not deployed. What the card does
+carry instead, since 2026-09-05, is **a link that opens the cockpit's Steering Cell page on
+that one incident**, which is the same tap the buttons would have saved without the exposure
+- [ ] Queryable incident store - the charter 7.5 move to the n8n Data Table node, now paced
+by the Streamlit cockpit rather than by the lifecycle
+- [x] **Streamlit cockpit** - nine pages over the two live services and the repository's own
+tracked metrics, deployed on the NAS at `http://AK2101:8303` (`app/README.md`). The Steering Cell
+page is charter 7.5: counts by priority and lifecycle state, the response-time KPIs, and any
+incident with the history of who moved it when. **It computes no status of its own**: an
+incident's state is the transition log folded onto its record and the n8n API performs that fold,
+so the cockpit and the assistant cannot disagree. It trains, loads and scores nothing, and the
+image carries no model weight. The one rule in it that is not presentation is that a failed
+lookup and an empty result render differently, because a dashboard that draws an empty table for
+both teaches its operator that an outage looks like a quiet plant. **Since 2026-09-05 it also
+writes, and only this**: the Steering Cell page is operator-first, with a queue of what needs a
+person now, ordered overdue first, and a "Move this incident" form offering only the moves
+charter 7.2 allows from the current state. The app was read-only by design until then, and the
+consequence was that a person who received a card had no surface at all to acknowledge or close
+it. The endpoint stays the authority, the transition log stays the record, and the form records
+the name typed in as the actor - a LAN control, not an audited one
+- [x] **Tableau executive view** - the extract layer and the workbook, both generated
+(`tableau/README.md`). The extracts are four tidy fact tables refreshed from the same status
+API the cockpit and the assistant read, so all three report one state; the layer sweeps one
+lifecycle state at a time, because every incident is in exactly one, and it reports itself
+incomplete rather than silently short if the API's 50-row cap is ever hit. **The workbook is
+authored as XML by `tableau/build_workbook.py`** rather than drawn with a mouse, so it
+regenerates deterministically when the store moves, and it opens and renders in Tableau
+Public 2026.2. Two findings paid for that. **Tableau Public opens extracts only**, which is
+why the CSV connection had to become `.hyper` and why `tableauhyperapi` is a dependency. And
+**a categorical colour map is parsed and silently ignored unless the coloured field's
+`<column-instance>` is declared at datasource level** - found by letting the application
+assign the colour once, saving, and diffing, which is the only mouse step in the build. The
+first version was numerically right and visually a Tableau default; the redesign is specified
+in `tableau/Dashboard_Design.md` against sources that are cited there, and v2 implements it:
+KPI cards with context, a Z-layout at 1300 x 900, red reserved for a response window that has
+run out, parameter filters, cross-filter actions, a drill-down sheet and a phone layout.
+Publishing is Sergey's sign-in and has not been done
+- [ ] **Executive view v3** - a deeper rework of the same dashboard to a board-room bar, and
+the same design carried into an Executive page in the cockpit so there is a surface that is
+live without a publish step. Tableau Public cannot auto-refresh; the honest form of "live"
+there is regenerate, rebuild and republish
+- [x] **The live plant, the demo engine - a mini-project of its own** (`live_plant/`, built
+2026-09-05, `live_plant/README.md`). One real-model incident every ten minutes or so, drawn from
+the seven modules' own published batches and re-timed, round-robin over the modules so seven
+ticks cover every module and every department, priorities weighted by each module's published
+band mix, and a simulated crew that acknowledges, contains, resolves, closes and reopens the
+incidents it raised through the transition endpoint, so the response-time KPIs come from real
+timestamps. **Every P1 and P2 is a real Telegram card, so it is budgeted** (six an hour by
+default) and every event carries the `arkon-2026-9` id series and an `emitter` label. It keeps a
+ledger of who was told what and when, honours intake's 24-hour dedup from its own side, and its
+reset archives the store inside the n8n container rather than rewinding anything. Not an n8n
+workflow: a Python service beside the cockpit, behind a compose profile so nothing starts it by
+accident; 46 offline checks against a fake Steering Cell, and a first live run whose two cards
+were confirmed in the Telegram group. Running as a service on the NAS since 2026-09-05 18:01
+- [x] **The incident process, end to end, on one page** - `docs/Incident_Process.md`. The same
+chain for two readers, the plant floor and the boardroom: detect, publish, intake, alert,
+acknowledge inside the window or go overdue, work, close or dismiss, and one status API that
+every screen reads. Nine steps with the rule behind each and where it can be seen, then one
+live incident traced through all of them with its evidence
+
+### One deployed piece that is not an Arkon feature
+
+Ten pieces are deployed: three Langflow flows, five n8n workflows, the Streamlit
+cockpit and the live plant. Nine of them run the plant. The exception is the twelve-node
+`n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
+rather than to serve an operator, and could be deleted without loss. It is kept
+because the claim it settles is documented in `n8n/README.md` and the evidence is
+worth more than the twelve nodes cost.
+
+---
+
 
 ## Results
 
@@ -412,175 +768,6 @@ are in its model card - [CMAPSS](docs/Model_Card_CMAPSS_RUL.md),
 
 ---
 
-## Architecture
-
-```
-Arkon Manufacturing AI Platform
-│
-├── ⏱️  Time Series      Engine Testing Dept.   NASA CMAPSS       RUL Prediction
-├── 🔧  ML Classification Truck Fleet Dept.      Scania APS        Fault Detection
-├── 🔍  CV Binary         Foundry Dept.          Casting Product   Defect Detection
-├── 🔬  CV Multi-class    Rolling Mill Dept.     NEU Surface       Defect Type
-├── 🧭  CV Anomaly        Component Inspection   MVTec AD          Anomaly + Region
-├── 📦  CV Detection      Stamping Dept.         GC10-DET          Located Defects
-├── 💬  NLP Multi-label   Field Quality Dept.    NHTSA Complaints  Component + Trend
-├── 🤖  LLM / RAG         All Departments        -                 AI Chatbot
-└── 📊  BI Dashboard      Executive Level        Tableau           KPI Analytics
-```
-
-### Runtime wiring, as deployed 2026-09-05
-
-The map above is the capability plan. This is what actually runs, and how the
-pieces reach each other. Three things put work into the system - a batch of risk
-events scored on the laptop, the live plant emitting one re-timed real event
-every ten minutes or so on the NAS itself, and an operator asking a question -
-and every one of them lands on the NAS, which owns every store.
-
-**The division of labour between the two operator surfaces is the thing to read
-off this diagram.** The cockpit is where an incident is moved: it is the only
-consumer that writes a transition, and it writes nothing else. The assistant
-never touches the store; it reads through the same status endpoint the screens
-read, answers from the ten documents in Qdrant, and holds exactly one write of
-its own, the escalation record, behind a human approval gate. So the cockpit
-answers what and who, the assistant answers why and what the rule says, and
-neither can contradict the other about a status because neither computes one.
-
-**The assistant hands the operator to the cockpit rather than acting for them,
-and that boundary was decided rather than inherited (2026-09-05).** The obvious
-next feature is to let the assistant acknowledge and close, and it is declined
-for a reason that is a measurement rather than a preference: an acknowledgement
-is the claim that a named person has seen an incident and taken it, and the
-response-time KPI this platform puts in red is measured from that timestamp. An
-agent that acknowledges turns a median response time into a measurement of the
-agent, and the number survives while its meaning does not, which is the failure
-mode this project keeps naming. The quality-management reading is the same one:
-a nonconformance disposition has a human owner, and an agent closing one is what
-an IATF audit writes up. There is a build cost as well, recorded in
-`langflow/README.md`: a canvas holding a Human Input node cannot be run through
-`/api/v1/run` at all, so a second gated write breaks every existing v1 caller.
-
-So the assistant does the half it is good at and stops there. It answers what the
-rule says and what the model can and cannot claim, then hands over **the link
-that opens that incident on the cockpit and a drafted note for the transition
-form**. The operator arrives with the form already filled and puts their own name
-on it. The agent prepares the decision; the person signs it, and the timestamp
-still measures the plant.
-
-```mermaid
-flowchart TB
-  subgraph LAPTOP["Laptop, offline and on demand"]
-    direction LR
-    DATA[("CMAPSS / Scania<br/>Casting images")] --> MODEL["Model<br/>XGBoost, ResNet-18"] --> EV["Risk events<br/>events/out/*.jsonl"]
-  end
-
-  OP(["Operator, in a browser"])
-
-  subgraph NAS["NAS AK2101, docker network msit"]
-    W1["(1) POST /webhook/arkon-event<br/>Quality Steering Cell<br/>validate, dedup 24h, record"]
-    ASSIST["Arkon Quality Assistant<br/>Langflow, 19 nodes"]
-    COCK["Arkon cockpit<br/>Streamlit, 9 pages<br/>AK2101:8303"]
-    W2["(2) GET /webhook/arkon-incident-status<br/>200 ok, 200 no_match,<br/>400 rejected, 503 unavailable"]
-    W3["(3) POST /webhook/arkon-escalation<br/>the assistant's only write"]
-    W4["(4) POST /webhook/arkon-incident-transition<br/>the lifecycle<br/>200, 400, 404, 409, 503"]
-    LP["Live plant<br/>one re-timed real event<br/>every ~10 min, plus a crew"]
-    QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 245 chunks")]
-    INC[("incidents.jsonl")]
-    TRN[("incident_transitions.jsonl")]
-    ESC[("escalations.jsonl")]
-    TG["Telegram<br/>P1 and P2 only"]
-
-    W1 -- alerts --> TG
-    W1 -- "writes, once, at new" --> INC
-    LP -- "emits" --> W1
-    LP -- "the crew moves them" --> W4
-    ASSIST -- retrieval --> QD
-    ASSIST -- lookup --> W2
-    ASSIST -- escalate --> W3
-    W2 -- reads --> INC
-    W2 -- "folds" --> TRN
-    COCK -- lookup --> W2
-    COCK -- "acknowledge, contain,<br/>resolve, close" --> W4
-    COCK -- chat --> ASSIST
-    W3 -- appends --> ESC
-    W3 -- "folds" --> TRN
-    W4 -- appends --> TRN
-    W4 -- reads --> INC
-  end
-
-  subgraph EXEC["Executive view, refreshed on demand"]
-    TAB["tableau/build_extracts.py<br/>then build_workbook.py"]
-  end
-
-  EV -- "HTTP POST, one per event" --> W1
-  TG -- "the card links to<br/>this one incident" --> COCK
-  OP -- "asks why, and what the rule says" --> ASSIST
-  OP -- "watches, and moves incidents" --> COCK
-  W2 -- "extract refresh" --> TAB
-```
-
-The assistant reaches the incident store only through endpoint 2, so it cannot
-invent a status: it has no other source. Inside the canvas, one classification
-picks one branch and the rest are deactivated.
-
-```mermaid
-flowchart TD
-  IN["Chat Input"] --> R{{"Intent Router<br/>one LLM call, six routes"}}
-
-  R -->|Quality procedure| PS["Procedure Specialist"]
-  PS -.->|tool| QD[("Qdrant<br/>arkon-knowledge")]
-  PS --> O1["Procedure Answer"]
-
-  R -->|Incident status| IS["Incident Specialist"]
-  IS -.->|tool| API2["(2) incident status API"]
-  IS --> O2["Incident Answer"]
-
-  R -->|Shift briefing| SUB["Arkon_Shift_Briefing<br/>sub-flow, no agent on this canvas"]
-  SUB -.->|tool| API2
-  SUB --> O3["Briefing Answer"]
-
-  R -->|Escalation request| GATE{"HUMAN APPROVAL GATE<br/>Approve / Reject"}
-  GATE -->|Approve| ES["Escalation Specialist"]
-  ES -.->|tool| API3["(3) escalation record API"]
-  ES --> O4["Escalation Answer"]
-  GATE -->|Reject| DEC["Escalation Declined"] --> O5["Declined Answer"]
-
-  R -->|Out of scope| O6["What I can help with"]
-  R -->|Unclear request| O7["Unclear Answer"]
-```
-
-**The last two routes carry a fixed message on the router itself**, so each
-reaches its output with no agent in between and no second model call. They are
-two routes rather than one because the operator is owed the right reason: out of
-scope means the subject is not covered, unclear means it is Arkon work with a
-piece missing, and answering the second as the first teaches people to stop
-asking.
-
-**The briefing has its own branch for a different reason.** Reaching it as a
-tool of the incident specialist put a fixed four-block format inside an agent
-whose job is to answer in its own words: the operator got the briefing twice,
-and the paraphrase relabelled an incident's age as an overdue figure. A
-component whose value is its exact output must not be reached through something
-that rewords.
-
-**Where the two systems meet is one file and three URLs.** n8n owns the incident
-store; Langflow never touches it. The assistant only ever sees what an endpoint
-chooses to return, which is why the store can change shape without touching the
-canvas, and why the assistant cannot invent a status: it has no other source.
-
-**Two host settings make the arrows work**, and neither is obvious from an error
-message. n8n carries the Docker network alias `n8n.arkon.internal`, because
-Langflow's API Request component validates URLs with `validators.url()` and
-rejects any hostname without a dot. And Langflow runs with
-`LANGFLOW_SSRF_ALLOWED_HOSTS=n8n.arkon.internal`, because it blocks outbound
-calls into private IP ranges by default. Details in `n8n/README.md` and
-`langflow/README.md`.
-
-**Direction of trust.** Everything the assistant can change goes through
-endpoint 3, and endpoint 3 is reachable only from the Approve branch of the
-human gate. Telegram is wired to endpoint 1 only, so no message reaches a person
-because of anything the assistant did.
-
----
 
 ## Datasets
 
@@ -600,179 +787,6 @@ because of anything the assistant did.
 
 ---
 
-## What's Built
-
-- [x] Project structure & environment setup
-- [x] Dataset downloads (all 7 datasets)
-- [x] Project Charter - risk events, P1-P4 priorities, steering-cell rules (`docs/Project_Charter.md`)
-- [x] Time Series module, first pass - CMAPSS on FD001 alone, one subset of four (LR RMSE 20.79, XGBoost RMSE 17.11). Superseded by the full-fleet model below; its metrics are kept at `models/checkpoints/cmapss/cmapss_xgb_v1_meta.json` and the notebooks that produced it were rebuilt on the fleet on 2026-08-31
-- [x] Time Series module, full fleet - all four CMAPSS subsets, 709 training engines, six operating regimes, two fault modes, with temporal features over a 20-cycle window. XGBoost RMSE 11.01 on the benchmark task over 707 held-out engines, scoring the hardest subset about as well as the easiest (`notebooks/01_timeseries/cmapss_full_fleet.py`, `docs/Model_Card_CMAPSS_RUL.md`). Also built as a notebook trio that reproduces the deployed model without importing from the training script: nine measurements compared, none moved
-- [x] Risk-event layer - schema, validator and six adapters, one per built module, all publishing the same contract (`events/`)
-- [x] n8n Quality Steering Cell - deployed on the NAS and verified end to end: contract validation, 24 h duplicate suppression, JSONL incident store, Telegram cards for P1 and P2 (`n8n/`)
-- [x] Operating documentation - CMAPSS model card and Steering Cell SOP (`docs/`)
-- [x] **Tabular module - Scania APS fault classifier.** XGBoost over 170 anonymised counters, total cost 10,660 on the dataset's own metric of 10 per needless workshop check and 500 per missed failure, which lands between first and second of the IDA 2016 challenge's published top three on the same test set. The decision threshold is worth a factor of 3.8; every structural choice is inside the noise of the selection (`notebooks/02_ml/scania_aps.py`, `docs/Model_Card_Scania_APS.md`). Rebuilt as a notebook pair on 2026-09-01, which reproduces the deployed model exactly - 22 measurements compared, none moved - and adds the one measurement the script never ran: the textbook pipeline of median imputation, MinMax scaling and SMOTE costs 11,820 against 10,660, and the threshold grid it uses starts above the optimum of both pipelines
-- [x] **CV module - casting defect inspection.** ResNet-18 fine-tuned end to end, 0 defects missed and 7 good parts rejected on 715 test images, ROC AUC 0.9999. Its priority bands run the opposite way to the other modules, and the reason is measured (`notebooks/03_cv/01_casting_defects/casting_cv.py`, `docs/Model_Card_Casting_CV.md`). Rebuilt as a notebook trio on 2026-09-01, which found two things the script never checked. **The published train and test folders share 64 byte-identical images, all of them good parts**, 55 of which were fitted on: recall is untouched because no defect is duplicated, and the false-alarm rate on genuinely unseen good parts is 3.03 percent against the 2.67 percent reported. **And the experiment does not reproduce itself** - four runs from the same seed on the same machine put the operating point anywhere from 0.0436 to 0.2203, the missed defects from 0 to 2 and the good parts rejected from 2 to 11, while the frozen-backbone ablation, which trains no convolution, comes back bit-identical every time. The instability is cuDNN's convolution backward pass reaching a decision threshold that is chosen on a cost curve with no well-determined minimum
-- [x] **CV module - NEU steel surface defect types.** ResNet-18 fine-tuned end to end over six defect classes, built from scratch as a notebook trio on 2026-09-01 with no training script behind it (`notebooks/03_cv/02_neu_steel_defects/`, `docs/Model_Card_NEU_Surface.md`). **1.0000 accuracy on 360 held-out images, and the notebook is what qualifies it**: a 1-nearest-neighbour classifier over un-finetuned ImageNet features already reaches 0.9750 on the same folder, so the benchmark is close to saturated and a perfect score is evidence about the dataset before it is evidence about the model. The dataset ships no test folder, so the shipped `validation/` folder is held out and scored once, and every number says which folder produced it. Two further findings: **6.8 per cent of the images carry a second defect class the folder label discards**, which is a ceiling on any single-label model, and **the confidence band could not be calibrated at all** because the model classified all 216 selection images correctly, so its band edge is declared as an Arkon assumption rather than measured. Unlike casting the split is clean - no image crosses it on either byte equality or feature similarity, with the control measured
-- [x] **CV module - MVTec component anomaly detection.** Four detectors, one per
-component category, built from scratch as a notebook trio on 2026-09-01 with no
-training script behind it (`notebooks/03_cv/03_mvtec_anomaly/`,
-`docs/Model_Card_MVTec_Anomaly.md`). **Nothing is trained**: a frozen ImageNet
-ResNet-18, a greedy coreset of 56,960 patch vectors taken from sound parts only,
-and a nearest-neighbour distance. Mean image AUROC
-0.9817 and mean pixel AUROC
-0.9738, spanning
-0.9650 in screw to 1.0000 in
-metal_nut, and the four numbers are reported as four results because the categories
-are four imaging setups. Three findings. **The skeleton design that shipped in the
-folder reaches 0.7810 against
-0.9817**, and notebook 02 predicted that from the
-mask geometry before either was run. **The threshold is declared on sound parts
-rather than searched on scores**, which is the casting lesson applied: run twice
-from one seed the banks come back bit-identical, no test score moves and no
-decision changes, with the four thresholds shifting only in their fifth decimal,
-because there is no backward pass for the non-determinism to enter through. And
-**the benchmark ships no anomalous validation data**, so every design choice that
-reasons about defects reasons from the folder the module is scored on; the
-threshold and the memory-bank size are the two that escaped that, and the card
-names the rest
-- [x] **CV module - GC10 steel sheet defect detection.** `fasterrcnn_resnet50_fpn_v2`
-fine-tuned from COCO weights over ten defect classes, built from scratch as a notebook
-trio on 2026-09-02 (`notebooks/03_cv/04_gc10_steel_defects/`,
-`docs/Model_Card_GC10_Detection.md`). **mAP@0.5 0.6260** on 339 held-out
-sheets, and it is the only module that answers where: 350 of 544 annotated
-boxes located, 231 claimed that are not there. Four findings. **The ten folders
-are not a labelling** - one in five annotated sheets carries a class its folder never
-names, so the boxes are the label and the folder is used for nothing. **The sheet is not
-a safe split unit and the standard duplicate check cannot say so**: nothing here is
-identical, but similarity is a continuum with no gap, and the file name's middle field
-turns out to be the coil, which explains 93 per cent of the closest pairs; splitting by
-coil cut the pairs straddling the split from 777 to 53. **The event carries a list and
-the contract did not have to change**, because `evidence` was already open beyond its
-four required keys. And **a sheet with no detection publishes nothing, which is not a
-pass**: this dataset holds no sheet anyone certified clean, so the module has never seen
-sound steel and its silence is a failure to find
-- [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
-- [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six
-routes, retrieval over a Qdrant store of eight Arkon documents, a live incident lookup, a human
-approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open
-MVP criterion of charter section 10, an operational interface (`langflow/README.md`). **Since
-2026-09-05 it also hands the operator over**: an answer about a named incident ends with the
-link that opens that incident on the cockpit and a drafted note for the transition form, so the
-operator arrives with the form filled and signs it with their own name. It still cannot
-acknowledge, contain, resolve or close, and the reason is in the architecture section above: the
-timestamp has to measure the plant, not the agent. **It needs an OpenRouter credential to run at
-all** - eight nodes across the three flows hold one, and without it retrieval stops too, because a
-question is embedded at query time even though Qdrant holds the vectors. The key this deployment
-uses was issued by the course and ends with it in September 2026; replacing it is one credential
-and no node changes (`langflow/README.md`). Nothing else in the platform depends on it: the
-Steering Cell, the cockpit, the executive view, the live plant and the Tableau layer all keep
-running
-- [x] **NLP module - NHTSA consumer-complaint field quality.** TF-IDF over unigrams and
-bigrams with a one-vs-rest linear classifier over 24 component classes, built from scratch
-as a notebook trio on 2026-09-03 (`notebooks/04_nlp/01_nhtsa_complaints/`,
-`docs/Model_Card_NHTSA_Field_Quality.md`). **micro F1 0.6867, macro F1 0.6306** on 60,039
-complaints received in 2024, read from the narrative text alone. **It is the first module
-whose input is not a measurement**: a complaint is what a member of the public wrote about
-their own vehicle, so nothing it publishes is evidence that a part failed. Four findings.
-**The component column is two labellings joined on 2020-11-04** - one day on which one class stops
-and three start, an intake form changing rather than a trend - so the window begins there
-and 50,170 complaints are discarded. **The row is not the complaint and the duplication is
-exact**: 418,884 rows carry 291,999 complaints and every extra row repeats its narrative byte for
-byte. **It is the first Arkon module that reproduces exactly**, a refit moving no predicted
-probability at all. And **its events are about a signal rather than a part**, so
-3,080 manufacturer-component-month cells were tested against their own trailing baselines and
-25 published - which is also the only Arkon batch whose worth is measured, at precision
-0.520 and recall 0.684 against the identical trend run on the held-out labels
-- [x] **Incident lifecycle write path** - `POST /webhook/arkon-incident-transition`, built
-2026-09-03 (`n8n/README.md`). The Steering Cell wrote an incident once, at `new`, and
-nothing could ever move it: no response-time KPI could exist, because a KPI needs two
-timestamps and one was recorded, and all 29 incidents in the store read `new`. Transitions
-are **appended to a second log rather than rewriting the incident line**, so the store stays
-append-only and cannot race the intake workflow, and the current status of an incident is
-the fold of that log onto its line - performed identically by the three workflows that
-report a status, from one source in `n8n/build/lifecycle.py`. The machine refuses as well
-as records: an illegal move answers 409 naming the current status and what is allowed from
-it, which is a different answer from a malformed request. **One incident has now gone from
-model output to human-reviewed closure**, the Phase 4 criterion of charter section 9 and the
-last one in that document that could not be met at all
-- [~] Alert-card callbacks - charter 7.4, and it has split into a half that cannot be built
-here and a half that is built. **The buttons cannot exist on this deployment**: a Telegram
-Trigger needs a callback URL Telegram can reach, and n8n's `WEBHOOK_URL` on this NAS is the
-tailnet name, which resolves through MagicDNS only. Exposing one path through a Tailscale
-Funnel is possible and is an internet exposure, so it is a decision rather than a task. **The
-manager notification and its timer are built** as `n8n/overdue_escalation_v1.json`: a
-scheduled reader that takes the overdue decision from the status API rather than recomputing
-it, dedups from its own notification log rather than from workflow static data, and writes
-Telegram's own `message_id` on the record. Offline-checked, not deployed. What the card does
-carry instead, since 2026-09-05, is **a link that opens the cockpit's Steering Cell page on
-that one incident**, which is the same tap the buttons would have saved without the exposure
-- [ ] Queryable incident store - the charter 7.5 move to the n8n Data Table node, now paced
-by the Streamlit cockpit rather than by the lifecycle
-- [x] **Streamlit cockpit** - nine pages over the two live services and the repository's own
-tracked metrics, deployed on the NAS at `http://AK2101:8303` (`app/README.md`). The Steering Cell
-page is charter 7.5: counts by priority and lifecycle state, the response-time KPIs, and any
-incident with the history of who moved it when. **It computes no status of its own**: an
-incident's state is the transition log folded onto its record and the n8n API performs that fold,
-so the cockpit and the assistant cannot disagree. It trains, loads and scores nothing, and the
-image carries no model weight. The one rule in it that is not presentation is that a failed
-lookup and an empty result render differently, because a dashboard that draws an empty table for
-both teaches its operator that an outage looks like a quiet plant. **Since 2026-09-05 it also
-writes, and only this**: the Steering Cell page is operator-first, with a queue of what needs a
-person now, ordered overdue first, and a "Move this incident" form offering only the moves
-charter 7.2 allows from the current state. The app was read-only by design until then, and the
-consequence was that a person who received a card had no surface at all to acknowledge or close
-it. The endpoint stays the authority, the transition log stays the record, and the form records
-the name typed in as the actor - a LAN control, not an audited one
-- [x] **Tableau executive view** - the extract layer and the workbook, both generated
-(`tableau/README.md`). The extracts are four tidy fact tables refreshed from the same status
-API the cockpit and the assistant read, so all three report one state; the layer sweeps one
-lifecycle state at a time, because every incident is in exactly one, and it reports itself
-incomplete rather than silently short if the API's 50-row cap is ever hit. **The workbook is
-authored as XML by `tableau/build_workbook.py`** rather than drawn with a mouse, so it
-regenerates deterministically when the store moves, and it opens and renders in Tableau
-Public 2026.2. Two findings paid for that. **Tableau Public opens extracts only**, which is
-why the CSV connection had to become `.hyper` and why `tableauhyperapi` is a dependency. And
-**a categorical colour map is parsed and silently ignored unless the coloured field's
-`<column-instance>` is declared at datasource level** - found by letting the application
-assign the colour once, saving, and diffing, which is the only mouse step in the build. The
-first version was numerically right and visually a Tableau default; the redesign is specified
-in `tableau/Dashboard_Design.md` against sources that are cited there, and v2 implements it:
-KPI cards with context, a Z-layout at 1300 x 900, red reserved for a response window that has
-run out, parameter filters, cross-filter actions, a drill-down sheet and a phone layout.
-Publishing is Sergey's sign-in and has not been done
-- [ ] **Executive view v3** - a deeper rework of the same dashboard to a board-room bar, and
-the same design carried into an Executive page in the cockpit so there is a surface that is
-live without a publish step. Tableau Public cannot auto-refresh; the honest form of "live"
-there is regenerate, rebuild and republish
-- [x] **The live plant, the demo engine - a mini-project of its own** (`live_plant/`, built
-2026-09-05, `live_plant/README.md`). One real-model incident every ten minutes or so, drawn from
-the seven modules' own published batches and re-timed, round-robin over the modules so seven
-ticks cover every module and every department, priorities weighted by each module's published
-band mix, and a simulated crew that acknowledges, contains, resolves, closes and reopens the
-incidents it raised through the transition endpoint, so the response-time KPIs come from real
-timestamps. **Every P1 and P2 is a real Telegram card, so it is budgeted** (six an hour by
-default) and every event carries the `arkon-2026-9` id series and an `emitter` label. It keeps a
-ledger of who was told what and when, honours intake's 24-hour dedup from its own side, and its
-reset archives the store inside the n8n container rather than rewinding anything. Not an n8n
-workflow: a Python service beside the cockpit, behind a compose profile so nothing starts it by
-accident; 46 offline checks against a fake Steering Cell, and a first live run whose two cards
-were confirmed in the Telegram group. Running as a service on the NAS since 2026-09-05 18:01
-- [x] **The incident process, end to end, on one page** - `docs/Incident_Process.md`. The same
-chain for two readers, the plant floor and the boardroom: detect, publish, intake, alert,
-acknowledge inside the window or go overdue, work, close or dismiss, and one status API that
-every screen reads. Nine steps with the rule behind each and where it can be seen, then one
-live incident traced through all of them with its evidence
-
-### One deployed piece that is not an Arkon feature
-
-Ten pieces are deployed: three Langflow flows, five n8n workflows, the Streamlit
-cockpit and the live plant. Nine of them run the plant. The exception is the twelve-node
-`n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
-rather than to serve an operator, and could be deleted without loss. It is kept
-because the claim it settles is documented in `n8n/README.md` and the evidence is
-worth more than the twelve nodes cost.
-
----
 
 ## Planned Extensions
 
@@ -806,6 +820,7 @@ and live in the cockpit at `/executive`.
 
 ---
 
+
 ## Stack
 
 ```
@@ -833,6 +848,7 @@ plan and belong to nothing that is deployed: the assistant runs on Langflow over
 Qdrant and reaches n8n over HTTP.
 
 ---
+
 
 ## Setup
 
@@ -862,6 +878,7 @@ streamlit run app/main.py
 ```
 
 ---
+
 
 ## Tests
 
@@ -911,6 +928,7 @@ and the notebooks reproduce them.
 
 ---
 
+
 ## MLflow - Experiment Tracking
 
 All model training runs are logged automatically to a local SQLite database.
@@ -940,6 +958,7 @@ version of it named runs that no experiment contained and two experiments that h
 never been created.
 
 ---
+
 
 ## Project Structure
 
@@ -993,6 +1012,7 @@ arkon-manufacturing-ai/
 
 ---
 
+
 ## Author
 
 **Sergey Kasatov** - Data Analyst, previously seventeen years in automotive
@@ -1006,7 +1026,11 @@ github.com/sergey-kasatov · linkedin.com/in/sergey-kasatov
 
 ---
 
+
 ## License
 
-For portfolio and educational purposes only.
-Datasets are subject to their original licenses - see each dataset source.
+Released under the MIT License - see [LICENSE](LICENSE).
+
+The seven datasets keep their own licences and are not redistributed here;
+`data/download_datasets.sh` fetches them from their sources and `data/README.md`
+names each one.

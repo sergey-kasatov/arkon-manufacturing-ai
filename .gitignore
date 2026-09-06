@@ -71,3 +71,7 @@ tableau/~*.twbr
 # The live plant's ledger: what live_plant/plant.py sent, what intake answered and
 # what the crew moved. Runtime state of one machine, like the n8n counters.
 live_plant/state/
+
+# Agent instructions. Kept locally and read by Claude Code; not part of
+# what this repository is for, and it was the first file a reader met.
+CLAUDE.md
