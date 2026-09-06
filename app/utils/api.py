@@ -209,13 +209,20 @@ def sessions(flow=None, limit=25):
                      if line.strip() and not line.strip().startswith("[operator:")]
             entry["preview"] = (lines[0] if lines else text.splitlines()[0])[:60]
 
-    # The scripted sessions this repository's own tools create. Named rather than
-    # pattern-matched on purpose: a filter that guessed would eventually hide a real
-    # conversation, and being wrong in that direction is the expensive one.
-    SCRIPTED = ("modelcheck-", "handover-check-", "route-fix-", "role-fix-", "greet-test-",
-                "ident-", "diag-", "restore-check", "cockpit-check-", "cockpit-smoke-",
-                "p1-retest-", "final-smoke-", "demo-rehearsal-")
-    human = [s for s in grouped.values() if not s["id"].startswith(SCRIPTED)]
+    # Only the sessions this app created. `cockpit-` is a marker the page writes
+    # itself, not a guess about somebody's naming, so this is inclusive by evidence
+    # rather than exclusive by blocklist - and the first version got that backwards.
+    # It listed thirteen known scripted prefixes and excluded those, on the reasoning
+    # that a filter which guessed would eventually hide a real conversation. The
+    # reasoning was right and the tool was wrong: this flow carries 109 sessions past
+    # that blocklist, of which 5 were started by a person, so the operator's own
+    # conversations were pushed off the end of the list by sprint1, phase2, probe,
+    # smoke, verify and two dozen other build scripts. A blocklist has to know every
+    # name that will ever exist; a marker only has to be written once.
+    #
+    # The two scripted sessions that DO carry the prefix - `cockpit-check-` and
+    # `cockpit-smoke-` - are the price, and they are two rows rather than a hundred.
+    human = [s for s in grouped.values() if s["id"].startswith("cockpit-")]
     human.sort(key=lambda s: s["last"], reverse=True)
     return human[:limit]
 
