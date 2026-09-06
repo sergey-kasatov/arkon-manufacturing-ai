@@ -31,12 +31,17 @@ jobs:
 
       # The generator's own claim is that the same extracts produce a byte-identical
       # workbook. That is checked here rather than asserted in a README, using the
-      # extracts committed with the repository.
+      # CSVs committed with the repository.
+      #
+      # Deliberately without --skip-extracts: the .hyper files are build outputs and
+      # are gitignored, so a fresh clone has nothing to reuse and the flag fails. The
+      # full build reads the tracked CSVs and writes the extracts itself; it does not
+      # reach the Steering Cell, which is build_extracts.py's job.
       - name: Rebuild the workbook twice and compare
         run: |
-          python tableau/build_workbook.py --skip-extracts
+          python tableau/build_workbook.py
           sha256sum tableau/Arkon_Executive_View.twb > first.sha
-          python tableau/build_workbook.py --skip-extracts
+          python tableau/build_workbook.py
           sha256sum -c first.sha
 
       # Rule of the repository: no em dash, no curly quotes, no ellipsis in
