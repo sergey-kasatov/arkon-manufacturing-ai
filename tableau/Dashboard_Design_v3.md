@@ -503,9 +503,10 @@ picked on Explore change the Executive numbers behind the presenter's back. The
 generator therefore emits the four cards and the aging profile twice under two
 names, and the suite asserts that no sheet is on both dashboards.
 
-**Filter cards, not parameters.** The three Explore controls are real Tableau filters
-in Multiple Values (Dropdown) mode: a caret, a list that opens, "(All)" and a check per
-member. In the XML that is a `type-v2='filter'` zone with `mode='checkdropdown'` on
+**Filter cards, not parameters.** The three Explore controls are real Tableau filters:
+Priority and Status in Multiple Values (Dropdown) mode, a caret, a list that opens,
+"(All)" and a check per member; Model as a Single Value (Dropdown), which Sergey set in
+the application on 2026-09-06 and the generator now writes (`mode='dropdown'`). In the XML that is a `type-v2='filter'` zone with `mode='checkdropdown'` on
 the dashboard and, on every sheet the card must move, a categorical `<filter>`
 carrying the same `filter-group` id with a `level-members` group filter (the "(All)"
 state). Priority set to P1 moved all seven Explore panels and none of the Executive

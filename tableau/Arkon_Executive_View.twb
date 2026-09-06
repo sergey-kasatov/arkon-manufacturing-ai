@@ -2795,7 +2795,7 @@
                 <format attr='margin' value='4' />
               </zone-style>
             </zone>
-            <zone fixed-size='300' h='6222' id='218' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:source_module:nk]' type-v2='filter' values='database' w='19330' x='29639' y='9333'>
+            <zone fixed-size='300' h='6222' id='218' is-fixed='true' mode='dropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:source_module:nk]' type-v2='filter' values='database' w='19330' x='29639' y='9333'>
               <zone-style>
                 <format attr='border-color' value='#000000' />
                 <format attr='border-style' value='none' />

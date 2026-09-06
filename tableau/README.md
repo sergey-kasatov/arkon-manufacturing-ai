@@ -146,7 +146,7 @@ that plant.
 | Band | What it shows | Where the number comes from |
 |---|---|---|
 | Header | the title, one line of instructions, the same "as of" stamp | text; the status sentence is left off, because a sentence about the whole store would contradict a filtered page one click later |
-| Filters | Priority, Model, Status as Multiple Values (Dropdown) cards | real Tableau filters on `priority`, `source_module` and `status`, one `filter-group` each, carried by all seven Explore sheets |
+| Filters | Priority and Status as Multiple Values (Dropdown) cards, Model as a Single Value (Dropdown) at Sergey's choice | real Tableau filters on `priority`, `source_module` and `status`, one `filter-group` each, carried by all seven Explore sheets |
 | The four cards | the same four BANs, recomputed from the rows the filters leave | the same calculations, on the Explore copies of the card sheets |
 | Where the backlog is | the same aging profile, filtered and clickable | the Explore copy of the aging sheet |
 | Which models raise the work | composition by model, sorted, seven rows with the height to be read | `COUNT([incident_id])` by `source_module`; `nhtsa_nlp` is a count of signals, not parts |

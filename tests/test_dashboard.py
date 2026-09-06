@@ -262,7 +262,8 @@ def test_the_explore_view_has_three_real_filter_cards(workbook):
     explore = workbook.find("./dashboards/dashboard[@name='%s']" % gen.DASH_EXPLORE)
     desktop = explore.find("zones")
     cards = [z for z in desktop.iter("zone") if z.get("type-v2") == "filter"]
-    assert [z.get("mode") for z in cards] == ["checkdropdown"] * 3
+    # Model is a Single Value (Dropdown) at Sergey's choice; the other two select several.
+    assert [z.get("mode") for z in cards] == ["checkdropdown", "dropdown", "checkdropdown"]
     assert [z.get("param").split(".")[-1] for z in cards] == [
         "[none:priority:nk]", "[none:source_module:nk]", "[none:status:nk]"]
     assert not [z for z in explore.iter("zone") if z.get("type-v2") == "paramctrl"]

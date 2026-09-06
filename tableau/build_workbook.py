@@ -1821,7 +1821,10 @@ def build(skip_extracts=False, phone=True, actions=True):
     x_zones.extend(flow_zone(215, x_filters, "horz", [
         text_zone(216, xf_label, filter_label, fixed_px=160),
         filter_zone(217, xf1, priority, S_X_AGING, fixed_px=300),
-        filter_zone(218, xf2, module, S_X_AGING, fixed_px=300),
+        # Sergey's choice, set by him in the application on 2026-09-06: the Model
+        # card is a Single Value (Dropdown), which is `dropdown` in the filter-card
+        # vocabulary; Priority and Status stay Multiple Values (Dropdown).
+        filter_zone(218, xf2, module, S_X_AGING, fixed_px=300, mode="dropdown"),
         filter_zone(219, xf3, status, S_X_AGING, fixed_px=300),
         text_zone(229, xf_slack, [run_xml(" ")]),
     ], fixed_px=56))
