@@ -371,7 +371,10 @@ Funnel is possible and is an internet exposure, so it is a decision rather than 
 manager notification and its timer are built** as `n8n/overdue_escalation_v1.json`: a
 scheduled reader that takes the overdue decision from the status API rather than recomputing
 it, dedups from its own notification log rather than from workflow static data, and writes
-Telegram's own `message_id` on the record. Offline-checked, not deployed. What the card does
+Telegram's own `message_id` on the record. Offline-checked, and **deployed 2026-09-06**: two
+runs, six cards, and the first run found that the record read the message id off the Bot API
+envelope rather than its `result`, fixed and re-deployed the same evening (`n8n/README.md`,
+"Overdue escalation"). What the card does
 carry instead, since 2026-09-05, is **a link that opens the cockpit's Steering Cell page on
 that one incident**, which is the same tap the buttons would have saved without the exposure
 - [ ] Queryable incident store - the charter 7.5 move to the n8n Data Table node, now paced
@@ -440,8 +443,8 @@ live incident traced through all of them with its evidence
 
 ### One deployed piece that is not an Arkon feature
 
-Ten pieces are deployed: three Langflow flows, five n8n workflows, the Streamlit
-cockpit and the live plant. Nine of them run the plant. The exception is the twelve-node
+Eleven pieces are deployed: three Langflow flows, six n8n workflows, the Streamlit
+cockpit and the live plant. Ten of them run the plant. The exception is the twelve-node
 `n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
 rather than to serve an operator, and could be deleted without loss. It is kept
 because the claim it settles is documented in `n8n/README.md` and the evidence is
@@ -806,10 +809,10 @@ BI dashboard, the one that was never a model, and it was built on 2026-09-05
 
 What is left is not a module. It is depth on what exists:
 
-- **The manager-notification timer**, built and offline-checked in
-  `n8n/overdue_escalation_v1.json` and not deployed. Its sibling half, callback
-  buttons on the Telegram card, is closed on this deployment: n8n's `WEBHOOK_URL` is
-  tailnet-only, so a button has nothing reachable to call.
+- **Callback buttons on the Telegram card**, the half of charter 7.4 that stays closed
+  on this deployment: n8n's `WEBHOOK_URL` is tailnet-only, so a button has nothing
+  reachable to call. The other half, the manager-notification timer, is deployed since
+  2026-09-06 (`n8n/README.md`, "Overdue escalation").
 - **Charter 7.6 intake outcomes.** The webhook has three and writes one down, so
   duplicate suppression cannot be counted and a validation regression looks exactly
   like a quiet plant from every screen.
@@ -980,7 +983,7 @@ arkon-manufacturing-ai/
 ├── docs/                       Charter, SOP and one model card per module
 ├── events/                     The shared event contract and the adapters
 ├── langflow/                   The assistant canvas, its prompts and build scripts
-├── n8n/                        The five workflows, their generators and probes
+├── n8n/                        The six workflows, their generators and probes
 ├── live_plant/                 The demo engine, a mini-project: real-model incidents on a clock plus the crew (live_plant/README.md)
 ├── tableau/                    The executive view: the extract layer, the workbook generator and its design specification (tableau/README.md)
 ├── assets/                     Saved plots for README and Streamlit

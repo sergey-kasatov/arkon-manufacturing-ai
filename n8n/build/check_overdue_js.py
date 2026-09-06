@@ -10,6 +10,10 @@ imported - and runs it under node against cases written out by hand.
 The selection decides who gets a message in a real chat, and it is capped, so the
 two failure modes worth catching offline are a run that notifies nobody when
 something is overdue and a run that notifies the same incident twice.
+The record builder is checked too, against the reply shape the Telegram node
+actually returns: on the first live run (execution 7800, 2026-09-06) every record
+carried a null message id because the code had read the Bot API envelope instead
+of its `result`, and nothing offline had exercised that node.
 
     python n8n/build/check_overdue_js.py
 """
@@ -144,6 +148,29 @@ check("the card names the notification id", escaped[0].json.alert_text.includes(
 // -- nothing to do -------------------------------------------------------
 check("an empty store selects nobody", run(api([]), "").length, 0);
 
+// -- the record, after the card ------------------------------------------
+// The Telegram node returns the Bot API envelope, `{ ok, result }`, with the
+// message id, the chat and the date inside `result`. This is the shape read out
+// of execution 7800 on 2026-09-06, the first live run, and the record must take
+// its evidence from there.
+const sentItems = (replies) => ({ all: () => replies.map((json) => ({ json })) });
+const selectedItems = (ids) => ({
+  all: () => ids.map((id) => ({
+    json: { notification: { notification_id: "ARK-NTF-0000" + id, incident_id: "ARK-INC-0000" + id, telegram_chat_id: "-5481573875", sent_at: null } },
+  })),
+});
+const envelope = { ok: true, result: { message_id: 83, chat: { id: -5481573875, title: "Arkon Quality Alerts" }, date: 1788723914 } };
+const recorded = record(() => selectedItems([1]), sentItems([envelope]));
+const firstRecord = JSON.parse(recorded[0].json.notifications_jsonl.trim().split("\n")[0]);
+check("the record carries Telegram's own message id", firstRecord.telegram_message_id, 83);
+check("the record's sent_at is Telegram's own date", firstRecord.sent_at, "2026-09-06T19:45:14.000Z");
+check("the record's chat id is the one Telegram answered with", firstRecord.telegram_chat_id, "-5481573875");
+check("one newline-terminated line per card", recorded[0].json.notifications_jsonl.endsWith("\n") && recorded[0].json.notified === 1, true);
+const bare = record(() => selectedItems([2]), sentItems([envelope.result]));
+check("a reply that already is the result object still reads", JSON.parse(bare[0].json.notifications_jsonl.trim()).telegram_message_id, 83);
+const empty = record(() => selectedItems([3]), sentItems([{}]));
+check("an empty reply records a null id rather than failing", JSON.parse(empty[0].json.notifications_jsonl.trim()).telegram_message_id, null);
+
 console.log(failures === 0 ? "\nALL PASS" : "\n" + failures + " FAILURE(S)");
 process.exit(failures === 0 ? 0 : 1);
 """
@@ -170,10 +197,13 @@ print("ok   the generator reproduces the tracked workflow byte for byte")
 
 workflow = json.loads(after.decode("utf-8"))
 select_js = code_body(workflow, "Select Overdue Incidents")
+record_js = code_body(workflow, "Build Notification Records")
 
-# The selection reads $input and $('Read Alerting Incidents'), so it runs here as
-# a function of exactly those two, which is also the whole of its interface to n8n.
-harness = "function select($, $input) {\n%s\n}\n%s" % (select_js, CASES)
+# The selection reads $input and $('Read Alerting Incidents'), and the record
+# builder reads $input and $('Select Overdue Incidents'), so each runs here as a
+# function of exactly those two, which is also the whole of its interface to n8n.
+harness = "function select($, $input) {\n%s\n}\nfunction record($, $input) {\n%s\n}\n%s" % (
+    select_js, record_js, CASES)
 
 with tempfile.TemporaryDirectory() as tmp:
     path = pathlib.Path(tmp) / "check.js"

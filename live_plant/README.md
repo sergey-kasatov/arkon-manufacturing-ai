@@ -171,8 +171,8 @@ exactly the case where the workflow said a card was sent and Telegram had refuse
 it, so a card is confirmed by a person reading the group, and the run log records
 it that way. There are two sources of notifications on this platform and they are
 not yet one log: this ledger for the intake cards, and
-`/data/arkon/incident_notifications.jsonl` for the Quality Manager cards once
-`n8n/overdue_escalation_v1.json` is deployed. Unifying them is the intake workflow
+`/data/arkon/incident_notifications.jsonl` for the Quality Manager cards, written by
+`n8n/overdue_escalation_v1.json` since 2026-09-06. Unifying them is the intake workflow
 appending its own notification line after the Telegram node, which is the one-node
 change of charter 7.6's shape and is not built.
 

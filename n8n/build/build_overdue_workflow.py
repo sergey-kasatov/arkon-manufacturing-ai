@@ -160,16 +160,21 @@ return selected.map((incident, index) => {
 """
 
 RECORD = r"""// Arkon Overdue Escalation - the record, written after the card was sent.
-// The Telegram node returns the Bot API's `result` object as the item, so
-// `message_id` is what Telegram itself assigned. Recording it here is what makes
-// this log evidence that a card exists rather than a note that one was composed.
+// The Telegram node returns the Bot API envelope as the item, `{ ok, result }`,
+// with `message_id`, `chat` and `date` inside `result`. Measured on execution
+// 7800 of 2026-09-06, the first live run: its three records carried
+// `telegram_message_id: null` because this code read the fields off the
+// envelope. Recording the id is what makes this log evidence that a card exists
+// rather than a note that one was composed, so the envelope is unwrapped here; a
+// reply that already is the result object still reads.
 const sent = $input.all();
 const selected = $('Select Overdue Incidents').all();
 
 const lines = [];
 for (let i = 0; i < selected.length; i += 1) {
   const record = { ...selected[i].json.notification };
-  const reply = sent[i]?.json ?? {};
+  const raw = sent[i]?.json ?? {};
+  const reply = raw.result && typeof raw.result === "object" ? raw.result : raw;
   record.telegram_message_id = reply.message_id ?? null;
   record.telegram_chat_id = String(reply.chat?.id ?? record.telegram_chat_id);
   record.sent_at = reply.date ? new Date(reply.date * 1000).toISOString() : new Date().toISOString();

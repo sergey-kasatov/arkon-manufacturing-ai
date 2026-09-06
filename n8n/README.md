@@ -1,8 +1,9 @@
 # n8n Quality Steering Cell
 
 Operational layer of the Arkon platform: one workflow raises incidents and
-alerts, one moves them along their lifecycle, one answers questions about them
-and one records an approved escalation. Process owner:
+alerts, one moves them along their lifecycle, one answers questions about them,
+one records an approved escalation, and one, on a timer, tells the Quality
+Manager about a P1 or P2 that nobody acknowledged inside its window. Process owner:
 `docs/Project_Charter.md` sections 7 and 8. All of them run on a self-hosted n8n
 instance, pinned to `n8nio/n8n:2.29.9`.
 
@@ -13,8 +14,9 @@ instance, pinned to `n8nio/n8n:2.29.9`.
 | `incident_status_api_v1.json` | read | `GET /webhook/arkon-incident-status` | 2026-08-30, folds transitions since 2026-09-03 |
 | `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30, folds transitions since 2026-09-03 |
 | `comparison_slice_v1.json` | read | `POST /webhook/arkon-slice` | 2026-08-30 |
+| `overdue_escalation_v1.json` | scheduled | every 15 minutes, no endpoint | 2026-09-06, record fix the same evening |
 
-**Three of the four share one piece of code.** The incident line is written once,
+**Three of the five that run the plant share one piece of code.** The incident line is written once,
 at `new`, and never rewritten, so the current status of an incident is the fold of
 the transition log onto that line. That fold lives in `n8n/build/lifecycle.py` and
 is injected verbatim into the three workflows that report a status; a state
@@ -257,14 +259,15 @@ anything but CMAPSS.
 ## Workflow ids, and the one that is not readable
 
 Every workflow file carries a fixed `id`, so `n8n import:workflow` updates the
-existing workflow instead of creating another copy. Three of them read like
-names. The fourth does not, and the reason is worth keeping:
+existing workflow instead of creating another copy. Four of them read like
+names. The fifth does not, and the reason is worth keeping:
 
 | File | id |
 |---|---|
 | `incident_status_api_v1.json` | `arkonStatusApi1` |
 | `escalation_record_v1.json` | `arkonEscalate01` |
 | `comparison_slice_v1.json` | `arkonSlice001` |
+| `overdue_escalation_v1.json` | `arkonOverdue01` |
 | `quality_steering_cell_v1.json` | **`o0vXtlRWIs9yFrUJ`** |
 
 **The steering cell keeps the id n8n generated for it, because that row is where
@@ -432,9 +435,11 @@ so they are recorded with their real cause.
 
 ### Known boundaries of v1
 
-- Acknowledge and close buttons on the alert card and the escalation timer are
-  the next iteration: they need a Telegram Trigger node for callback handling and
-  a Wait-based escalation branch (charter 7.4). **There is now something behind
+- Acknowledge and close buttons on the alert card are closed on this deployment:
+  they need a Telegram Trigger node, and n8n's `WEBHOOK_URL` here is tailnet-only,
+  so Telegram has nothing reachable to call. The escalation timer of charter 7.4
+  is deployed since 2026-09-06 as its own scheduled workflow ("Overdue escalation"
+  below) and needed no Wait-based branch in this one. **There is now something behind
   those buttons**, which there was not until 2026-09-03: the lifecycle write path
   below. This workflow itself still only ever writes an incident at `new`, and
   that is correct - raising is its job and moving is the other endpoint's.
@@ -917,7 +922,8 @@ to `closed`.
   close buttons charter 7.4 describes on the Telegram card still do not exist:
   they need a Telegram Trigger node for callback handling, and there is now
   something behind them for the first time. The unacknowledged-incident timer and
-  the manager notification are the same iteration.
+  the manager notification exist since 2026-09-06 ("Overdue escalation" below);
+  they read this endpoint's effect through the status API and never call it.
 - **It cannot verify who the actor is.** The endpoint records the `actor` value
   its caller sends, exactly as the escalation record does with `approved_by`. In
   production this endpoint would check a signed token.
@@ -930,6 +936,122 @@ to `closed`.
   the assistant's one action stays the guarded escalation. What did change is what
   it can *report*, because the status API it already reads now returns real
   statuses and response times.
+
+## Overdue escalation (scheduled reader)
+
+Sixth workflow, `overdue_escalation_v1.json`, built 2026-09-05, workflow id
+`arkonOverdue01`, **deployed 2026-09-06**. It is the timer half of charter 7.4: a
+P1 or P2 that is still `new` past its charter 7.1 window puts a card in front of
+the Quality Manager. It is a scheduled reader rather than an endpoint: every 15
+minutes it answers nobody and writes one file.
+
+```text
+Schedule, every 15 minutes
+  -> GET /webhook/arkon-incident-status?status=new&priority=P1,P2&limit=50
+                                                 (halt on an unavailable API)
+  -> Read /data/arkon/incident_notifications.jsonl   (halt if unreadable)
+  -> Select: overdue per the API, not yet in the log, oldest wait first, at most 3
+  -> Telegram card to the alert group, one per incident
+  -> Append one record per card, carrying Telegram's own message_id
+```
+
+Three decisions are worth reading before the generator,
+`n8n/build/build_overdue_workflow.py`.
+
+- **The overdue decision is not made here.** The status API already computes
+  `overdue` from the windows in `lifecycle.py`, so the timer reads that flag. A
+  fourth copy of the rule is what `lifecycle.py` exists to prevent, and a timer
+  that disagreed with the API about what is overdue would be the worse kind of
+  wrong: both numbers would look reasonable.
+- **Dedup is the notification log, not workflow static data.** An import rewrites
+  `staticData`, and both counters this project keeps there have had to be carried
+  across a deploy by hand; a log that is read back cannot be rewound by a deploy,
+  and it is also the evidence. So a re-import of this workflow is safe, and the
+  deploy copy below carries no counter.
+- **Three cards per run, longest wait first.** The alert group is a real chat and
+  the store can hold a backlog of never-acknowledged incidents, so a run works
+  through the backlog rather than emptying it in one burst; the first live run
+  found 14 waiting and sent three, and the record says so (`candidates_overdue`,
+  `selection_capped`). The API pages at 50 and ranks by recency, so a store with
+  more than 50 open alerting incidents would hide the oldest, the very ones this
+  workflow exists to surface; that cannot be fixed from this side, so
+  `selection_truncated` is written on every record of a truncated run instead.
+
+The record, one JSON line per card in `/data/arkon/incident_notifications.jsonl`:
+the notification id (`ARK-NTF-*`, continuing from the highest in the log), the
+incident with its priority, raise time and status, the minutes unacknowledged and
+overdue against its window, the notified role and the escalation contact, the
+chat id and **Telegram's own `message_id` and `date`**, the run time, the three
+selection facts above, and `context_origin: simulated` for the people named.
+
+### Deploying it
+
+It carries a credential, and that is the one thing a plain import cannot bind:
+the tracked file names `Arkon Telegram Bot`, and n8n binds by internal id. So the
+deploy copy carries the id, read out of the live steering cell rather than
+guessed, and differs from the tracked file in exactly that one key:
+
+```bash
+# on the NAS, once: the export the id is read from, and the log the append node cannot create
+docker exec n8n n8n export:workflow --id=o0vXtlRWIs9yFrUJ --output=/data/arkon/_predeploy_<date>/steering_cell.json
+docker exec n8n touch /data/arkon/incident_notifications.jsonl
+# on the laptop: overdue_escalation_v1.deploy.json is the tracked file with
+#   "telegramApi": {"id": "<id from the export>", "name": "Arkon Telegram Bot"}
+# copied under /volume1/docker/arkon/_deploy/ (the bind mount, so docker cp is not needed), then:
+docker exec n8n n8n import:workflow --input=/data/arkon/_deploy/overdue_escalation_v1.deploy.json
+docker exec n8n n8n publish:workflow --id=arkonOverdue01
+docker restart n8n
+```
+
+`docker` runs without `sudo` for the NAS user, measured 2026-09-06, which is why
+this deploy was scripted end to end over SSH where the earlier ones were typed in
+a terminal on the NAS. The restart is the same non-optional step as for every CLI
+import. Proof of activation is the line `Activated workflow "Arkon Overdue
+Escalation v1"` in `docker logs n8n`; proof of function is the first quarter-hour
+tick. Rollback is `docker exec n8n n8n unpublish:workflow --id=arkonOverdue01`
+and a restart; the CLI has no delete.
+
+### The first two runs, and the defect the first one found
+
+**21:45, execution 7800, `success`, three cards.** `ARK-NTF-00001` to `00003` for
+`ARK-INC-00014`, `00011` and `00021`, the three longest waits among the 14 overdue
+P2 of the replayed batches of 30 August to 3 September (the live plant's crew
+acknowledges its own incidents, so none of the plant's were waiting). Telegram
+assigned them message ids 83, 84 and 85 in "Arkon Quality Alerts". **The three
+records say `telegram_message_id: null`.** The Telegram node returns the Bot API
+envelope, `{"ok": true, "result": {"message_id": ..., "chat": ..., "date": ...}}`,
+and the record builder read `message_id` off the envelope; `sent_at` fell back to
+the node's own clock, which is why all three carry one identical timestamp. Found
+by reading execution 7800's node outputs out of `execution_data` (the flatted
+JSON n8n stores), not by reading the record, which looked plausible. Fixed in the
+generator the same evening: the envelope is unwrapped, a reply that already is the
+result object still reads, six cases on exactly that shape were added to
+`check_overdue_js.py` (which had checked the selection and never the record), and
+the workflow was re-imported and published at 21:49. The three records are left as
+written: the log is append-only evidence, and execution 7800 holds the ids they
+lack.
+
+**22:00, execution 7810, `success`, three cards.** `ARK-NTF-00004` to `00006` for
+`ARK-INC-00020`, `00019` and `00026`, message ids 87, 88 and 89, each record carrying Telegram's
+`message_id` and `date` (`candidates_overdue` fell from 14 to 11, the dedup reading the first run's records back; `sent_at` is now Telegram's `date`). Delivery is attested by Telegram's own reply in both executions, one `message_id` per card; no person had read the cards off the group when this was written, and the run log says so rather than claiming it.
+
+### Known boundaries
+
+- **It notifies the group, not a person.** The card names the escalation contact
+  taken from the incident (simulated, and labelled so) and goes to the same alert
+  group the intake cards use; a corporate deployment would route it to the
+  manager's own channel.
+- **It does not repeat itself.** One card per incident, ever: an incident still
+  unacknowledged an hour after its card gets no second card. A reminder cadence is
+  a decision about the process before it is a node.
+- **It sees only the first 50**, the status API's page cap, recorded rather than
+  fixed, as above.
+- **Its log and the intake ledger are two notification sources**, not one log
+  (`live_plant/README.md`); charter 7.6's one-node change would unify them.
+- **The charter and the SOP still describe the timer as unbuilt** (charter 7.4's
+  deployment paragraph, SOP section 5). Both are ingested into the assistant's
+  knowledge store, so that edit and the store rebuild go together and are not
+  done here.
 
 ## The live plant: the demo engine, a mini-project of its own
 
@@ -947,8 +1069,8 @@ What it asks of this layer: nothing new. Every event it sends passes the section
 6 contract, carries the `arkon-2026-9xxxxx` id series and an `emitter` label in
 `operational_context`, and is answered by the same four intake outcomes as a
 replayed batch. The one thing worth knowing here is that its ledger is the second
-notification source on the platform, beside `/data/arkon/incident_notifications.jsonl`
-once the overdue timer is deployed, and the two are not one log yet.
+notification source on the platform, beside `/data/arkon/incident_notifications.jsonl`,
+which the overdue timer writes since 2026-09-06, and the two are not one log yet.
 
 ## Comparison slice (evaluation artifact, not Arkon infrastructure)
 
