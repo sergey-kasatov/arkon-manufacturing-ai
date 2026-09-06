@@ -341,6 +341,8 @@ Tableau view for the executive.
 
 ## Publishing, decided 2026-09-04
 
+**Published 2026-09-06.** The workbook is live at https://public.tableau.com/views/ArkonQualitySteeringCell/ArkonExecutiveView (the Executive view; the Explore view is the second tab, also reachable as https://public.tableau.com/views/ArkonQualitySteeringCell/ArkonExploreView). Title "Arkon Quality Steering Cell", a 218-character description with the hashtags as tags, the repository as the external link. Refreshing the published copy is the loop of "Running it live" plus one Save to Tableau Public from the application.
+
 **Sergey's decision is to publish to Tableau Public.** So the shape is settled:
 the workbook lives at a public URL that this repository and `kasatov.de` can link,
 and the extracts are committed here so the published view and the repository can

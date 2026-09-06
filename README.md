@@ -417,7 +417,8 @@ and an Explore view with real filter cards, the model chart and the incident lis
 panel its own worksheet so a filter picked there cannot move the Executive numbers
 (`tableau/README.md`). Tableau Public cannot auto-refresh; the honest form of "live" there is
 regenerate, rebuild and republish, and `tableau/refresh_loop.py` does the first two on a timer,
-leaving the publish click to a person
+leaving the publish click to a person. Published 2026-09-06 at
+https://public.tableau.com/views/ArkonQualitySteeringCell/ArkonExecutiveView
 - [x] **The live plant, the demo engine - a mini-project of its own** (`live_plant/`, built
 2026-09-05, `live_plant/README.md`). One real-model incident every ten minutes or so, drawn from
 the seven modules' own published batches and re-timed, round-robin over the modules so seven
