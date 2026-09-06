@@ -1823,7 +1823,7 @@
                 <format attr='font-size' value='14' />
               </style-rule>
               <style-rule element='mark'>
-                <format attr='size' value='0.88' />
+                <format attr='size' value='1.7' />
                 <format attr='mark-labels-show' value='true' />
                 <format attr='mark-labels-cull' value='false' />
               </style-rule>
@@ -2019,7 +2019,7 @@
                 <format attr='font-size' value='14' />
               </style-rule>
               <style-rule element='mark'>
-                <format attr='size' value='0.88' />
+                <format attr='size' value='1.7' />
                 <format attr='mark-labels-show' value='true' />
                 <format attr='mark-labels-cull' value='false' />
               </style-rule>
@@ -2261,7 +2261,7 @@
               </style-rule>
               <style-rule element='mark'>
                 <format attr='mark-color' value='#15304F' />
-                <format attr='size' value='0.88' />
+                <format attr='size' value='1.7' />
                 <format attr='mark-labels-show' value='true' />
                 <format attr='mark-labels-cull' value='false' />
               </style-rule>

@@ -142,11 +142,17 @@ RIGHT_COLUMN = 600
 
 BULLET_ROWS = 6
 
-# Bar thickness as a fraction of the row. 0.62 was a data-ink instinct, correct for a
-# dense screen read at 60 cm and wrong for one read through a video codec: a 3 px bar
-# does not survive the compression, and a label placed against a row that is much taller
-# than its bar sits between rows rather than on one. Both are fixed by one number.
-MARK_SIZE = "0.88"
+# Bar thickness. NOT a fraction of the row, which is the trap: Tableau's mark `size`
+# runs to about 2.0, not to 1.0. Measured by dragging the Size slider to maximum on one
+# sheet and diffing the save, which wrote `1.9890055656433105`. So the 0.62 this
+# dashboard shipped with was about 31 percent of a row and the 0.88 that replaced it
+# about 44 percent - both read as thin, and the "misaligned" value labels were a
+# symptom of that rather than a placement bug: a 14 pt label beside a 5 px bar cannot
+# look centred on it.
+#
+# 1.7 is about 85 percent of the row: thick enough to survive the compression of a
+# shared screen, with a gap left between rows so the bars stay countable.
+MARK_SIZE = "1.7"
 FEED_ROWS = 6
 
 # Sheet names, used by zones, windows and actions alike
