@@ -154,6 +154,7 @@ which is worse than saying so.
   so a stale figure is a stale commit rather than a stale cache, but nothing in
   this app checks that a figure and a metrics file came from the same run.
 - **It shows the plant, not the platform's own health.** Whether the intake
-  webhook is rejecting everything is invisible here for the reason charter 7.6
-  gives: only recorded incidents are written anywhere, so a validation
-  regression looks like a quiet plant on this page too.
+  webhook is rejecting everything is invisible here: since 2026-09-06 every intake
+  outcome is written to `/data/arkon/intake_outcomes.jsonl` (charter 7.6), but this
+  app does not read that log yet, so a validation regression still looks like a
+  quiet plant on this page.

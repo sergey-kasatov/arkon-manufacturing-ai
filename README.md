@@ -131,7 +131,7 @@ flowchart TB
     W3["(3) POST /webhook/arkon-escalation<br/>the assistant's only write"]
     W4["(4) POST /webhook/arkon-incident-transition<br/>the lifecycle<br/>200, 400, 404, 409, 503"]
     LP["Live plant<br/>one re-timed real event<br/>every ~10 min, plus a crew"]
-    QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 246 chunks")]
+    QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 247 chunks")]
     INC[("incidents.jsonl")]
     TRN[("incident_transitions.jsonl")]
     ESC[("escalations.jsonl")]
@@ -819,9 +819,10 @@ What is left is not a module. It is depth on what exists:
   reachable to call. The rest of 7.4, the manager-notification timer and the daily
   digest, is deployed since 2026-09-06 (`n8n/README.md`, "Overdue escalation" and
   "Daily digest").
-- **Charter 7.6 intake outcomes.** The webhook has three and writes one down, so
-  duplicate suppression cannot be counted and a validation regression looks exactly
-  like a quiet plant from every screen.
+- **Charter 7.6 intake outcomes: DONE 2026-09-06.** Every outcome is a line in
+  `/data/arkon/intake_outcomes.jsonl` with its reason, and an alerted incident's line
+  carries Telegram's own message id; nothing reads that log back yet, so the screens
+  still cannot show a rejection (`n8n/README.md`, "Intake outcomes").
 - **Charter 7.5, a queryable incident store.** The status API parses both JSONL files
   whole on every request. That is right at demo scale and it has begun to show: the
   page cap was raised from 50 to 500 on 2026-09-06 after it truncated a headline
@@ -938,8 +939,9 @@ the repository's typography rule.
 **What is not covered, and honestly**: the deployed n8n workflows, the Langflow
 assistant and the live plant's transport all need the running NAS, so they are checked
 by `live_plant/check_plant.py` (48 assertions against a fake Steering Cell),
-`n8n/build/check_lifecycle_js.py`, `n8n/build/check_overdue_js.py` and
-`n8n/build/check_digest_js.py`, which are run by hand. Model training is not tested at all; the model cards carry the held-out numbers
+`n8n/build/check_lifecycle_js.py`, `n8n/build/check_overdue_js.py`,
+`n8n/build/check_digest_js.py` and `n8n/build/check_intake_outcome_js.py`, which are
+run by hand. Model training is not tested at all; the model cards carry the held-out numbers
 and the notebooks reproduce them.
 
 ---

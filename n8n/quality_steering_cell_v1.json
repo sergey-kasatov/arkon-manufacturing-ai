@@ -252,6 +252,51 @@
         -224,
         240
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Arkon Quality Steering Cell - intake outcome, charter 7.6.\n// Every event that reaches the webhook has exactly one of three outcomes:\n// recorded as an incident, rejected against the contract, or suppressed as a\n// duplicate inside the 24-hour window. Until 2026-09-06 only the first was\n// written anywhere, so suppression could not be counted and a validation\n// regression was indistinguishable from a quiet plant. This node sits after all\n// four Respond nodes, so it runs once per event whatever happened, after the\n// caller was answered, and writes one line to /data/arkon/intake_outcomes.jsonl.\nconst verdict = $('Validate + Dedup + Incident').first().json;\nconst raw = $('Event Intake').first().json;\nconst event = raw && raw.body && typeof raw.body === \"object\" ? raw.body : (raw && typeof raw === \"object\" ? raw : {});\nconst evidence = event.evidence && typeof event.evidence === \"object\" ? event.evidence : {};\nconst context = event.operational_context && typeof event.operational_context === \"object\" ? event.operational_context : {};\n\nlet outcome;\nlet reason = null;\nif (verdict.valid === false) {\n  outcome = \"rejected\";\n  reason = Array.isArray(verdict.errors) && verdict.errors.length ? verdict.errors.join(\"; \") : \"contract violation\";\n} else if (verdict.duplicate === true) {\n  outcome = \"duplicate_suppressed\";\n  reason = \"same record_id and priority inside the 24 h window\";\n} else {\n  outcome = \"recorded\";\n}\n\n// On the alert branch this node runs after the Telegram node answered, so the\n// reply is real evidence of the card; read it the way the overdue timer does\n// (the Bot API envelope, or the bare result), and never fail the line over it.\nlet telegramMessageId = null;\nif (outcome === \"recorded\" && verdict.alert === true) {\n  try {\n    const sent = $('Telegram Alert').first().json ?? {};\n    const reply = sent.result && typeof sent.result === \"object\" ? sent.result : sent;\n    telegramMessageId = reply.message_id ?? null;\n  } catch (error) {\n    telegramMessageId = null;\n  }\n}\n\nconst recordId = evidence.record_id ?? null;\nconst priority = event.priority ?? null;\nlet executionId = null;\ntry {\n  executionId = typeof $execution !== \"undefined\" && $execution && $execution.id ? String($execution.id) : null;\n} catch (error) {\n  executionId = null;\n}\n\nconst line = {\n  received_at: new Date().toISOString(),\n  execution_id: executionId,\n  outcome: outcome,\n  reason: reason,\n  event_id: event.event_id ?? null,\n  record_id: recordId,\n  priority: priority,\n  source_module: event.source_module ?? null,\n  business_domain: event.business_domain ?? null,\n  dedup_key: recordId !== null && priority !== null ? String(recordId) + \"|\" + String(priority) : null,\n  incident_id: outcome === \"recorded\" && verdict.incident ? (verdict.incident.incident_id ?? null) : null,\n  alert_branch: outcome === \"recorded\" && verdict.alert === true,\n  telegram_message_id: telegramMessageId,\n  errors: outcome === \"rejected\" && Array.isArray(verdict.errors) ? verdict.errors : [],\n  emitter: context.emitter ?? null,\n  context_origin: context.context_origin ?? event.context_origin ?? null,\n};\n\nreturn [{ json: { intake_outcome_jsonl: JSON.stringify(line) + \"\\n\" } }];\n"
+      },
+      "id": "f1000000-0000-4000-8000-000000000001",
+      "name": "Build Intake Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "intake_outcome_jsonl",
+        "options": {}
+      },
+      "id": "f1000000-0000-4000-8000-000000000002",
+      "name": "Build Intake Outcome Line",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/data/arkon/intake_outcomes.jsonl",
+        "options": {
+          "append": true
+        }
+      },
+      "id": "f1000000-0000-4000-8000-000000000003",
+      "name": "Append Intake Log",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        240
+      ]
     }
   ],
   "connections": {
@@ -358,6 +403,72 @@
         [
           {
             "node": "Append Incident Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Invalid": {
+      "main": [
+        [
+          {
+            "node": "Build Intake Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Duplicate": {
+      "main": [
+        [
+          {
+            "node": "Build Intake Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Recorded": {
+      "main": [
+        [
+          {
+            "node": "Build Intake Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Alerted": {
+      "main": [
+        [
+          {
+            "node": "Build Intake Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Intake Outcome": {
+      "main": [
+        [
+          {
+            "node": "Build Intake Outcome Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Intake Outcome Line": {
+      "main": [
+        [
+          {
+            "node": "Append Intake Log",
             "type": "main",
             "index": 0
           }

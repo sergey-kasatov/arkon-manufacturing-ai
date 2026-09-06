@@ -691,7 +691,7 @@ def cmd_status(plant, args):
     return 0
 
 
-RESET_FILES = ["incidents", "incident_transitions", "escalations", "incident_notifications"]
+RESET_FILES = ["incidents", "incident_transitions", "escalations", "incident_notifications", "intake_outcomes"]
 
 
 def reset_script(stamp):

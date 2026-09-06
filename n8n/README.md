@@ -312,6 +312,7 @@ POST /webhook/arkon-event
   -> Build incident line -> append to the JSONL store
   -> P1/P2 -> Telegram incident card + respond
   -> P3/P4 -> respond (recorded, no push alert)
+  -> every outcome, one line in /data/arkon/intake_outcomes.jsonl   (charter 7.6, since 2026-09-06)
 ```
 
 Incident numbering (`ARK-INC-00001`) and the dedup cache live in n8n workflow
@@ -368,6 +369,77 @@ A P2 replayed now is overdue an hour later, per the charter 7.1 window, and turn
 up in the OVERDUE block of the shift briefing. That is the store behaving
 correctly, and it is a reason to keep the demo store small rather than a reason
 to widen the window.
+
+### Intake outcomes, charter 7.6 (since 2026-09-06)
+
+Every event that reaches this webhook has exactly one of three outcomes: recorded
+as an incident, rejected against the section 6 contract, or suppressed as a
+duplicate inside the 24-hour window. Until 2026-09-06 only the first was written
+anywhere, so duplicate suppression could not be counted and a validation
+regression looked exactly like a quiet plant from every screen (charter 7.6).
+Now every outcome is one line in `/data/arkon/intake_outcomes.jsonl`.
+
+```text
+Respond Invalid / Respond Duplicate / Respond Recorded / Respond Alerted
+  -> Build Intake Outcome   (one Code node, runs once per event on every branch)
+  -> Build Intake Outcome Line -> Append Intake Log
+```
+
+The node hangs off the four Respond nodes rather than off the branches before
+them. The caller is answered first, so the log can never delay or fail an intake;
+and on the alert branch it runs after the Telegram node has answered, so the line
+for an alerted incident carries **Telegram's own `message_id`**, which the
+platform had never recorded for an intake card. An alert that fails loses the
+line and never the incident: the store already has it, and the failed execution
+is the trace. The line: `received_at`, the n8n `execution_id`, the outcome
+(`recorded`, `rejected`, `duplicate_suppressed`) with its reason (the validator's
+errors joined, or the dedup rule), the event id, the record id and priority that
+make the `dedup_key`, the module and domain, the incident id when one was
+created, `alert_branch`, `telegram_message_id`, the `errors` list, the `emitter`
+label and the context origin. Patch, check and deploy:
+
+```bash
+py n8n/build/add_intake_outcomes.py n8n/quality_steering_cell_v1.json   # the tracked file (idempotent)
+py n8n/build/check_intake_outcome_js.py                                  # the node under node, 34 cases
+python3 deploy_steering_cell.py add_intake_outcomes                      # ON THE NAS, see below
+```
+
+`n8n/build/deploy_steering_cell.py` is the "not a plain import" recipe of this
+file as code: it exports the live row, applies the patch module to the export,
+asserts that the counter, the dedup cache and the credential id did not move,
+creates the log file inside the container, imports, publishes, restarts and
+reads the live counter back against the highest id in the store. **It also waits
+for the quiet minutes after a live-plant tick**, because the plant raises an
+incident every ten minutes or so and an export taken before a tick and imported
+after it would rewind the counter by one, silently.
+
+**Verified 2026-09-06 on all three outcomes, with no card sent and no id
+consumed.** Deployed at 23:24:31 through `deploy_steering_cell.py`, 176 s after
+the plant tick that raised `ARK-INC-00222`: counter 222 and 144 dedup entries
+before and after, 12 nodes to 15, restart 23:24:39, `healthz` in 4 s, all seven
+Arkon workflows re-activated. Then, from the NAS: a body with only `event_id` and
+`priority: P9` answered HTTP 400 with ten validator errors (execution 7901) and
+left one `rejected` line with the ten errors as `reason` and `errors` and no
+dedup key; the last incident's own embedded event (`arkon-2026-900183`,
+`FD002-Unit-041`, P3) re-posted answered `duplicate_suppressed` (execution 7902)
+and left one line with `dedup_key: FD002-Unit-041|P3` and `emitter: live_plant`,
+the store unchanged at 00222; and the plant's next tick at 23:30
+(`arkon-2026-900184`, `CASTING-CAST_DEF_0_108`, P3) was recorded as
+`ARK-INC-00223` (execution 7905) and left one `recorded` line naming it,
+`alert_branch: false`. The first alerted line, carrying a Telegram message id, is
+the plant's next P1 or P2; read it out of the log rather than out of this
+paragraph.
+
+Boundaries. **Nothing reads the log back yet**: the cockpit, the status API and
+the assistant still see recorded incidents only, so a rejection is countable
+from the file and visible on no screen; a read path is the next step and is
+named in charter 7.6. **It is not the unified notification log.** The intake
+card's message id now exists here and the timer's and the digest's in
+`incident_notifications.jsonl`; folding the intake cards into that log is not the
+one-node change it looks like, because the overdue timer's dedup reads every
+`incident_id` in that log as an incident already notified, and an intake-card
+record there would silence the overdue card for every alerted incident. The
+timer's selection would have to key on its own `trigger` first.
 
 ### Deployment steps (interactive)
 
@@ -1049,12 +1121,19 @@ lack.
 - **It sees only the first 50**, the status API's page cap, recorded rather than
   fixed, as above.
 - **Its log and the intake ledger are two notification sources**, not one log
-  (`live_plant/README.md`); charter 7.6's one-node change would unify them.
+  (`live_plant/README.md`). Since 2026-09-06 the intake log of charter 7.6 records
+  Telegram's `message_id` for every intake card too, so the evidence exists in two
+  files. Folding the intake cards into this log is NOT the one-node change it looks
+  like: the selection above treats every record carrying an `incident_id` as an
+  incident already notified, so an intake-card record here would silence the
+  overdue card for every alerted incident. Key the selection on its own `trigger`
+  first.
 - **The charter and the SOP describe the timer since 2026-09-06** (charter 7.4's
   deployment paragraph, SOP section 5 and step 6), edited together with the daily
   digest's arrival and followed by one rebuild of the assistant's knowledge store:
-  245 to 246 chunks, the eight untouched documents back at identical counts, the
-  retired sentences returning no chunk (`langflow/README.md`).
+  245 to 247 chunks across the evening's two rebuilds (the second after the 7.6
+  edit), every untouched document back at identical counts, the retired sentences
+  returning no chunk (`langflow/README.md`).
 
 ## Daily digest (scheduled reader)
 
@@ -1131,23 +1210,22 @@ the first-run note below.
 
 ### The first run
 
-**Not run yet when this was written, 2026-09-06 22:50.** The first scheduled run is
-07:05 on 2026-09-07 Europe/Berlin, which the execution table will show as 05:05
-UTC. **The CLI cannot start it.** `n8n execute --id=arkonDigest001` refuses with
-"Missing node to start execution ... contains an Execute Workflow Trigger node":
-in n8n 2.x that command starts only from an Execute Workflow Trigger, never from a
-schedule. Beside the live instance it also has to be given its own task-broker port
-(`docker exec -e N8N_RUNNERS_BROKER_PORT=5680 n8n n8n execute ...`), or it dies on
-5679 being in use before saying anything else; both measured 2026-09-06. A manual
-run is therefore the editor's "Execute workflow" button, which n8n records with
-`mode = manual` and which sends a real card. What was verified before the first
-tick: both Code nodes under node against 65 cases including the timer's own
-selection over a shared log (`n8n/build/check_digest_js.py`); the credential bound
-by the same id that delivered the timer's fourteen cards that evening; the
-activation line `Activated workflow "Arkon Daily Digest v1"` after the restart at
-22:42; and `settings.timezone` read back as `Europe/Berlin` from `workflow_entity`.
-Read the first execution out of `execution_entity` and its record out of the log
-before trusting this paragraph; the timer's first run is why.
+**First run 2026-09-06 23:13, manual, execution 7887, `success`, one card.** Sergey
+pressed "Execute workflow" in the editor, because the CLI cannot start it:
+`n8n execute --id=arkonDigest001` refuses with "Missing node to start execution ...
+contains an Execute Workflow Trigger node" (in n8n 2.x that command starts only from
+an Execute Workflow Trigger, never from a schedule), and beside the live instance it
+first needs its own task-broker port (`-e N8N_RUNNERS_BROKER_PORT=5680`), or it dies
+on 5679 being in use; both measured that evening. The record is `ARK-NTF-00015`,
+`trigger: daily_digest`, `telegram_message_id: 102`, `sent_at` Telegram's own
+`2026-09-06T21:13:20Z`, `as_of` the API's `21:13:20.021Z`: open 50 (P1 0, P2 16,
+P3 34; new 48, acknowledged 1, in containment 1), overdue 14 (all P2, five listed),
+141 acknowledged at a median of 50.6 minutes (58 within the window, 9 late), 159
+closed at 162.1, a P3 queue of 33 with ten listed, no page truncated. The card's
+header read `2026-09-06 23:13 (Europe/Berlin)`, the timezone pin verified on a real
+run. Read back from `execution_entity` and the log; the card itself was read by
+Sergey off the group at 23:13, which is the delivery reading. The first scheduled
+run is 07:05 on 2026-09-07.
 
 ### Known boundaries
 
@@ -1181,7 +1259,8 @@ What it asks of this layer: nothing new. Every event it sends passes the section
 replayed batch. The one thing worth knowing here is that its ledger is the second
 notification source on the platform, beside `/data/arkon/incident_notifications.jsonl`,
 which the overdue timer and the daily digest write since 2026-09-06, and the two are
-not one log yet.
+not one log yet; since the same evening the intake log of charter 7.6 carries Telegram's
+message id for every intake card as well ("Intake outcomes" above).
 
 ## Comparison slice (evaluation artifact, not Arkon infrastructure)
 

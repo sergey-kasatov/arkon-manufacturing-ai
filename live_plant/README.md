@@ -173,9 +173,12 @@ it that way. There are two sources of notifications on this platform and they ar
 not yet one log: this ledger for the intake cards, and
 `/data/arkon/incident_notifications.jsonl` for the Quality Manager cards and the daily
 digest, written by `n8n/overdue_escalation_v1.json` and `n8n/daily_digest_v1.json`
-since 2026-09-06. Unifying them is the intake workflow
-appending its own notification line after the Telegram node, which is the one-node
-change of charter 7.6's shape and is not built.
+since 2026-09-06. Since the same evening the intake log of charter 7.6
+(`/data/arkon/intake_outcomes.jsonl`) records Telegram's `message_id` for every
+intake card, so the delivery evidence exists on the platform side too, in a third
+file. Folding the intake cards into the notification log itself is not the one-node
+change it looks like: the overdue timer's dedup reads every `incident_id` in that log
+as already notified (`n8n/README.md`, "Overdue escalation", boundaries).
 
 ## Reset: archive, never rewind
 
@@ -183,7 +186,8 @@ The store cannot be rewound. Its files are append-only and the incident,
 transition and escalation counters live in n8n's workflow static data, so a
 reset is an archive: `plant.py reset` prints, and with `--execute` runs over SSH,
 one `docker exec n8n sh -c` script that moves every existing store file
-(`incidents`, `incident_transitions`, `escalations`, `incident_notifications`) into
+(`incidents`, `incident_transitions`, `escalations`, `incident_notifications`,
+`intake_outcomes`) into
 `/data/arkon/_archive/<stamp>/` and creates a fresh empty one in its place, as the
 container user, because the append node cannot create a file (`n8n/README.md`,
 trap 3). It stops at the first error and deletes nothing. Afterwards the counters
@@ -267,8 +271,8 @@ alias. The service was left stopped.
 ## Boundaries
 
 - **It cannot see whether a card arrived.** Intake's answer is what it records;
-  the group is the evidence. A unified notification log would need the intake
-  workflow to write one.
+  the group is the evidence. Since 2026-09-06 the intake log carries Telegram's
+  message id per card, which is that evidence, in a different file.
 - **It moves only what it raised.** The legacy backlog stays as it is unless
   `--crew-all` is passed, so a demo store carries two populations: the incidents
   of 2026-08-30 to 09-03 that nobody acknowledged for days, and the live ones.
