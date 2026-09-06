@@ -37,13 +37,17 @@ Schema provenance, because none of it was invented:
   prefix. The first build wrote the prefixed form and Tableau silently ignored
   it, which is why v1 shipped with one blue.
 
-Colors come from the `dataviz` skill's reference palette and were checked with its
-validator rather than by eye: critical `#d03b3b` for a window that has run out,
-neutral `#898781` for the rest of a status pair, and one accent blue `#2a78d6`
-for bars that carry no state. The gray is deliberately gray (the validator's
-chroma floor flags it, as it flags every neutral): an untouched incident that is
-merely still inside its window is not a good outcome and must not be painted as
-one.
+Colors are section 9 of `Dashboard_Design_v3.md`: one navy family plus one reserved
+red. Priority is an ORDERED category, so its three levels are intensities of a
+single hue rather than three unrelated ones, which is Few's rule for ordered
+categories and is also what leaves red free to carry exactly one meaning. Red
+appears in three places on the whole page - the OVERDUE card, the overdue segment
+of an aging band, and a bullet bar past its tick - so if a viewer sees red, a
+response window has run out. It is never a series colour and never a highlight.
+
+The context ink moved from v2's `#6b6b66` to `#55555e` because the first measures
+about 4.0:1 against the canvas and fails WCAG AA for body text; the replacement is
+about 7.3:1.
 """
 
 import argparse
@@ -73,14 +77,33 @@ EXTRACT_DIR = TABLEAU_DIR / "extracts"
 OUTPUT = TABLEAU_DIR / "Arkon_Executive_View.twb"
 OUTPUT_TWBX = TABLEAU_DIR / "Arkon_Executive_View.twbx"
 
-# Palette (dataviz reference palette; see the module docstring)
-COLOR_BAR = "#2a78d6"
-COLOR_ALERT = "#d03b3b"
-COLOR_NEUTRAL = "#898781"
-COLOR_CANVAS = "#f5f5f3"
-COLOR_CARD = "#ffffff"
-COLOR_INK = "#1f1f1d"
-COLOR_INK_SOFT = "#6b6b66"
+# Palette, section 9 of Dashboard_Design_v3.md. One navy family plus one reserved
+# red. Priority is an ORDERED category, so its levels are intensities of a single
+# hue rather than three unrelated colours (Few); that is also what leaves red free
+# to carry exactly one meaning on the whole page.
+COLOR_CANVAS = "#F2F2EF"
+COLOR_CARD = "#FFFFFF"
+COLOR_INK = "#16161A"
+# v2 used #6B6B66 here. Sergey read it as too light on the gray canvas and he was
+# right: it measures about 4.0:1 against the canvas, which fails WCAG AA for body
+# text. This is about 7.3:1.
+COLOR_INK_SOFT = "#55555E"
+COLOR_RULE = "#D8D8D2"
+
+# Breach, and nothing else. If a viewer sees red anywhere on this dashboard, a
+# response window has run out. Never a series colour, never a highlight.
+COLOR_ALERT = "#C0392B"
+
+# The ordered priority ramp.
+COLOR_P1 = "#1F3A63"
+COLOR_P2 = "#3D6394"
+COLOR_P3 = "#8AA6C8"
+COLOR_P4 = "#B9C6D8"
+
+# Single-series bars take the darkest step of the ramp; card rules that are not
+# shouting take the neutral rule colour.
+COLOR_BAR = COLOR_P1
+COLOR_NEUTRAL = COLOR_RULE
 
 # A color map is honoured only when its encoding names a palette. Under the
 # "Automatic" palette Tableau re-assigns colors on every open and the map is
@@ -97,18 +120,33 @@ FONT_BOOK = "Tableau Book"
 SOURCE_BUILD = "2026.2.0 (20262.26.0819.2015)"
 
 DASHBOARD = "Arkon Executive View"
-DASH_W, DASH_H = 1300, 900
+# 1600 x 900: a presentation screen rather than a laptop, which is what Sergey
+# asked for and what buys the number grid of section 3.
+DASH_W, DASH_H = 1600, 900
 REPO_URL = "github.com/sergey-kasatov/arkon-manufacturing-ai"
+
+# The bullet chart's fixed axis, in multiples of an incident's own window. Four
+# puts the window tick at a quarter of the track, where it can be seen.
+BULLET_CAP = 4.0
+
+# How many rows the two bounded panels carry. Section 7 caps the bullet chart at
+# twelve; the feed is the eight most recent transitions.
+# 0.38 of the usable canvas. Stated in pixels because a layout-flow container
+# ignores a proportional box: see the comment at the main row.
+RIGHT_COLUMN = 600
+
+BULLET_ROWS = 6
+FEED_ROWS = 6
 
 # Sheet names, used by zones, windows and actions alike
 S_KPI_OVERDUE = "KPI Overdue"
 S_KPI_OPEN = "KPI Open"
-S_KPI_ACK = "KPI Acknowledged in window"
-S_KPI_MEDIAN = "KPI Median time to acknowledge"
-S_PRIORITY = "Open incidents by priority"
+S_KPI_ACK = "KPI Time to acknowledge"
+S_KPI_CLOSE = "KPI Time to close"
+S_AGING = "Open incidents by age"
 S_TIME = "Time to acknowledge"
-S_MODULES = "Incidents by module"
-S_TRANSITIONS = "Lifecycle transitions"
+S_FEED = "Who acted, and when"
+S_MODULES = "Incidents by model"
 S_DRILL = "Incidents behind this bar"
 
 # Deterministic ids, so the generator reproduces its own artifact
@@ -529,6 +567,18 @@ def calc_dimension(ds, column, datatype="string"):
     return Field(ds, column, "None", datatype, "dimension", "nominal")
 
 
+def calc_row_measure(ds, column, datatype="real"):
+    """A ROW-LEVEL numeric calculation used as a measure: `sum:...:qk`.
+
+    The counterpart of `calc_dimension` on the measure side. `calc_measure` is for
+    a formula that is ITSELF an aggregate (COUNT, MEDIAN); this is for a per-row
+    arithmetic result that the shelf then sums. On a view with one row per incident
+    the sum is the value, and it is the form a reference line can average per cell,
+    which `usr:` cannot.
+    """
+    return Field(ds, column, "Sum", datatype, "measure", "quantitative")
+
+
 # Formatted text
 
 
@@ -553,23 +603,40 @@ def formatted_text(runs, indent):
 
 
 def title_runs(title, subtitle=None):
-    runs = [run_xml(title, {"fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "12"})]
+    """Section 10: chart title 13 Medium on ink, its caption 11 Book on context."""
+    runs = [run_xml(title, {"fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "13"})]
     if subtitle:
         runs.append(NEWLINE)
-        runs.append(run_xml(subtitle, {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "9"}))
+        runs.append(run_xml(subtitle, {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}))
     return runs
 
 
 def kpi_runs(label, number_field, context_field, alert=False):
-    """The three lines of a KPI card: label, number, context."""
-    soft = {"fontalignment": "1", "fontcolor": COLOR_INK_SOFT, "fontname": FONT_MEDIUM, "fontsize": "9"}
-    number = {"bold": "true", "fontalignment": "1", "fontcolor": COLOR_ALERT if alert else COLOR_INK,
-              "fontname": FONT_BOLD, "fontsize": "30"}
-    context = {"fontalignment": "1", "fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "10"}
-    center_newline = run_xml("\u00c6&#10;", {"fontalignment": "1"}, raw=True)
+    """The three lines of a KPI card: label, number, context.
+
+    All three are LEFT-aligned, which is the point Sergey made most sharply and the
+    one that separates a dashboard that looks designed from one that looks
+    assembled. v2 centred them, and a centred number moves as its digit count
+    changes, so a row of four centred BANs has no vertical line anywhere in it.
+
+    Alignment is stated EXPLICITLY on every run including the paragraph breaks, and
+    omitting it is not the same thing. Measured: with the attribute absent, Tableau
+    aligned the two cards whose number is a numeric field to the RIGHT and the two
+    whose number is a string to the left, so the row had two alignments in it. The
+    default follows the field's datatype, not the page.
+
+    One font size for all four numbers whatever their digits, so the row shares one
+    baseline (section 3).
+    """
+    left = {"fontalignment": "0"}
+    soft = dict(left, fontcolor=COLOR_INK_SOFT, fontname=FONT_MEDIUM, fontsize="10")
+    number = dict(left, bold="true", fontcolor=COLOR_ALERT if alert else COLOR_INK,
+                  fontname=FONT_BOLD, fontsize="38")
+    context = dict(left, fontcolor=COLOR_INK_SOFT, fontname=FONT_BOOK, fontsize="11")
+    left_newline = run_xml("Æ&#10;", left, raw=True)
     return [
-        run_xml(label, soft), center_newline,
-        field_run(number_field, number), center_newline,
+        run_xml(label.upper(), soft), left_newline,
+        field_run(number_field, number), left_newline,
         field_run(context_field, context),
     ]
 
@@ -750,19 +817,28 @@ def worksheet(name, ds, params=(), title=None, subtitle=None, rows=(), cols=(), 
         out.append("            </encodings>")
     for index, line in enumerate(reference_lines):
         out.append(
+            # label-type is none, not value: on a ratio axis the tick printed
+            # "1.0000" beside every row, which is the number the axis already
+            # carries. Few's comparative measure is a mark, not an annotation.
             "            <reference-line axis-column='%s' enable-instant-analytics='false' "
-            "formula='average' id='refline%d' label-type='value' probability='95' "
+            "formula='average' id='refline%d' label-type='none' probability='95' "
             "scope='per-cell' value-column='%s' z-order='%d' />"
             % (line["axis"].ref, index, line["value"].ref, index + 1)
         )
-    if label_runs:
-        out.append("            <customized-label>")
-        out.extend(formatted_text(label_runs, 14))
-        out.append("            </customized-label>")
+    # Tooltip BEFORE label, which is not the intuitive order and is not negotiable.
+    # Tableau states the content model when it refuses the file:
+    #   (view, mark, mark-sizing?, encodings?, label-data?, dropline?, trendline?,
+    #    reference-line, customized-tooltip, customized-label, style)
+    # v2 never hit this because no sheet carried both at once; the v3 bullet chart is
+    # the first with a reference line, a custom label and a custom tooltip together.
     if tooltip_runs:
         out.append("            <customized-tooltip>")
         out.extend(formatted_text(tooltip_runs, 14))
         out.append("            </customized-tooltip>")
+    if label_runs:
+        out.append("            <customized-label>")
+        out.extend(formatted_text(label_runs, 14))
+        out.append("            </customized-label>")
     pane_rules = []
     if label_font_size:
         pane_rules.append("              <style-rule element='datalabel'>")
@@ -833,6 +909,16 @@ def window(name, is_dashboard=False, sheets=()):
     out.append("          </strip>")
     out.append("        </edge>")
     out.append("      </cards>")
+    # Fit: Entire View, and the dashboard's own <viewpoints> block above is NOT
+    # enough on its own. Measured: with only the dashboard viewpoints every sheet
+    # rendered at the default Standard fit, so seven model bars used 32 px of a
+    # 140 px card and their row labels overlapped into an unreadable stack. The
+    # setting that binds lives on the WORKSHEET's window, and this is the element
+    # Tableau writes there when the toolbar dropdown is changed by hand - found by
+    # setting it on one sheet in the application and diffing the saved file.
+    out.append("      <viewpoint>")
+    out.append("        <zoom type='entire-view' />")
+    out.append("      </viewpoint>")
     out.append("      <simple-id uuid='%s' />" % stable_uuid("win:" + name))
     out.append("    </window>")
     return out
@@ -1018,7 +1104,110 @@ def acknowledge_windows(incidents):
         if row["acknowledge_due_minutes"] != "":
             windows[row["priority"]] = int(float(row["acknowledge_due_minutes"]))
     parts = ["%d min %s" % (windows[p], p) for p in sorted(windows)]
-    return "windows: " + ", ".join(parts) if parts else "no response windows recorded"
+    return "median, window " + " / ".join(parts) if parts else "no response windows recorded"
+
+
+# Section 6. The bands open at the hour scale because this Steering Cell measures
+# P1 in fifteen minutes; the ITSM convention of five-day buckets would collapse the
+# whole live stream into one bar. Identical to AGE_BANDS in app/pages/00_executive.py,
+# because two executive views of one plant must not band the same incident differently.
+AGE_BANDS = [
+    ("under 1 h", 0, 60),
+    ("1 to 4 h", 60, 240),
+    ("4 to 24 h", 240, 1440),
+    ("1 to 3 d", 1440, 4320),
+    ("over 3 d", 4320, float("inf")),
+]
+
+
+def band_of(minutes):
+    for name, low, high in AGE_BANDS:
+        if low <= minutes < high:
+            return name
+    return AGE_BANDS[-1][0]
+
+
+def _number(row, key):
+    try:
+        return float(row[key])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def status_sentence(incidents):
+    """Section 5: one generated sentence, stating a relationship rather than a number.
+
+    Deliberately a sentence and not a fifth KPI card. A card holds a number; what an
+    executive wants first is what two numbers mean TOGETHER, and only prose can say
+    that. Two clauses, the oldest open band and the freshest, collapsing to one when
+    they would say the same thing twice.
+
+    Mirrors `status_sentence` in app/pages/00_executive.py. The two surfaces are
+    checked against each other by reading one number off each on the same minute, so
+    the rule that produces this string has to be the same rule.
+    """
+    openi = [r for r in incidents.rows if r["is_open"] == "TRUE"]
+    if not openi:
+        return "Nothing is open. Every incident in the store has been closed or dismissed."
+
+    by_band = {}
+    for row in openi:
+        by_band.setdefault(band_of(_number(row, "age_minutes") or 0.0), []).append(row)
+
+    names = [n for n, _, _ in AGE_BANDS]
+    oldest = next((n for n in reversed(names) if by_band.get(n)), None)
+    newest = next((n for n in names if by_band.get(n)), None)
+    old_group = by_band.get(oldest, [])
+    never = [r for r in old_group if not r.get("acknowledged_at")]
+
+    first = "%d of %d open incidents have been open %s%s." % (
+        len(old_group), len(openi),
+        "more than three days" if oldest == "over 3 d" else "for " + oldest,
+        ", none of them ever acknowledged" if never and len(never) == len(old_group) else "",
+    )
+    if newest == oldest:
+        return first
+
+    fresh = by_band[newest]
+    late = [r for r in fresh if r["overdue"] == "TRUE"]
+    second = " The %d raised %s %s." % (
+        len(fresh),
+        "in the last hour" if newest == "under 1 h" else "in the last " + newest,
+        "are being worked inside window" if not late
+        else "include %d already past window" % len(late),
+    )
+    return first + second
+
+
+def bullet_threshold(incidents, rows=BULLET_ROWS):
+    """The cut that keeps the bullet chart to its `rows` slowest acknowledgements.
+
+    Section 7 caps the chart at twelve rows, and Tableau expresses "top N" as either
+    a table-calculation filter or a threshold. A threshold is used here for the same
+    reason section 5's sentence is generated: this workbook ships WITH the extract it
+    describes, so a number derived from that extract is exactly as fresh as the data
+    beside it. Both are rebuilt by one command and neither can drift from the other.
+
+    Returns None when the store holds fewer rows than the cap, in which case no
+    filter is written at all rather than one that happens to keep everything.
+    """
+    values = sorted(
+        (_number(r, "minutes_to_acknowledge") for r in incidents.rows
+         if r["minutes_to_acknowledge"] != "" and r["acknowledge_due_minutes"] not in ("", "0")),
+        reverse=True,
+    )
+    values = [v for v in values if v is not None]
+    return values[rows - 1] if len(values) > rows else None
+
+
+def feed_cutoff(transitions, rows=FEED_ROWS):
+    """The recorded_at of the `rows`-th most recent transition, or None.
+
+    The stamps are ISO-8601 UTC, which sorts lexicographically, so no parsing is
+    needed and no timezone can get into the comparison.
+    """
+    stamps = sorted((r["recorded_at"] for r in transitions.rows if r["recorded_at"]), reverse=True)
+    return stamps[rows - 1] if len(stamps) > rows else None
 
 
 def build(skip_extracts=False, phone=True, actions=True):
@@ -1052,36 +1241,78 @@ def build(skip_extracts=False, phone=True, actions=True):
         "COUNT([incident_id])",
     )
     incidents.add_calculation(
-        "[Calculation_102]", "Response state", "string", "dimension", "nominal",
-        'IF [overdue] THEN "Overdue" ELSE "Within window" END',
-    )
-    incidents.add_calculation(
         "[Calculation_103]", "Open?", "string", "dimension", "nominal",
         'IF [is_open] THEN "Open" ELSE "Closed" END',
-    )
-    incidents.add_calculation(
-        "[Calculation_104]", "Has acknowledge time", "string", "dimension", "nominal",
-        'IF ISNULL([minutes_to_acknowledge]) THEN "no" ELSE "yes" END',
-    )
-    incidents.add_calculation(
-        "[Calculation_105]", "Acknowledge state", "string", "dimension", "nominal",
-        'IF [minutes_to_acknowledge] > [acknowledge_due_minutes] THEN "Late" ELSE "In window" END',
     )
     incidents.add_calculation(
         "[Calculation_106]", "Open incidents", "integer", "measure", "quantitative",
         "SUM(IF [is_open] THEN 1 ELSE 0 END)",
     )
     incidents.add_calculation(
-        "[Calculation_107]", "Open by priority", "string", "measure", "nominal",
-        " + ".join(
-            'STR(SUM(IF [is_open] AND [priority] = "%s" THEN 1 ELSE 0 END)) + " %s%s"'
-            % (p, p, "" if i == len(priorities) - 1 else ", ")
-            for i, p in enumerate(priorities)
-        ),
-    )
-    incidents.add_calculation(
         "[Calculation_108]", "Age (hours)", "string", "measure", "nominal",
         'STR(ROUND(SUM([age_minutes]) / 60, 1)) + " h"',
+    )
+
+    # Section 6: the age band, generated from AGE_BANDS so the workbook and the
+    # cockpit page cannot band the same incident differently.
+    band_formula = " ".join(
+        '%s [age_minutes] < %d THEN "%s"' % ("IF" if i == 0 else "ELSEIF", high, name)
+        for i, (name, _low, high) in enumerate(AGE_BANDS[:-1])
+    ) + ' ELSE "%s" END' % AGE_BANDS[-1][0]
+    incidents.add_calculation(
+        "[Calculation_130]", "Age band", "string", "dimension", "nominal", band_formula,
+    )
+
+    # The stack of the aging chart, and the shape of this one line is the finding
+    # that took three attempts. Colouring a band red only when EVERY incident in it
+    # is past its window fails, because P3 carries no response window and can never
+    # be overdue: a band holding 11 breaches beside a few P3 came out entirely navy.
+    # Counting the overdue into their OWN segment cannot be defeated by a mixture -
+    # the red is exactly as long as the number of breaches in that row.
+    incidents.add_calculation(
+        "[Calculation_131]", "Aging segment", "string", "dimension", "nominal",
+        'IF [overdue] THEN "Overdue" ELSE [priority] END',
+    )
+
+    # Section 7, the bullet chart. The bar is the RATIO to each incident's own
+    # window, never the raw minutes: this store holds acknowledgements from 0 to
+    # about 9,000 minutes against windows of 15 and 60, so on a minutes axis a
+    # 600-fold range puts every window tick within a pixel of the left edge and the
+    # comparison Few designed the bullet graph to make disappears. On the ratio
+    # scale the tick is always at 1.0, a quarter of the way along a fixed axis of 4.
+    incidents.add_calculation(
+        "[Calculation_140]", "Window", "real", "measure", "quantitative",
+        "[acknowledge_due_minutes] / [acknowledge_due_minutes]",
+    )
+    incidents.add_calculation(
+        "[Calculation_141]", "Acknowledge ratio", "real", "measure", "quantitative",
+        "MIN([minutes_to_acknowledge] / [acknowledge_due_minutes], %.1f)" % BULLET_CAP,
+    )
+    incidents.add_calculation(
+        "[Calculation_142]", "Acknowledge segment", "string", "dimension", "nominal",
+        'IF [minutes_to_acknowledge] > [acknowledge_due_minutes] THEN "Late" ELSE [priority] END',
+    )
+    incidents.add_calculation(
+        "[Calculation_143]", "Incident", "string", "dimension", "nominal",
+        'REPLACE([incident_id], "ARK-INC-", "") + " / " + [priority]',
+    )
+    # P3 and P4 have no window, so they have no row. A zero would be a lie.
+    incidents.add_calculation(
+        "[Calculation_144]", "Has window", "boolean", "dimension", "nominal",
+        "NOT ISNULL([minutes_to_acknowledge]) AND [acknowledge_due_minutes] > 0",
+    )
+    incidents.add_calculation(
+        "[Calculation_145]", "Minutes to acknowledge", "string", "measure", "nominal",
+        'IF SUM([minutes_to_acknowledge]) < 1 THEN "under 1 min" '
+        'ELSE STR(INT(ROUND(SUM([minutes_to_acknowledge]), 0))) + " min" END',
+    )
+    # A bar that ran off the fixed axis says so, rather than looking like a bar that
+    # merely reaches the end. The number column keeps the real figure either way, so
+    # the cap costs resolution and never costs the fact.
+    incidents.add_calculation(
+        "[Calculation_146]", "Ratio to window", "string", "measure", "nominal",
+        'IF SUM([minutes_to_acknowledge]) / SUM([acknowledge_due_minutes]) > %.1f '
+        'THEN ">%dx" ELSE "" END' % (BULLET_CAP, BULLET_CAP),
     )
     incidents.add_calculation(
         "[Calculation_110]", "Priority filter", "boolean", "dimension", "nominal",
@@ -1105,32 +1336,63 @@ def build(skip_extracts=False, phone=True, actions=True):
         'STR(INT(ROUND([Calculation_120] / [Calculation_106] * 100))) + " percent" '
         'ELSE "no open incidents" END',
     )
+    # Card 2, OPEN. Its context line carries what the number leaves out: how much
+    # has come through the plant, and how much is sitting resolved but not closed.
+    # `resolved` is deliberately NOT counted as open - the status API's own
+    # open_incidents is new + acknowledged + in_containment, and a workbook that
+    # defined it otherwise would disagree with the cockpit and the assistant, which
+    # is worse than being slightly conservative. So it is surfaced here instead.
     incidents.add_calculation(
-        "[Calculation_122]", "Acknowledged incidents", "integer", "measure", "quantitative",
-        "SUM(IF ISNULL([minutes_to_acknowledge]) THEN 0 ELSE 1 END)",
+        "[Calculation_122]", "Closed or dismissed", "integer", "measure", "quantitative",
+        'SUM(IF [status] = "closed" OR [status] = "false_positive" THEN 1 ELSE 0 END)',
     )
     incidents.add_calculation(
-        "[Calculation_123]", "Acknowledged within window", "integer", "measure", "quantitative",
-        "SUM(IF [minutes_to_acknowledge] <= [acknowledge_due_minutes] THEN 1 ELSE 0 END)",
+        "[Calculation_123]", "Resolved awaiting closure", "integer", "measure", "quantitative",
+        'SUM(IF [status] = "resolved" THEN 1 ELSE 0 END)',
     )
     incidents.add_calculation(
-        "[Calculation_124]", "Acknowledged context", "string", "measure", "nominal",
-        '"of " + STR([Calculation_122]) + " acknowledged, " + '
-        'STR([Calculation_122] - [Calculation_123]) + " late"',
+        "[Calculation_124]", "Open context", "string", "measure", "nominal",
+        'STR([Calculation_101]) + " raised, " + STR([Calculation_122]) + " closed"'
+        ' + IF [Calculation_123] > 0 THEN ", " + STR([Calculation_123]) + '
+        '" resolved" ELSE "" END',
     )
+    # Cards 3 and 4 are MTTA and MTTR under their plant names, which is the pair the
+    # incident-management field leads with (PagerDuty), beside the breach count and
+    # the backlog that cards 1 and 2 carry.
     incidents.add_calculation(
         "[Calculation_125]", "Median minutes to acknowledge", "real", "measure", "quantitative",
         "MEDIAN([minutes_to_acknowledge])",
     )
     incidents.add_calculation(
-        "[Calculation_126]", "Median hours to acknowledge", "string", "measure", "nominal",
+        "[Calculation_126]", "Time to acknowledge", "string", "measure", "nominal",
         'IF ISNULL([Calculation_125]) THEN "none yet" ELSE '
-        'STR(ROUND([Calculation_125] / 60, 1)) + " h" END',
+        'STR(ROUND([Calculation_125], 1)) + " min" END',
     )
     incidents.add_calculation(
         "[Calculation_127]", "Response windows", "string", "measure", "nominal",
         'MAX("%s")' % acknowledge_windows(incidents),
     )
+    incidents.add_calculation(
+        "[Calculation_128]", "Median minutes to close", "real", "measure", "quantitative",
+        "MEDIAN([minutes_to_close])",
+    )
+    incidents.add_calculation(
+        "[Calculation_129]", "Time to close", "string", "measure", "nominal",
+        'IF ISNULL([Calculation_128]) THEN "none yet" ELSE '
+        'STR(ROUND([Calculation_128], 1)) + " min" END',
+    )
+    incidents.add_calculation(
+        "[Calculation_133]", "Closed context", "string", "measure", "nominal",
+        '"median over " + STR(SUM(IF ISNULL([minutes_to_close]) THEN 0 ELSE 1 END)) + " closed"',
+    )
+
+    # Section 7: keep the chart to its twelve slowest rows. See bullet_threshold().
+    cut = bullet_threshold(incidents)
+    if cut is not None:
+        incidents.add_calculation(
+            "[Calculation_147]", "Slowest acknowledgements", "boolean", "dimension", "nominal",
+            "[minutes_to_acknowledge] >= %r" % cut,
+        )
 
     # Calculations, transitions
     transitions.add_calculation(
@@ -1145,40 +1407,75 @@ def build(skip_extracts=False, phone=True, actions=True):
         "[Calculation_311]", "Model filter", "boolean", "dimension", "nominal",
         '%s = "All" OR [source_module] = %s' % (p_module.ref, p_module.ref),
     )
+    # Section 8. This panel is the transition log, which is a real audit trail with
+    # an actor and a timestamp on every row. It is NOT a notification log: whether a
+    # Telegram card was delivered lives only in an n8n execution record and no store
+    # holds it, so a panel headed "who was told" would be inferring from the rule
+    # that P1 and P2 alert. This project does not put inferred facts on dashboards.
+    transitions.add_calculation(
+        "[Calculation_320]", "Move", "string", "measure", "nominal",
+        'MAX([from_status] + " to " + [to_status])',
+    )
+    transitions.add_calculation(
+        "[Calculation_321]", "Incident", "string", "dimension", "nominal",
+        'REPLACE([incident_id], "ARK-INC-", "")',
+    )
+    since = feed_cutoff(transitions)
+    if since is not None:
+        transitions.add_calculation(
+            "[Calculation_322]", "Recent", "boolean", "dimension", "nominal",
+            '[recorded_at] >= "%s"' % since,
+        )
 
     # Fields
     count = calc_measure(incidents, "[Calculation_101]")
-    response_state = calc_dimension(incidents, "[Calculation_102]")
     open_state = calc_dimension(incidents, "[Calculation_103]")
-    has_ack = calc_dimension(incidents, "[Calculation_104]")
-    ack_state = calc_dimension(incidents, "[Calculation_105]")
     open_count = calc_measure(incidents, "[Calculation_106]")
-    open_by_priority = calc_string(incidents, "[Calculation_107]")
     age_hours = calc_string(incidents, "[Calculation_108]")
     inc_filters = [calc_dimension(incidents, "[Calculation_%d]" % n, "boolean") for n in (110, 111, 112)]
     overdue_count = calc_measure(incidents, "[Calculation_120]")
     overdue_context = calc_string(incidents, "[Calculation_121]")
-    ack_in_window = calc_measure(incidents, "[Calculation_123]")
-    ack_context = calc_string(incidents, "[Calculation_124]")
-    median_text = calc_string(incidents, "[Calculation_126]")
+    open_context = calc_string(incidents, "[Calculation_124]")
+    mtta_text = calc_string(incidents, "[Calculation_126]")
     windows_text = calc_string(incidents, "[Calculation_127]")
+    mttc_text = calc_string(incidents, "[Calculation_129]")
+    closed_context = calc_string(incidents, "[Calculation_133]")
+    age_band = calc_dimension(incidents, "[Calculation_130]")
+    aging_segment = calc_dimension(incidents, "[Calculation_131]")
+    window_line = calc_row_measure(incidents, "[Calculation_140]")
+    ack_ratio = calc_row_measure(incidents, "[Calculation_141]")
+    ack_segment = calc_dimension(incidents, "[Calculation_142]")
+    ack_label = calc_dimension(incidents, "[Calculation_143]")
+    has_window = calc_dimension(incidents, "[Calculation_144]", "boolean")
+    minutes_text = calc_string(incidents, "[Calculation_145]")
+    overflow_text = calc_string(incidents, "[Calculation_146]")
+    slowest = (calc_dimension(incidents, "[Calculation_147]", "boolean")
+               if cut is not None else None)
     priority = dimension(incidents, "priority")
     module = dimension(incidents, "source_module")
     domain = dimension(incidents, "business_domain")
     incident_id = dimension(incidents, "incident_id")
     status = dimension(incidents, "status")
     assignee = dimension(incidents, "assigned_to")
-    created_at = dimension(incidents, "created_at")
+    created_local = dimension(incidents, "created_local")
     summary_text = dimension(incidents, "summary")
     minutes_to_ack = measure(incidents, "minutes_to_acknowledge")
     due_minutes = measure(incidents, "acknowledge_due_minutes")
-    t_count = calc_measure(transitions, "[Calculation_301]")
-    t_to = dimension(transitions, "to_status")
+    t_move = calc_string(transitions, "[Calculation_320]")
+    t_incident = calc_dimension(transitions, "[Calculation_321]")
+    t_actor = dimension(transitions, "actor")
+    t_when = dimension(transitions, "recorded_local")
+    t_recent = (calc_dimension(transitions, "[Calculation_322]", "boolean")
+                if since is not None else None)
     t_filters = [calc_dimension(transitions, "[Calculation_%d]" % n, "boolean") for n in (310, 311)]
 
-    # Color maps: red only where a response window has run out
-    incidents.add_palette(response_state, [(COLOR_ALERT, "Overdue"), (COLOR_NEUTRAL, "Within window")])
-    incidents.add_palette(ack_state, [(COLOR_ALERT, "Late"), (COLOR_NEUTRAL, "In window")])
+    # Section 9. Priority is an ORDERED category, so its levels are three intensities
+    # of one navy; breach is the only other ink on the page and it is never a series
+    # colour. Both stacks put the breach segment first so that the red always starts
+    # at the axis, where its length is read against a common baseline.
+    ramp = [(COLOR_P1, "P1"), (COLOR_P2, "P2"), (COLOR_P3, "P3"), (COLOR_P4, "P4")]
+    incidents.add_palette(aging_segment, [(COLOR_ALERT, "Overdue")] + ramp)
+    incidents.add_palette(ack_segment, [(COLOR_ALERT, "Late")] + ramp)
 
     # Extracts
     hyper_parameters = {"log_dir": tempfile.gettempdir()}
@@ -1193,102 +1490,136 @@ def build(skip_extracts=False, phone=True, actions=True):
             for ds in (incidents, transitions):
                 print("  extract     : %s, %d rows" % (ds.hyper.name, ds.write_hyper(hyper)))
 
-    soft = {"fontcolor": COLOR_INK_SOFT}
-    bold = {"bold": "true", "fontcolor": COLOR_INK}
+    soft = {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}
+    bold = {"bold": "true", "fontcolor": COLOR_INK, "fontname": FONT_BOOK, "fontsize": "11"}
     sheets = []
 
-    # KPI cards: label, number, context. Recomputed from the rows so the cards
-    # follow the filters; cross_check() has already proved they equal the API.
+    # Section 4, the KPI row: four BANs, each three left-aligned lines. A BAN without
+    # context is a number without a claim, so every card carries one. Card 1 is the
+    # only one with red ink and the only one whose left rule is red, which is what
+    # makes four identical objects read as one shouting and three answering.
+    #
+    # Every figure is recomputed from the incident rows rather than read off the
+    # snapshot, so the cards follow the filters; cross_check() has already proved that
+    # recomputation equals what the status API computed independently.
     sheets.append(worksheet(
         S_KPI_OVERDUE, incidents, params, mark="Text",
         texts=[overdue_count, overdue_context], bool_filters=inc_filters,
-        label_runs=kpi_runs("OVERDUE", overdue_count, overdue_context, alert=True),
+        label_runs=kpi_runs("Overdue", overdue_count, overdue_context, alert=True),
         show_labels=True,
     ))
     sheets.append(worksheet(
         S_KPI_OPEN, incidents, params, mark="Text",
-        texts=[open_count, open_by_priority], bool_filters=inc_filters,
-        label_runs=kpi_runs("OPEN INCIDENTS", open_count, open_by_priority),
+        texts=[open_count, open_context], bool_filters=inc_filters,
+        label_runs=kpi_runs("Open", open_count, open_context),
         show_labels=True,
     ))
     sheets.append(worksheet(
         S_KPI_ACK, incidents, params, mark="Text",
-        texts=[ack_in_window, ack_context], bool_filters=inc_filters,
-        label_runs=kpi_runs("ACKNOWLEDGED IN WINDOW", ack_in_window, ack_context),
+        texts=[mtta_text, windows_text], bool_filters=inc_filters,
+        label_runs=kpi_runs("Time to acknowledge", mtta_text, windows_text),
         show_labels=True,
     ))
     sheets.append(worksheet(
-        S_KPI_MEDIAN, incidents, params, mark="Text",
-        texts=[median_text, windows_text], bool_filters=inc_filters,
-        label_runs=kpi_runs("MEDIAN TIME TO ACKNOWLEDGE", median_text, windows_text),
+        S_KPI_CLOSE, incidents, params, mark="Text",
+        texts=[mttc_text, closed_context], bool_filters=inc_filters,
+        label_runs=kpi_runs("Time to close", mttc_text, closed_context),
         show_labels=True,
     ))
 
-    # Main view: open incidents by priority, red where the window has run out
+    # Section 6, the dominant view. This is the chart neither v1 nor v2 had, and it
+    # is where the store's bimodality shows: a live stream being worked inside window
+    # beside an aged batch nobody ever touched. "26 open, 16 overdue" states a number;
+    # an aging profile states what is wrong with the process.
+    #
+    # A SNAPSHOT and never a trend. The extracts hold current state only, so a trend
+    # over them reconstructs today's backlog and calls it history - section 6 of the
+    # specification, and the comment in build_extracts.py.
+    band_order = [name for name, _low, _high in AGE_BANDS]
     sheets.append(worksheet(
-        S_PRIORITY, incidents, params,
-        title="Open incidents by priority",
-        subtitle="Red bars are past their response window. Click a bar to filter the module "
-                 "view; the tooltip menu opens the incidents behind it.",
-        rows=[priority, response_state], cols=[count], mark="Bar",
-        color=response_state,
+        S_AGING, incidents, params,
+        title="Where the backlog is",
+        subtitle="Open incidents by age, stacked by priority. Red is the part already past "
+                 "its response window.",
+        rows=[age_band], cols=[count], mark="Bar",
+        color=aging_segment,
         filters=[(open_state, ["Open"])], bool_filters=inc_filters,
-        manual_sorts=[(response_state, ["Overdue", "Within window"])],
-        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="10",
-        mark_size="0.55",
+        manual_sorts=[(age_band, band_order),
+                      (aging_segment, ["P4", "P3", "P2", "P1", "Overdue"])],
+        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="12",
+        mark_size="0.62",
         tooltip_runs=[
-            field_run(count, bold), run_xml(" open incidents at ", soft), field_run(priority, bold),
-            run_xml(", ", soft), field_run(response_state, bold), run_xml(".", soft),
+            field_run(count, bold), run_xml(" open ", soft), field_run(aging_segment, bold),
+            run_xml(" incidents, open ", soft), field_run(age_band, bold), run_xml(".", soft),
         ],
     ))
 
-    # Time to acknowledge against the allowed window, per acknowledged incident
+    # Section 7, the bullet chart. Few designed it to replace the gauges dashboards
+    # accumulate: a featured measure, one comparative measure as a perpendicular tick,
+    # and two qualitative ranges - inside the window and past it - encoded as
+    # intensities of one hue rather than distinct ones, so the chart survives colour
+    # blindness. The bar is the ratio to each incident's own window; see Calculation_141.
+    bullet_filters = list(inc_filters) + [has_window] + ([slowest] if slowest else [])
     sheets.append(worksheet(
         S_TIME, incidents, params,
-        title="Time to acknowledge",
-        subtitle="Minutes from raise to acknowledgement, one bar per acknowledged incident. "
-                 "The tick is the window the SOP allows; red means it was missed.",
-        rows=[incident_id], cols=[minutes_to_ack], mark="Bar",
-        color=ack_state, lods=[due_minutes, priority, assignee, created_at],
-        filters=[(has_ack, ["yes"])], bool_filters=inc_filters,
-        reference_lines=[{"axis": minutes_to_ack, "value": due_minutes}],
-        gridlines_off=True, show_labels=True, label_font_size="10", mark_size="0.6",
+        title="How late is late",
+        subtitle="As a multiple of the window that incident was allowed.",
+        rows=[ack_label], cols=[ack_ratio], mark="Bar",
+        # `window_line` is on Detail deliberately. A reference line whose value column
+        # sits on no shelf is written into the file and silently not drawn: v2's tick
+        # worked because its value field was already on Detail for the tooltip, and
+        # this one had nothing else to put it there.
+        color=ack_segment,
+        lods=[priority, assignee, created_local, due_minutes, window_line],
+        texts=[minutes_text, overflow_text],
+        bool_filters=bullet_filters,
+        shelf_sorts=[(ack_label, ack_ratio)],
+        manual_sorts=[(ack_segment, ["P4", "P3", "P2", "P1", "Late"])],
+        reference_lines=[{"axis": ack_ratio, "value": window_line}],
+        gridlines_off=True, show_labels=True, label_font_size="12",
+        mark_size="0.62",
+        label_runs=[field_run(minutes_text, bold), run_xml("  ", soft),
+                    field_run(overflow_text, soft)],
         tooltip_runs=[
-            field_run(incident_id, bold), run_xml(", ", soft), field_run(priority, bold),
-            run_xml(", raised ", soft), field_run(created_at, bold),
-            run_xml(": acknowledged after ", soft), field_run(minutes_to_ack, bold),
-            run_xml(" minutes against a ", soft), field_run(due_minutes, bold),
-            run_xml(" minute window, ", soft), field_run(assignee, bold), run_xml(".", soft),
+            field_run(ack_label, bold), run_xml(", raised ", soft),
+            field_run(created_local, bold), run_xml(", acknowledged after ", soft),
+            field_run(minutes_text, bold), run_xml(" against a ", soft),
+            field_run(due_minutes, bold), run_xml(" minute window, by ", soft),
+            field_run(assignee, bold), run_xml(".", soft),
         ],
     ))
 
-    # Detail strip: composition by module, and what the lifecycle has recorded
+    # Section 8, demoted to the strip: who acted, and when.
+    feed_filters = list(t_filters) + ([t_recent] if t_recent else [])
+    feed_order = []
+    if t_recent is not None:
+        seen_stamps = set()
+        for row in sorted(transitions.rows, key=lambda r: r["recorded_at"], reverse=True):
+            if row["recorded_at"] >= since and row["recorded_local"] not in seen_stamps:
+                seen_stamps.add(row["recorded_local"])
+                feed_order.append(row["recorded_local"])
+    sheets.append(worksheet(
+        S_FEED, transitions, params,
+        title="Who acted, and when",
+        subtitle="The %d most recent transitions, newest first, on the plant clock. "
+                 "An audit trail, not a notification log." % FEED_ROWS,
+        rows=[t_when, t_actor, t_incident], texts=[t_move], mark="Text",
+        bool_filters=feed_filters,
+        manual_sorts=[(t_when, feed_order)] if feed_order else (),
+    ))
+
     sheets.append(worksheet(
         S_MODULES, incidents, params,
-        title="Incidents by module",
-        subtitle="All incidents, one event per inspected object, except nhtsa_nlp whose "
-                 "events are already trends over an aggregate. Click a bar to filter by module.",
+        title="Which models raise the work",
+        subtitle="All incidents, one event per inspected object.",
         rows=[module], cols=[count], mark="Bar",
         mark_color=COLOR_BAR, lods=[domain], bool_filters=inc_filters,
         shelf_sorts=[(module, count)],
-        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="10",
+        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="12",
+        mark_size="0.62",
         tooltip_runs=[
             field_run(module, bold), run_xml(" raised ", soft), field_run(count, bold),
             run_xml(" incidents in ", soft), field_run(domain, bold), run_xml(".", soft),
-        ],
-    ))
-    sheets.append(worksheet(
-        S_TRANSITIONS, transitions, params,
-        title="Lifecycle transitions",
-        subtitle="Recorded transitions by destination state. One incident was driven back from "
-                 "resolved to containment on purpose, which is why the count exceeds the incidents that moved.",
-        rows=[t_to], cols=[t_count], mark="Bar",
-        mark_color=COLOR_BAR, bool_filters=t_filters,
-        shelf_sorts=[(t_to, t_count)],
-        hide_axes=[t_count], gridlines_off=True, show_labels=True, label_font_size="10",
-        tooltip_runs=[
-            field_run(t_count, bold), run_xml(" transitions ended in ", soft),
-            field_run(t_to, bold), run_xml(".", soft),
         ],
     ))
 
@@ -1301,76 +1632,99 @@ def build(skip_extracts=False, phone=True, actions=True):
         texts=[age_hours], mark="Text", bool_filters=inc_filters,
     ))
 
-    dashboard_sheets = [S_KPI_OVERDUE, S_KPI_OPEN, S_KPI_ACK, S_KPI_MEDIAN,
-                        S_PRIORITY, S_TIME, S_MODULES, S_TRANSITIONS]
+    dashboard_sheets = [S_KPI_OVERDUE, S_KPI_OPEN, S_KPI_ACK, S_KPI_CLOSE,
+                        S_AGING, S_TIME, S_FEED, S_MODULES]
     sheet_names = dashboard_sheets + [S_DRILL]
 
-    # Dashboard layout: six bands in pixels, Z reading order
-    b_title, b_filters, b_kpi, b_main, b_detail, b_footer = bands([76, 60, 130, 364, 220, 50])
+    # Section 3, the layout. White space is planned arithmetically rather than
+    # nudged: the bands are pixel heights that MUST sum to DASH_H, because bands()
+    # normalises whatever it is given, so a budget that does not add up rescales
+    # every box silently. The assertion below is the guard.
+    #
+    # The specification's own arithmetic slipped here: it subtracts a gap and margin
+    # budget from 984 and lands on 352 where the subtraction gives 316. The numbers
+    # are therefore solved in code, and Dashboard_Design_v3.md is corrected to match
+    # what this builds rather than the other way round.
+    band_heights = [84, 44, 150, 330, 236, 56]
+    if sum(band_heights) != DASH_H:
+        raise SystemExit("the band budget is %d px and the canvas is %d px"
+                         % (sum(band_heights), DASH_H))
+    b_title, b_filters, b_kpi, b_main, b_detail, b_footer = bands(band_heights)
 
     heading = [
-        run_xml("Arkon Quality Steering Cell", {"fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "20"}),
-        run_xml("   Executive view", {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "20"}),
+        run_xml("Arkon Quality Steering Cell",
+                {"fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "22"}),
+        run_xml("    Executive view",
+                {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "22"}),
         NEWLINE,
-        run_xml("Are we on top of the open incidents? Seven models raise them; red always means "
-                "a response window has run out.",
-                {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "10"}),
+        # Section 5: generated, not typed. A sentence states the relationship between
+        # two numbers, which is the thing a fifth KPI card cannot do.
+        run_xml(status_sentence(incidents),
+                {"fontcolor": COLOR_INK, "fontname": FONT_BOOK, "fontsize": "13"}),
     ]
     stamp = [
-        run_xml("as of %s" % as_of_text,
-                {"fontalignment": "2", "fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "10"}),
+        run_xml("as of %s" % summary["as_of_local"],
+                {"fontalignment": "2", "fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "11"}),
         NEWLINE,
-        run_xml("status API extract: %s incidents, %s transitions" % (summary["total_incidents"], summary["total_transitions"]),
-                {"fontalignment": "2", "fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "9"}),
+        run_xml("%s incidents, %s transitions, plant clock"
+                % (summary["total_incidents"], summary["total_transitions"]),
+                {"fontalignment": "2", "fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}),
     ]
     footer = [
-        run_xml("What this store is. ", {"bold": "true", "fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "9"}),
-        run_xml("%s incidents raised over deliberately small demo slices, so every rate here is a rate "
-                "over a sample chosen to be small; the response times are real measurements of real delays. "
-                "Source: the n8n incident status API, refreshed by tableau/build_extracts.py. Repository: %s"
+        run_xml("What this store is. ",
+                {"bold": "true", "fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "11"}),
+        run_xml("%s incidents raised by seven models on public datasets. Every timestamp is "
+                "real. The operational context - people, lines, shifts - is simulated, and so "
+                "are the response times: a demo crew inside the live plant acknowledges and "
+                "closes on a schedule, so cards 3 and 4 measure that emitter, not a workforce. "
+                "Source: the n8n incident status API. %s"
                 % (summary["total_incidents"], REPO_URL),
-                {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "9"}),
+                {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}),
     ]
 
-    t_left, t_right = split(b_title, [900, 400])
-    f_space, f1, f2, f3 = split(b_filters, [640, 200, 260, 200])
+    t_left, t_right = split(b_title, [1120, 432])
+    f_space, f1, f2, f3 = split(b_filters, [772, 240, 300, 240])
     cards = split(b_kpi, [1, 1, 1, 1])
-    m_left, m_right = split(b_main, [780, 520])
-    d_left, d_right = split(b_detail, [780, 520])
+    # 0.62 of the usable width, which puts the dominant chart on the left and gives
+    # both rows the same vertical line down the page.
+    m_left, m_right = split(b_main, [62, 38])
+    d_left, d_right = split(b_detail, [62, 38])
 
     def card(container_id, stripe_id, sheet_id, box, sheet, stripe_color):
-        stripe_box, sheet_box = split(box, [6, 319])
+        stripe_box, sheet_box = split(box, [6, 382])
         return flow_zone(container_id, box, "horz", [
             text_zone(stripe_id, stripe_box, [run_xml(" ")], fixed_px=6, color=stripe_color, margin=0, padding=0),
-            sheet_zone(sheet_id, sheet_box, sheet, kpi=True, margin=0, padding=8),
-        ], color=COLOR_CARD, margin=6)
+            sheet_zone(sheet_id, sheet_box, sheet, kpi=True, margin=0, padding=10),
+        ], color=COLOR_CARD, margin=8)
 
     zones = []
     zones.extend(flow_zone(12, b_title, "horz", [
         text_zone(13, t_left, heading),
-        text_zone(14, t_right, stamp, fixed_px=400),
-    ], fixed_px=76))
+        text_zone(14, t_right, stamp, fixed_px=432),
+    ], fixed_px=84))
     zones.extend(flow_zone(15, b_filters, "horz", [
         text_zone(16, f_space, [run_xml(" ")]),
-        param_zone(17, f1, p_priority, fixed_px=200),
-        param_zone(18, f2, p_module, fixed_px=260),
-        param_zone(19, f3, p_status, fixed_px=200),
-    ], fixed_px=60))
+        param_zone(17, f1, p_priority, fixed_px=240),
+        param_zone(18, f2, p_module, fixed_px=300),
+        param_zone(19, f3, p_status, fixed_px=240),
+    ], fixed_px=44))
     zones.extend(flow_zone(20, b_kpi, "horz", [
         card(21, 31, 41, cards[0], S_KPI_OVERDUE, COLOR_ALERT),
-        card(22, 32, 42, cards[1], S_KPI_OPEN, COLOR_NEUTRAL),
-        card(23, 33, 43, cards[2], S_KPI_ACK, COLOR_NEUTRAL),
-        card(24, 34, 44, cards[3], S_KPI_MEDIAN, COLOR_NEUTRAL),
-    ], fixed_px=130, even=True))
+        card(22, 32, 42, cards[1], S_KPI_OPEN, COLOR_RULE),
+        card(23, 33, 43, cards[2], S_KPI_ACK, COLOR_RULE),
+        card(24, 34, 44, cards[3], S_KPI_CLOSE, COLOR_RULE),
+    ], fixed_px=150, even=True))
     zones.extend(flow_zone(50, b_main, "horz", [
-        sheet_zone(51, m_left, S_PRIORITY, color=COLOR_CARD, margin=6, padding=8),
-        sheet_zone(52, m_right, S_TIME, color=COLOR_CARD, margin=6, padding=8),
+        sheet_zone(51, m_left, S_AGING, color=COLOR_CARD, margin=8, padding=10),
+        sheet_zone(52, m_right, S_TIME, color=COLOR_CARD, margin=8, padding=10,
+                   fixed_px=RIGHT_COLUMN),
     ]))
     zones.extend(flow_zone(60, b_detail, "horz", [
-        sheet_zone(61, d_left, S_MODULES, color=COLOR_CARD, margin=6, padding=8),
-        sheet_zone(62, d_right, S_TRANSITIONS, color=COLOR_CARD, margin=6, padding=8),
-    ], fixed_px=220))
-    zones.extend(text_zone(70, b_footer, footer, fixed_px=50))
+        sheet_zone(61, d_left, S_FEED, color=COLOR_CARD, margin=8, padding=10),
+        sheet_zone(62, d_right, S_MODULES, color=COLOR_CARD, margin=8, padding=10,
+                   fixed_px=RIGHT_COLUMN),
+    ], fixed_px=236))
+    zones.extend(text_zone(70, b_footer, footer, fixed_px=56))
 
     # Content model, as Tableau states it when it refuses a file:
     # ((layout-options? | repository-location?), style, size?, datasources,
@@ -1403,10 +1757,10 @@ def build(skip_extracts=False, phone=True, actions=True):
         phone_zones = [
             text_zone(13, p_title, heading, fixed_px=70, padding=0),
             sheet_zone(41, p_overdue, S_KPI_OVERDUE, kpi=True, fixed_px=110, color=COLOR_CARD, padding=0),
-            sheet_zone(51, p_priority_box, S_PRIORITY, fixed_px=300, color=COLOR_CARD, padding=0),
+            sheet_zone(51, p_priority_box, S_AGING, fixed_px=300, color=COLOR_CARD, padding=0),
             sheet_zone(42, p_open, S_KPI_OPEN, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
             sheet_zone(43, p_ack, S_KPI_ACK, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
-            sheet_zone(44, p_median, S_KPI_MEDIAN, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
+            sheet_zone(44, p_median, S_KPI_CLOSE, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
         ]
         dashboard.append("      <devicelayouts>")
         dashboard.append("        <devicelayout name='Phone'>")
@@ -1427,9 +1781,9 @@ def build(skip_extracts=False, phone=True, actions=True):
     action_lines = []
     if actions:
         action_lines.append("  <actions>")
-        action_lines.extend(action(1, "Priority selection filters the module view", S_PRIORITY, S_MODULES, "on-select"))
-        action_lines.extend(action(2, "Module selection filters the priority view", S_MODULES, S_PRIORITY, "on-select"))
-        action_lines.extend(action(3, "Incidents behind this bar", S_PRIORITY, S_DRILL, "explicit"))
+        action_lines.extend(action(1, "Age selection filters the model view", S_AGING, S_MODULES, "on-select"))
+        action_lines.extend(action(2, "Model selection filters the age view", S_MODULES, S_AGING, "on-select"))
+        action_lines.extend(action(3, "Incidents behind this bar", S_AGING, S_DRILL, "explicit"))
         action_lines.extend(action(4, "Incidents behind this module", S_MODULES, S_DRILL, "explicit"))
         action_lines.append("  </actions>")
 
@@ -1458,7 +1812,7 @@ def build(skip_extracts=False, phone=True, actions=True):
     # published workbook does not depend on a Preferences.tps on any machine.
     out.append("  <preferences>")
     out.append("    <color-palette custom='true' name='%s' type='regular'>" % PALETTE_NAME)
-    for color in (COLOR_ALERT, COLOR_NEUTRAL):
+    for color in (COLOR_ALERT, COLOR_P1, COLOR_P2, COLOR_P3, COLOR_P4):
         out.append("      <color>%s</color>" % color)
     out.append("    </color-palette>")
     out.append("  </preferences>")

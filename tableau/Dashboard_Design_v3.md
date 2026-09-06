@@ -107,8 +107,38 @@ main row split      1552 x 0.62 = 962 left, 574 right, 16 px gap
 ```
 
 40 + 34 + 150 + 400 + 180 + 32 = 836, plus five 20 px band gaps and 2 x 24 outer
-margin = 984. Trim the main row to 352 to land on 900 exactly, or author at 1600 x 984
-and let Tableau fit. **Build at 1600 x 900 with the main row at 352.**
+margin = 984.
+
+**Corrected at build time, 2026-09-06.** The trim above worked out to 352, and the
+subtraction gives 316; the sentence was written before the arithmetic was done. The
+budget is therefore solved in `build_workbook.py` and asserted there rather than
+carried in prose, because `bands()` normalises whatever it is handed and a budget that
+does not add up rescales every box silently instead of failing.
+
+The built band heights, which sum to exactly 900 with the zone margins inside them:
+
+| Band | px | Holds |
+|---|---|---|
+| Header | 84 | Title, the generated status sentence, the as-of stamp |
+| Filters | 44 | The three list parameters |
+| KPI row | 150 | Four BANs |
+| Main | 330 | Aging profile (62 percent) and bullet bars (38 percent) |
+| Strip | 236 | Activity feed (62 percent) and models (38 percent) |
+| Footer | 56 | What this store is |
+
+Two of those differ from the plan on purpose. **The filter band survives**: this
+document's layout has no room for it and section 11 argues an executive view should be
+a statement, but the three controls were already built, they work (verified by setting
+Priority to P1 and reading 11 raised, 11 closed, 0 open off the cards), and dropping a
+working feature is Sergey's call rather than the specification's. **The strip grew and
+the main row shrank**: at 186 px, seven model rows and six feed rows had about 14 px
+each and their 11 pt labels overlapped into an unreadable stack, while the main row had
+room to spare with five aging rows.
+
+**A horizontal container does not honour a proportional child box.** The 62/38 split is
+in the XML exactly as written, and Tableau rendered the charts 50/50 and the strip
+18/82, sizing the text table to its own content. The right-hand child carries an
+explicit pixel width and the left takes the remainder; that is what holds.
 
 **Every block is left-aligned, and every number sits on a column grid.** This is the
 point Sergey made most sharply and it is the one that separates a dashboard that looks
@@ -181,8 +211,14 @@ fifteen minutes, so the bands have to open at the hour scale or the whole live s
 collapses into one bar. The empty 4-to-24-hour band stays on the axis: an empty band
 between two full ones is information, and dropping it would hide the shape.
 
-Row headers are **one combined label per row**, not two nested header columns. Where a
-band is entirely past its response window the row reads `over 3 d / overdue`.
+Row headers are **one combined label per row**, not two nested header columns.
+
+**As built the label is the band name alone**, and the overdue count is carried by the
+red segment's own data label instead. Composing `over 3 d / 11 overdue` in Tableau needs
+a FIXED level-of-detail expression, and a FIXED LOD is computed before the dimension
+filters, so the three parameter controls would have left a row label counting incidents
+the chart was no longer drawing. A number that contradicts the bar beside it is worse
+than a plainer label.
 
 **The trap, and it is the reason there is no aging trend on this dashboard.** An aging
 chart built from current state is honest about today and lies about every other day:
@@ -216,10 +252,27 @@ declaring the featured measure's state. His rules that bind here:
   survives colour blindness.
 - The comparative measure is a single perpendicular tick, not a bar.
 
-Applied: one row per acknowledged incident, the bar is minutes to acknowledge, the
-tick is that incident's own allowed window (15 for P1, 60 for P2), and the bar is red
-only where it has passed its tick. Sorted descending by minutes. At most 12 rows; the
-row label is the incident id plus priority in one column.
+Applied: one row per acknowledged incident, the bar is the ratio to that incident's own
+allowed window (15 minutes for P1, 60 for P2), the tick is that window at 1.0, and the
+bar is red only where it has passed the tick. Sorted descending. The row label is the
+incident id plus priority in one column.
+
+**Six rows, not twelve.** Measured on the render: this panel pays for two things the
+aging chart beside it does not, a wrapped second caption line and a quantitative axis,
+which together cost about 43 px of a 143 px plot. At twelve rows that left four pixels
+each and the labels printed on top of one another. Six rows and a one-line caption put
+it back in proportion with the panel beside it.
+
+**A consequence worth stating**: the six slowest acknowledgements are currently all
+past their window, so the chart shows no in-window bar and Few's two qualitative ranges
+collapse to one on this data. That is the honest answer to the question the panel asks
+("how late is late") and the in-window count is on card 3, but if the store ever becomes
+mostly punctual the selection rule is the thing to revisit.
+
+**The axis stays visible**, which is a change from section 10's instinct to hide it.
+Hiding it also removed the window tick, and a bullet graph without its quantitative
+scale is not a bullet graph: the reader has to be able to see where 1.0 sits. It is the
+axis TITLE that section 10 drops, not the axis.
 
 P3 and P4 have no window and therefore no row. That is not a gap to fill with a zero.
 
@@ -344,6 +397,67 @@ is for.
   a record across suppression windows.
 - **Cost of poor quality.** The measure that reaches executives fastest, and there is
   no cost figure anywhere in this system.
+
+---
+
+## 13. What Tableau refused, and what it silently ignored
+
+Four findings from building this, each cheaper to read than to rediscover. Three of them
+produce no error at all, which is what makes them worth writing down.
+
+**`customized-tooltip` comes before `customized-label`.** Tableau refused the whole
+workbook and named the content model: `(view, mark, mark-sizing?, encodings?, label-data?,
+dropline?, trendline?, reference-line, customized-tooltip, customized-label, style)`. v2
+never met this because no sheet carried both; the bullet chart is the first with a
+reference line, a custom label and a custom tooltip together.
+
+**A reference line whose value column is on no shelf is written and never drawn.** The
+window tick was in the file, valid, and invisible. v2's tick worked by accident: its value
+field was already on Detail for the tooltip. Putting the field on Detail is what draws it.
+Its label is then set to `none`, because on a ratio axis the default printed "1.0000"
+beside every row, which is the number the axis already carries.
+
+**Fit is a property of the worksheet's window, not of the dashboard.** The dashboard
+`<viewpoints>` block already asked for `entire-view` per sheet and every sheet still
+rendered at the default Standard fit, so seven model bars used 32 px of a 140 px card.
+The element that binds is `<viewpoint><zoom type='entire-view' /></viewpoint>` inside
+`<window class='worksheet'>`. Found by setting it on one sheet with the mouse, saving,
+and diffing - the same method that found the colour-map declaration for v2. Note that
+Tableau Public's Ctrl+S publishes to the web; File > Save As is the local one.
+
+**A stacked colour dimension stacks in DESCENDING sort order.** The dictionary that read
+Overdue-first put the red at the far end of every bar, where its length has no common
+baseline to be read against. Reversing it puts breach at the axis on both charts.
+
+**And one that is not about Tableau.** `Preferences.tps` in this folder defined the same
+palette NAME with the v2 colours. The workbook embeds its own copy and renders correctly
+from it, but Tableau merges a same-named local palette over the embedded one when a
+workbook is saved from the application, so the stale file came back as the v2 red and
+gray in a hand save. Both now carry the section 9 values.
+
+---
+
+## 14. The footer says the response times are simulated, and that is a correction
+
+The footer in section 3 read "Operational context simulated", which is true about the
+people, lines and shifts on an incident and says nothing about the two response-time
+cards beside it. Sergey asked on 2026-09-06 whether the crew working the incidents is an
+automatic step. It is: `live_plant/plant.py` rolls per-incident probabilities every tick
+and posts to the same transition endpoint an operator's form posts to, so **cards 3 and 4
+measure that emitter rather than a workforce**, and the footer now says so.
+
+The measurement behind it: of 302 transitions in the extract of that morning, 301 carry a
+name from the simulated roster and one carries Sergey's. That is not a count of human
+actions - the cockpit's transition form records the identity picked in its own selector,
+and the crew draws from the same roster, so **a person's move and a dice roll are
+indistinguishable in the `actor` column**. Every timestamp is real, which is why the
+footer keeps that clause too.
+
+The fix that would make the distinction real is small and is not built: the emitter sends
+an origin marker to the transition endpoint, the endpoint stores it, and the two surfaces
+can then separate work done by the crew from work done by a person. It is worth doing
+because it turns "the numbers are simulated" into "the system records who made each move,
+including whether it was a bot".
 
 ---
 

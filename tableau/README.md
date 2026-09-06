@@ -107,50 +107,71 @@ inside the `.twbx`.
 
 ### What is on the dashboard, and where every number comes from
 
-One dashboard, `Arkon Executive View`, 1300 by 900, plus a phone layout, answering
-one question for a plant manager: **are we on top of the open incidents?** Read
-top to bottom, left to right:
+One dashboard, `Arkon Executive View`, **1600 by 900**, plus a phone layout,
+answering one question for a plant manager: **is the Steering Cell keeping up, and if
+not, where is it behind?** Built from `Dashboard_Design_v3.md`, which is one
+specification for two surfaces - this workbook is the published snapshot and the
+cockpit's `/executive` page is the always-live one, and they carry the same hierarchy,
+the same numbers and the same colour rules, because two executive views of one plant
+that look different are two claims about that plant.
+
+Read top to bottom, left to right:
 
 | Band | What it shows | Where the number comes from |
 |---|---|---|
-| Title | the question, the "as of" stamp, the extract size | `store_summary.as_of`, `total_incidents`, `total_transitions` |
+| Header | the title, a generated status sentence, the "as of" stamp on the plant clock | `store_summary.as_of_local`, `total_incidents`, `total_transitions`; the sentence is computed from `incidents.csv` by `status_sentence()` |
 | Filters | Priority, Model, Status | three list parameters whose members are read from `incidents.csv` at build time; every sheet carries a boolean filter calculation against them |
-| **OVERDUE** card, red stripe, red number | open incidents past their response window, as a count and as a share of open incidents | `SUM(IF [overdue] THEN 1 ELSE 0 END)` over `incidents`, context `of N open, P percent` |
-| OPEN INCIDENTS card | open incidents and their priority split | `SUM(IF [is_open] ...)`, context `n P1, n P2, n P3` |
-| ACKNOWLEDGED IN WINDOW card | incidents acknowledged inside the SOP window, of those acknowledged at all | `minutes_to_acknowledge <= acknowledge_due_minutes`, context `of N acknowledged, M late` |
-| MEDIAN TIME TO ACKNOWLEDGE card | median minutes from raise to acknowledgement, in hours | `MEDIAN([minutes_to_acknowledge])`, context lists the windows the store carries per priority (15 min P1, 60 min P2; P3 has none) |
-| Open incidents by priority (the main view) | bars by priority, split by response state; **red only where the window has run out** | `incidents`, filter `is_open`, colour by `IF [overdue] THEN "Overdue" ELSE "Within window" END` |
-| Time to acknowledge | one bar per acknowledged incident, with the allowed window as a reference tick; red where the window was missed | `minutes_to_acknowledge` against `acknowledge_due_minutes`, drawn as a per-row reference line |
-| Incidents by module | composition by source module, sorted | `COUNT([incident_id])` by `source_module`; `nhtsa_nlp` is a count of signals, not parts, and the subtitle says so |
-| Lifecycle transitions | recorded transitions by destination state | `transitions.csv`, `COUNT([transition_id])` by `to_status` |
-| Footer | what this store is, the source, the repository | text |
+| **OVERDUE** card, red rule, red number | open incidents past their response window, and their share of open | `SUM(IF [overdue] THEN 1 ELSE 0 END)`, context `of N open, P percent` |
+| OPEN card | open incidents, with what has been through the plant beside it | `SUM(IF [is_open] ...)`, context `N raised, M closed, R resolved`. `resolved` is deliberately not counted as open: the status API's `open_incidents` is new + acknowledged + in_containment, and a workbook that defined it otherwise would disagree with the cockpit and the assistant |
+| TIME TO ACKNOWLEDGE card | MTTA in minutes | `MEDIAN([minutes_to_acknowledge])`, context lists the windows the store carries (15 min P1, 60 min P2; P3 has none) |
+| TIME TO CLOSE card | MTTR in minutes | `MEDIAN([minutes_to_close])`, context `median over N closed` |
+| **Where the backlog is** (the dominant view) | open incidents by age band, stacked by priority, with the overdue part of each band as its own red segment | `incidents`, filter `is_open`, rows `Age band`, colour `IF [overdue] THEN "Overdue" ELSE [priority] END` |
+| How late is late | the six slowest acknowledgements as bullet bars, each a ratio to its own allowed window, with that window as a tick at 1.0 | `minutes_to_acknowledge / acknowledge_due_minutes`, capped at 4x and marked `>4x` past the cap; the tick is a per-cell reference line |
+| Who acted, and when | the six most recent lifecycle transitions on the plant clock | `transitions.csv`: `recorded_local`, `actor`, incident, `from_status to to_status` |
+| Which models raise the work | composition by model, sorted | `COUNT([incident_id])` by `source_module`; `nhtsa_nlp` is a count of signals, not parts |
+| Footer | what this store is, including what is simulated | text |
 
-The KPI cards recompute from the incident rows rather than reading the API's
-summary, so that they follow the three filters like every other sheet. The generator
-refuses to build if that recomputation disagrees with `store_summary.csv` (open,
-overdue, acknowledged, acknowledged within window), so the API stays the reference
-and any drift is loud rather than silent.
+The KPI cards recompute from the incident rows rather than reading the API's summary,
+so that they follow the three filters like every other sheet. The generator refuses to
+build if that recomputation disagrees with `store_summary.csv` (open, overdue,
+acknowledged, acknowledged within window), so the API stays the reference and any drift
+is loud rather than silent.
 
-Interactivity: the three filters apply to every sheet; clicking a bar in the
-priority view filters the module view and vice versa (both "use as filter" actions on
-the same data source); the tooltip of either bar chart carries a menu link,
-"Incidents behind this bar", that opens the drill-down sheet filtered to that bar
-(incident, priority, status, module, assignee, summary, age in hours). Tooltips are
-sentences built from the fields in the view.
+Interactivity: the three filters apply to every sheet; clicking a bar in the aging view
+filters the model view and vice versa; the tooltip of either bar chart carries a menu
+link, "Incidents behind this bar", that opens the drill-down sheet filtered to that bar.
+Tooltips are sentences built from the fields in the view. **The filters work and do not
+look like they do**: a Tableau compact list shows no arrow until it is hovered, so the
+control reads as a text box. Verified by setting Priority to P1 and reading `11 raised,
+11 closed, 0 open` off the cards, which matches the store's eleven P1 incidents.
+`radiolist` instead of `dropdown` in `param_zone()` would put the choices on one line.
 
-**Design rules, from `Dashboard_Design.md`:** one message in five seconds (the red
-overdue count), KPI cards with a label, a number and a context line, a Z-layout with
-the important view upper-left, no gridlines, no zero lines, no axis where the marks
-carry their labels, thin bars, direct labels, sorted bars, a neutral canvas
-(`#f5f5f3`) with white cards, one accent blue for bars that carry no state, and one
-alert red (`#d03b3b`) reserved for a response window that has run out. The status
-pair red / gray was validated with the `dataviz` skill's palette script (the gray is
-flagged by its chroma floor, as every neutral is; that is the point of it).
+**Design rules, from `Dashboard_Design_v3.md`:** one message in five seconds; four BANs
+with a label, a number and a context line, all left-aligned on one baseline so the row
+has a vertical line in it; the aging profile as the dominant view because an aged
+backlog behind a healthy live stream is the thing this dashboard exists to expose;
+bullet bars as ratios rather than minutes, because this store spans 0 to about 9,000
+minutes against windows of 15 and 60 and on a minutes axis every window tick lands
+inside a pixel of the left edge; a single navy family for priority, which is an ordered
+category, plus one reserved red; no gridlines, no zero lines, thin sorted bars and
+direct labels. **Red appears in exactly three places**: the OVERDUE card, the overdue
+segment of an aging band, and a bullet bar past its tick. If a viewer sees red, a
+response window has run out.
 
-**Two honest reframings, decided by the data.** The module counts are 6 / 6 / 5 /
-5 / 5 / 1 / 1, so the charter's "trend Pareto" is a composition by module and is
-titled as one. Two incidents carry an acknowledge time, so "response times" is the
-two measurements, not a distribution.
+**What this dashboard deliberately does not show** is in section 12 of the design, and
+the two that matter here are an aging TREND and sparklines. The extracts hold current
+state only, so a trend over them reconstructs today's backlog and calls it history. That
+stays true until the extract layer appends a dated row per open incident per run.
+
+**Three honest reframings, decided by the data.** The charter's "trend Pareto" is a
+composition by model and is titled as one. `resolved` is not open, and the OPEN card
+says so rather than borrowing the word. And the response-time cards measure the demo
+crew inside `live_plant/plant.py`, not a workforce: that crew rolls probabilities every
+tick and posts to the same transition endpoint an operator's form posts to, so of 302
+transitions in one morning's extract, 301 carried a name from the simulated roster. The
+footer says this. Every timestamp is real; who acted is not distinguishable from a dice
+roll in the `actor` column, because the cockpit's form records the identity picked in
+its own selector and the crew draws from the same roster.
 
 ### How the generator learned Tableau's XML
 
@@ -182,7 +203,11 @@ in marks, kept as the specification the workbook above was built against.
 - **Open incidents by priority.** `incidents.csv`, filter `is_open`, split by
   `priority`. `overdue` and `age_minutes` are the second dimension that makes it
   operational rather than decorative, because an open P1 inside its window and one
-  four days past it are not the same fact.
+  four days past it are not the same fact. **v3 builds this as an aging profile**:
+  rows are age bands, the stack is priority, and the overdue part of each band is
+  its own red segment - see `Dashboard_Design_v3.md` section 6 for why the obvious
+  alternative, colouring a band red when all of it is overdue, cannot work when P3
+  carries no window at all.
 - **Response times.** `incidents.csv` for the distributions
   (`minutes_to_acknowledge`, `minutes_to_resolve`, `minutes_to_close`) and
   `acknowledged_within_window` from the summary for the one number an executive
@@ -195,11 +220,23 @@ in marks, kept as the specification the workbook above was built against.
   aggregate, so it contributes 25 rows standing for 3,080 tested cells, and mixing
   the two on one axis compares a count of parts with a count of signals.
 
-**One honest caveat belongs on the finished dashboard**, and it is in the footer:
-this store holds 29 incidents from deliberately small demo slices, so every rate on
-it is a rate over a sample chosen to be small. The response times are real
-measurements of real delays and the delays are days, because nobody was watching a
-demo store.
+**The honest caveat that belongs on the finished dashboard has changed, and it is in
+the footer.** It used to read that the store held 29 incidents from deliberately small
+demo slices, so every rate on it was a rate over a small sample, and that the response
+times were real measurements of real delays because nobody was watching a demo store.
+
+Both halves are now wrong, in opposite directions. The live plant has raised the store
+past 140 and keeps going, so the sample is no longer the limitation. And the delays are
+no longer nobody watching: a demo crew inside `live_plant/plant.py` acknowledges,
+contains, resolves and closes on rolled probabilities every tick, through the same
+transition endpoint an operator's form uses. So the response-time cards measure that
+emitter rather than a workforce, and the footer says so. What has not changed is that
+every timestamp is real - the emitter records real moments, it does not fabricate them.
+
+The aged half of the backlog is the part that still comes from the old replay batches:
+20 of 47 open incidents more than three days old with one ever acknowledged, sitting
+behind a live stream being worked inside window. That bimodality is what the aging
+profile exists to show.
 
 Booleans are written `TRUE` and `FALSE` and nulls as empty cells, which is the
 form Tableau's CSV connector types as Boolean and Null rather than as a two-value

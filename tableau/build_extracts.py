@@ -31,9 +31,35 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from zoneinfo import ZoneInfo
 
 DEFAULT_API = "http://AK2101:5678/webhook/arkon-incident-status"
 OUT = pathlib.Path(__file__).resolve().parent / "extracts"
+
+# The plant's clock. Every timestamp the status API returns is UTC, and a board
+# in Cologne that prints UTC raw reads two hours behind the room; that defect was
+# found on the cockpit's executive page on 2026-09-06 and this is the same fix one
+# layer earlier, so the workbook does not have to do timezone arithmetic in a
+# calculated field. The zone is named rather than taken from the machine, so an
+# extract built on a laptop in another country still carries the plant's clock,
+# and named zones handle CEST and CET without a hardcoded offset.
+#
+# The raw UTC columns stay beside these, because they are the fact; these are a
+# rendering of it.
+PLANT_TZ = ZoneInfo("Europe/Berlin")
+
+
+def local(stamp, fmt="%d %b %H:%M"):
+    """Render an API timestamp on the plant clock. Unparseable stamps pass through."""
+    if not stamp:
+        return ""
+    try:
+        moment = datetime.datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+    except ValueError:
+        return str(stamp)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=datetime.timezone.utc)
+    return moment.astimezone(PLANT_TZ).strftime(fmt)
 
 # Charter 7.2. Every incident is in exactly one of these, which is what makes the
 # per-state sweep below both complete and free of duplicates.
@@ -115,6 +141,7 @@ def main():
         rows.append({
             "incident_id": item["incident_id"],
             "created_at": item["created_at"],
+            "created_local": local(item["created_at"]),
             "priority": item["priority"],
             "status": item["status"],
             "raised_as": item.get("raised_as"),
@@ -157,6 +184,7 @@ def main():
                 "transition_id": step.get("transition_id"),
                 "incident_id": item["incident_id"],
                 "recorded_at": step.get("recorded_at"),
+                "recorded_local": local(step.get("recorded_at"), "%d %b %H:%M"),
                 "from_status": step.get("from_status"),
                 "to_status": step.get("to_status"),
                 "actor": step.get("actor"),
@@ -167,14 +195,15 @@ def main():
             })
     steps.sort(key=lambda s: (s["recorded_at"] or "", s["incident_id"]))
     write("transitions.csv", steps,
-          ["transition_id", "incident_id", "recorded_at", "from_status", "to_status", "actor",
-           "note", "priority", "source_module", "business_domain"])
+          ["transition_id", "incident_id", "recorded_at", "recorded_local", "from_status",
+           "to_status", "actor", "note", "priority", "source_module", "business_domain"])
 
     # One row, the snapshot. Its purpose is the as_of stamp and the KPI figures
     # the API computed, so a workbook can show what it was told rather than a
     # number it recomputed and might have recomputed differently.
     snapshot = [{
         "as_of": as_of,
+        "as_of_local": local(as_of, "%d %b %Y %H:%M"),
         "total_incidents": store.get("total_incidents"),
         "open_incidents": store.get("open_incidents"),
         "overdue_incidents": store.get("overdue_incidents"),

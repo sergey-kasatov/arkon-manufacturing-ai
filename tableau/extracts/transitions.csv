@@ -1,297 +1,309 @@
-transition_id,incident_id,recorded_at,from_status,to_status,actor,note,priority,source_module,business_domain
-ARK-TRN-00001,ARK-INC-00013,2026-09-03T19:46:11.291Z,new,acknowledged,M. Brandt,picked up by the assigned planner,P1,cmapss_rul,asset_reliability
-ARK-TRN-00002,ARK-INC-00013,2026-09-03T19:46:11.473Z,acknowledged,in_containment,M. Brandt,unit pulled from the schedule pending inspection,P1,cmapss_rul,asset_reliability
-ARK-TRN-00003,ARK-INC-00013,2026-09-03T19:46:11.672Z,in_containment,resolved,M. Brandt,"inspection completed, part replaced",P1,cmapss_rul,asset_reliability
-ARK-TRN-00004,ARK-INC-00013,2026-09-03T19:46:11.887Z,resolved,closed,M. Brandt,reviewed and closed,P1,cmapss_rul,asset_reliability
-ARK-TRN-00005,ARK-INC-00016,2026-09-03T19:46:42.884Z,new,false_positive,S. Kasatov,"attribution test record, not a real engine; kept for threshold tuning",P1,cmapss_rul,asset_reliability
-ARK-TRN-00006,ARK-INC-00032,2026-09-03T19:46:56.749Z,new,acknowledged,T. Vogel,picked up by the assigned planner,P2,gc10_detect,visual_inspection
-ARK-TRN-00007,ARK-INC-00032,2026-09-03T19:47:21.927Z,acknowledged,in_containment,T. Vogel,unit pulled from the schedule pending inspection,P2,gc10_detect,visual_inspection
-ARK-TRN-00008,ARK-INC-00032,2026-09-03T19:47:47.094Z,in_containment,resolved,T. Vogel,"inspection completed, part replaced",P2,gc10_detect,visual_inspection
-ARK-TRN-00009,ARK-INC-00032,2026-09-03T19:48:12.283Z,resolved,in_containment,T. Vogel,unit pulled from the schedule pending inspection,P2,gc10_detect,visual_inspection
-ARK-TRN-00010,ARK-INC-00032,2026-09-03T19:48:37.455Z,in_containment,resolved,T. Vogel,"inspection completed, part replaced",P2,gc10_detect,visual_inspection
-ARK-TRN-00011,ARK-INC-00032,2026-09-03T19:49:02.634Z,resolved,closed,T. Vogel,reviewed and closed,P2,gc10_detect,visual_inspection
-ARK-TRN-00012,ARK-INC-00042,2026-09-05T15:39:03.172Z,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P1,scania_aps,fleet_reliability
-ARK-TRN-00013,ARK-INC-00040,2026-09-05T15:39:03.323Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
-ARK-TRN-00014,ARK-INC-00040,2026-09-05T15:39:24.305Z,acknowledged,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
-ARK-TRN-00015,ARK-INC-00045,2026-09-05T15:39:45.343Z,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00016,ARK-INC-00045,2026-09-05T15:40:06.499Z,acknowledged,false_positive,A. Novak,"component within drawing tolerance, returned to the line",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00017,ARK-INC-00047,2026-09-05T16:01:49.142Z,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
-ARK-TRN-00018,ARK-INC-00040,2026-09-05T16:01:49.315Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
-ARK-TRN-00019,ARK-INC-00047,2026-09-05T16:19:31.475Z,acknowledged,in_containment,M. Brandt,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
-ARK-TRN-00020,ARK-INC-00041,2026-09-05T16:19:31.627Z,new,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
-ARK-TRN-00021,ARK-INC-00043,2026-09-05T16:19:31.783Z,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
-ARK-TRN-00022,ARK-INC-00042,2026-09-05T16:30:39.991Z,acknowledged,resolved,M. Sato,"air dryer cartridge replaced, road test passed",P1,scania_aps,fleet_reliability
-ARK-TRN-00023,ARK-INC-00044,2026-09-05T16:30:40.174Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
-ARK-TRN-00024,ARK-INC-00046,2026-09-05T16:30:40.348Z,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00025,ARK-INC-00048,2026-09-05T16:42:38.464Z,new,false_positive,A. Novak,"section clean, part released to machining",P3,casting_cv,visual_inspection
-ARK-TRN-00026,ARK-INC-00050,2026-09-05T16:42:38.650Z,new,false_positive,P. Lindt,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
-ARK-TRN-00027,ARK-INC-00051,2026-09-05T16:42:38.845Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
-ARK-TRN-00028,ARK-INC-00042,2026-09-05T16:51:23.282Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P1,scania_aps,fleet_reliability
-ARK-TRN-00029,ARK-INC-00044,2026-09-05T16:51:23.469Z,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
-ARK-TRN-00030,ARK-INC-00047,2026-09-05T17:13:40.572Z,in_containment,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P2,cmapss_rul,asset_reliability
-ARK-TRN-00031,ARK-INC-00043,2026-09-05T17:13:40.756Z,acknowledged,false_positive,A. Novak,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
-ARK-TRN-00032,ARK-INC-00044,2026-09-05T17:13:40.943Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
-ARK-TRN-00033,ARK-INC-00051,2026-09-05T17:22:54.323Z,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
-ARK-TRN-00034,ARK-INC-00055,2026-09-05T17:27:02.161Z,new,acknowledged,A. Novak,"acknowledged from the cockpit form, part quarantined for QC",P3,casting_cv,visual_inspection
-ARK-TRN-00035,ARK-INC-00046,2026-09-05T17:31:12.186Z,acknowledged,in_containment,P. Lindt,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
-ARK-TRN-00036,ARK-INC-00055,2026-09-05T17:31:12.383Z,acknowledged,false_positive,A. Novak,"section clean, part released to machining",P3,casting_cv,visual_inspection
-ARK-TRN-00037,ARK-INC-00053,2026-09-05T17:42:39.889Z,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00038,ARK-INC-00054,2026-09-05T17:42:40.066Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
-ARK-TRN-00039,ARK-INC-00056,2026-09-05T17:42:40.296Z,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
-ARK-TRN-00040,ARK-INC-00047,2026-09-05T17:53:21.078Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,cmapss_rul,asset_reliability
-ARK-TRN-00041,ARK-INC-00053,2026-09-05T17:53:21.279Z,acknowledged,in_containment,A. Novak,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
-ARK-TRN-00042,ARK-INC-00046,2026-09-05T18:02:16.570Z,in_containment,resolved,P. Lindt,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
-ARK-TRN-00043,ARK-INC-00051,2026-09-05T18:02:16.733Z,resolved,in_containment,L. Fischer,"containment did not hold, incident reopened",P3,nhtsa_nlp,field_quality
-ARK-TRN-00044,ARK-INC-00054,2026-09-05T18:02:16.904Z,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P3,cmapss_rul,asset_reliability
-ARK-TRN-00045,ARK-INC-00059,2026-09-05T18:10:24.477Z,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00046,ARK-INC-00046,2026-09-05T18:10:24.680Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
-ARK-TRN-00047,ARK-INC-00051,2026-09-05T18:10:24.887Z,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
-ARK-TRN-00048,ARK-INC-00061,2026-09-05T18:21:13.304Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P1,cmapss_rul,asset_reliability
-ARK-TRN-00049,ARK-INC-00051,2026-09-05T18:21:13.558Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
-ARK-TRN-00050,ARK-INC-00053,2026-09-05T18:21:13.737Z,in_containment,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
-ARK-TRN-00051,ARK-INC-00061,2026-09-05T18:30:48.273Z,acknowledged,false_positive,D. Keller,"inspection found the sensor drifted, no wear on the unit",P1,cmapss_rul,asset_reliability
-ARK-TRN-00052,ARK-INC-00053,2026-09-05T18:30:48.467Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
-ARK-TRN-00053,ARK-INC-00052,2026-09-05T18:42:45.076Z,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00054,ARK-INC-00056,2026-09-05T18:54:01.892Z,acknowledged,resolved,M. Sato,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
-ARK-TRN-00055,ARK-INC-00012,2026-09-05T18:55:09.043Z,new,false_positive,D. Keller,,P1,cmapss_rul,asset_reliability
-ARK-TRN-00056,ARK-INC-00015,2026-09-05T18:55:24.287Z,new,acknowledged,D. Keller,,P2,cmapss_rul,asset_reliability
-ARK-TRN-00057,ARK-INC-00056,2026-09-05T19:03:42.911Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
-ARK-TRN-00058,ARK-INC-00062,2026-09-05T19:03:43.125Z,new,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
-ARK-TRN-00059,ARK-INC-00059,2026-09-05T19:15:39.257Z,acknowledged,in_containment,P. Lindt,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00060,ARK-INC-00052,2026-09-05T19:27:14.348Z,acknowledged,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00061,ARK-INC-00058,2026-09-05T19:27:14.555Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
-ARK-TRN-00062,ARK-INC-00060,2026-09-05T19:27:14.810Z,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00063,ARK-INC-00068,2026-09-05T19:38:49.970Z,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P1,cmapss_rul,asset_reliability
-ARK-TRN-00064,ARK-INC-00067,2026-09-05T19:38:50.403Z,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P2,gc10_detect,visual_inspection
-ARK-TRN-00065,ARK-INC-00052,2026-09-05T19:38:50.589Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00066,ARK-INC-00066,2026-09-05T19:48:49.040Z,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00067,ARK-INC-00069,2026-09-05T19:48:49.247Z,new,acknowledged,P. Lindt,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
-ARK-TRN-00068,ARK-INC-00065,2026-09-05T19:59:41.427Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
-ARK-TRN-00069,ARK-INC-00068,2026-09-05T19:59:41.605Z,acknowledged,in_containment,M. Brandt,engine taken off the test schedule pending borescope inspection,P1,cmapss_rul,asset_reliability
-ARK-TRN-00070,ARK-INC-00049,2026-09-05T19:59:41.791Z,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
-ARK-TRN-00071,ARK-INC-00068,2026-09-05T20:08:21.325Z,in_containment,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P1,cmapss_rul,asset_reliability
-ARK-TRN-00072,ARK-INC-00049,2026-09-05T20:08:21.661Z,acknowledged,in_containment,M. Sato,APS compressor and dryer under inspection at the workshop,P3,scania_aps,fleet_reliability
-ARK-TRN-00073,ARK-INC-00058,2026-09-05T20:08:22.005Z,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P3,nhtsa_nlp,field_quality
-ARK-TRN-00074,ARK-INC-00066,2026-09-05T20:19:11.190Z,acknowledged,in_containment,P. Lindt,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00075,ARK-INC-00067,2026-09-05T20:19:11.390Z,acknowledged,in_containment,P. Lindt,sheet marked and coil routed to the inspection bay,P2,gc10_detect,visual_inspection
-ARK-TRN-00076,ARK-INC-00054,2026-09-05T20:19:11.579Z,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
-ARK-TRN-00077,ARK-INC-00068,2026-09-05T20:29:01.094Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P1,cmapss_rul,asset_reliability
-ARK-TRN-00078,ARK-INC-00065,2026-09-05T20:29:01.314Z,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
-ARK-TRN-00079,ARK-INC-00066,2026-09-05T20:29:01.505Z,in_containment,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00080,ARK-INC-00073,2026-09-05T20:39:38.831Z,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00081,ARK-INC-00066,2026-09-05T20:39:39.056Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00082,ARK-INC-00067,2026-09-05T20:39:39.252Z,in_containment,resolved,P. Lindt,"defect located on the sheet, coil downgraded and dispatched",P2,gc10_detect,visual_inspection
-ARK-TRN-00083,ARK-INC-00063,2026-09-05T20:50:57.698Z,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P2,scania_aps,fleet_reliability
-ARK-TRN-00084,ARK-INC-00065,2026-09-05T20:50:57.941Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
-ARK-TRN-00085,ARK-INC-00073,2026-09-05T20:50:58.138Z,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00086,ARK-INC-00059,2026-09-05T21:01:24.072Z,in_containment,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00087,ARK-INC-00063,2026-09-05T21:01:24.335Z,acknowledged,resolved,M. Sato,"air dryer cartridge replaced, road test passed",P2,scania_aps,fleet_reliability
-ARK-TRN-00088,ARK-INC-00058,2026-09-05T21:01:24.558Z,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
-ARK-TRN-00089,ARK-INC-00063,2026-09-05T21:10:45.274Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,scania_aps,fleet_reliability
-ARK-TRN-00090,ARK-INC-00073,2026-09-05T21:10:45.471Z,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00091,ARK-INC-00054,2026-09-05T21:10:45.659Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
-ARK-TRN-00092,ARK-INC-00073,2026-09-05T21:19:57.215Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00093,ARK-INC-00058,2026-09-05T21:19:57.458Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
-ARK-TRN-00094,ARK-INC-00064,2026-09-05T21:19:57.645Z,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
-ARK-TRN-00095,ARK-INC-00060,2026-09-05T21:29:40.809Z,acknowledged,in_containment,A. Novak,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
-ARK-TRN-00096,ARK-INC-00069,2026-09-05T21:29:40.993Z,acknowledged,in_containment,P. Lindt,casting sectioned for porosity check,P3,casting_cv,visual_inspection
-ARK-TRN-00097,ARK-INC-00071,2026-09-05T21:29:41.275Z,new,false_positive,A. Novak,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
-ARK-TRN-00098,ARK-INC-00080,2026-09-05T21:39:25.704Z,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00099,ARK-INC-00060,2026-09-05T21:39:25.889Z,in_containment,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
-ARK-TRN-00100,ARK-INC-00064,2026-09-05T21:39:26.095Z,acknowledged,in_containment,A. Novak,coil held for surface inspection by eye,P3,neu_surface,visual_inspection
-ARK-TRN-00101,ARK-INC-00059,2026-09-05T21:50:42.907Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00102,ARK-INC-00080,2026-09-05T21:50:43.143Z,acknowledged,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00103,ARK-INC-00049,2026-09-05T21:50:43.489Z,in_containment,resolved,M. Sato,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
-ARK-TRN-00104,ARK-INC-00079,2026-09-05T21:59:30.392Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
-ARK-TRN-00105,ARK-INC-00069,2026-09-05T21:59:30.706Z,in_containment,resolved,P. Lindt,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
-ARK-TRN-00106,ARK-INC-00072,2026-09-05T21:59:30.900Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
-ARK-TRN-00107,ARK-INC-00082,2026-09-05T22:08:59.639Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
-ARK-TRN-00108,ARK-INC-00064,2026-09-05T22:08:59.842Z,in_containment,resolved,A. Novak,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
-ARK-TRN-00109,ARK-INC-00075,2026-09-05T22:09:00.039Z,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
-ARK-TRN-00110,ARK-INC-00079,2026-09-05T22:18:45.010Z,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
-ARK-TRN-00111,ARK-INC-00082,2026-09-05T22:18:45.316Z,acknowledged,false_positive,D. Keller,"inspection found the sensor drifted, no wear on the unit",P2,cmapss_rul,asset_reliability
-ARK-TRN-00112,ARK-INC-00060,2026-09-05T22:18:45.607Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
-ARK-TRN-00113,ARK-INC-00067,2026-09-05T22:28:27.697Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,gc10_detect,visual_inspection
-ARK-TRN-00114,ARK-INC-00049,2026-09-05T22:28:27.896Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
-ARK-TRN-00115,ARK-INC-00057,2026-09-05T22:28:28.093Z,new,acknowledged,P. Lindt,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
-ARK-TRN-00116,ARK-INC-00074,2026-09-05T22:37:50.112Z,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00117,ARK-INC-00080,2026-09-05T22:49:23.766Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00118,ARK-INC-00064,2026-09-05T22:49:24.028Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
-ARK-TRN-00119,ARK-INC-00074,2026-09-05T22:49:24.218Z,acknowledged,in_containment,P. Lindt,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
-ARK-TRN-00120,ARK-INC-00087,2026-09-05T23:01:10.089Z,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00121,ARK-INC-00072,2026-09-05T23:01:10.504Z,acknowledged,false_positive,L. Fischer,"reporting change at the OEM explains the movement, no fleet issue",P3,nhtsa_nlp,field_quality
-ARK-TRN-00122,ARK-INC-00088,2026-09-05T23:01:10.877Z,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00123,ARK-INC-00089,2026-09-05T23:11:46.974Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P1,cmapss_rul,asset_reliability
-ARK-TRN-00124,ARK-INC-00057,2026-09-05T23:11:47.170Z,acknowledged,in_containment,P. Lindt,coil held for surface inspection by eye,P3,neu_surface,visual_inspection
-ARK-TRN-00125,ARK-INC-00074,2026-09-05T23:11:47.389Z,in_containment,resolved,P. Lindt,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
-ARK-TRN-00126,ARK-INC-00089,2026-09-05T23:22:31.169Z,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P1,cmapss_rul,asset_reliability
-ARK-TRN-00127,ARK-INC-00079,2026-09-05T23:22:31.392Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
-ARK-TRN-00128,ARK-INC-00069,2026-09-05T23:22:31.622Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,casting_cv,visual_inspection
-ARK-TRN-00129,ARK-INC-00070,2026-09-05T23:32:03.952Z,new,false_positive,M. Sato,"pressure test within specification, truck released",P3,scania_aps,fleet_reliability
-ARK-TRN-00130,ARK-INC-00074,2026-09-05T23:32:04.168Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
-ARK-TRN-00131,ARK-INC-00078,2026-09-05T23:32:04.421Z,new,acknowledged,P. Lindt,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
-ARK-TRN-00132,ARK-INC-00089,2026-09-05T23:41:10.945Z,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P1,cmapss_rul,asset_reliability
-ARK-TRN-00133,ARK-INC-00087,2026-09-05T23:41:11.134Z,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00134,ARK-INC-00075,2026-09-05T23:41:11.319Z,acknowledged,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
-ARK-TRN-00135,ARK-INC-00083,2026-09-05T23:52:38.093Z,new,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
-ARK-TRN-00136,ARK-INC-00084,2026-09-05T23:52:38.299Z,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
-ARK-TRN-00137,ARK-INC-00085,2026-09-05T23:52:38.483Z,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
-ARK-TRN-00138,ARK-INC-00089,2026-09-06T00:02:35.107Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P1,cmapss_rul,asset_reliability
-ARK-TRN-00139,ARK-INC-00075,2026-09-06T00:02:35.301Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
-ARK-TRN-00140,ARK-INC-00078,2026-09-06T00:02:35.519Z,acknowledged,resolved,P. Lindt,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
-ARK-TRN-00141,ARK-INC-00057,2026-09-06T00:12:30.138Z,in_containment,resolved,P. Lindt,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
-ARK-TRN-00142,ARK-INC-00084,2026-09-06T00:12:30.389Z,acknowledged,false_positive,M. Sato,"pressure test within specification, truck released",P3,scania_aps,fleet_reliability
-ARK-TRN-00143,ARK-INC-00091,2026-09-06T00:12:30.657Z,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
-ARK-TRN-00144,ARK-INC-00088,2026-09-06T00:24:16.018Z,acknowledged,false_positive,P. Lindt,"no defect at the located position, coil dispositioned as prime",P3,gc10_detect,visual_inspection
-ARK-TRN-00145,ARK-INC-00093,2026-09-06T00:24:16.219Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
-ARK-TRN-00146,ARK-INC-00094,2026-09-06T00:33:20.642Z,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00147,ARK-INC-00087,2026-09-06T00:33:20.865Z,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00148,ARK-INC-00057,2026-09-06T00:33:21.066Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
-ARK-TRN-00149,ARK-INC-00098,2026-09-06T00:42:12.934Z,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P1,scania_aps,fleet_reliability
-ARK-TRN-00150,ARK-INC-00087,2026-09-06T00:42:13.163Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00151,ARK-INC-00094,2026-09-06T00:42:13.471Z,acknowledged,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00152,ARK-INC-00094,2026-09-06T00:52:30.445Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00153,ARK-INC-00085,2026-09-06T00:52:30.671Z,acknowledged,false_positive,A. Novak,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
-ARK-TRN-00154,ARK-INC-00099,2026-09-06T00:52:30.923Z,new,false_positive,P. Lindt,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
-ARK-TRN-00155,ARK-INC-00091,2026-09-06T01:02:49.126Z,acknowledged,in_containment,J. Winter,APS compressor and dryer under inspection at the workshop,P3,scania_aps,fleet_reliability
-ARK-TRN-00156,ARK-INC-00093,2026-09-06T01:02:49.333Z,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P3,nhtsa_nlp,field_quality
-ARK-TRN-00157,ARK-INC-00096,2026-09-06T01:02:49.532Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
-ARK-TRN-00158,ARK-INC-00098,2026-09-06T01:11:29.604Z,acknowledged,false_positive,J. Winter,"pressure test within specification, truck released",P1,scania_aps,fleet_reliability
-ARK-TRN-00159,ARK-INC-00093,2026-09-06T01:11:29.851Z,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
-ARK-TRN-00160,ARK-INC-00096,2026-09-06T01:11:30.107Z,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P3,cmapss_rul,asset_reliability
-ARK-TRN-00161,ARK-INC-00081,2026-09-06T01:20:00.303Z,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00162,ARK-INC-00091,2026-09-06T01:20:00.539Z,in_containment,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
-ARK-TRN-00163,ARK-INC-00103,2026-09-06T01:29:27.277Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P1,cmapss_rul,asset_reliability
-ARK-TRN-00164,ARK-INC-00076,2026-09-06T01:29:27.514Z,new,acknowledged,A. Novak,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
-ARK-TRN-00165,ARK-INC-00093,2026-09-06T01:29:27.770Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
-ARK-TRN-00166,ARK-INC-00076,2026-09-06T01:40:43.565Z,acknowledged,in_containment,A. Novak,casting sectioned for porosity check,P3,casting_cv,visual_inspection
-ARK-TRN-00167,ARK-INC-00078,2026-09-06T01:40:43.780Z,resolved,in_containment,P. Lindt,"containment did not hold, incident reopened",P3,neu_surface,visual_inspection
-ARK-TRN-00168,ARK-INC-00081,2026-09-06T01:40:44.007Z,acknowledged,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
-ARK-TRN-00169,ARK-INC-00100,2026-09-06T01:51:29.734Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
-ARK-TRN-00170,ARK-INC-00103,2026-09-06T01:51:29.938Z,acknowledged,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P1,cmapss_rul,asset_reliability
-ARK-TRN-00171,ARK-INC-00076,2026-09-06T01:51:30.140Z,in_containment,resolved,A. Novak,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
-ARK-TRN-00172,ARK-INC-00100,2026-09-06T02:00:25.608Z,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P2,nhtsa_nlp,field_quality
-ARK-TRN-00173,ARK-INC-00081,2026-09-06T02:00:25.816Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
-ARK-TRN-00174,ARK-INC-00091,2026-09-06T02:00:26.028Z,resolved,in_containment,J. Winter,"containment did not hold, incident reopened",P3,scania_aps,fleet_reliability
-ARK-TRN-00175,ARK-INC-00103,2026-09-06T02:09:27.170Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P1,cmapss_rul,asset_reliability
-ARK-TRN-00176,ARK-INC-00076,2026-09-06T02:09:27.478Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,casting_cv,visual_inspection
-ARK-TRN-00177,ARK-INC-00077,2026-09-06T02:09:27.733Z,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
-ARK-TRN-00178,ARK-INC-00100,2026-09-06T02:20:56.727Z,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
-ARK-TRN-00179,ARK-INC-00077,2026-09-06T02:20:56.924Z,acknowledged,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
-ARK-TRN-00180,ARK-INC-00086,2026-09-06T02:20:57.176Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
-ARK-TRN-00181,ARK-INC-00108,2026-09-06T02:30:50.764Z,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00182,ARK-INC-00100,2026-09-06T02:30:51.021Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
-ARK-TRN-00183,ARK-INC-00078,2026-09-06T02:30:51.280Z,in_containment,resolved,P. Lindt,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
-ARK-TRN-00184,ARK-INC-00108,2026-09-06T02:39:56.688Z,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00185,ARK-INC-00086,2026-09-06T02:39:56.912Z,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P3,nhtsa_nlp,field_quality
-ARK-TRN-00186,ARK-INC-00096,2026-09-06T02:39:57.129Z,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
-ARK-TRN-00187,ARK-INC-00107,2026-09-06T02:49:48.438Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
-ARK-TRN-00188,ARK-INC-00078,2026-09-06T02:49:48.708Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
-ARK-TRN-00189,ARK-INC-00086,2026-09-06T02:49:48.926Z,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
-ARK-TRN-00190,ARK-INC-00086,2026-09-06T03:01:47.399Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
-ARK-TRN-00191,ARK-INC-00091,2026-09-06T03:01:47.608Z,in_containment,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
-ARK-TRN-00192,ARK-INC-00096,2026-09-06T03:01:47.813Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
-ARK-TRN-00193,ARK-INC-00107,2026-09-06T03:11:45.812Z,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P2,nhtsa_nlp,field_quality
-ARK-TRN-00194,ARK-INC-00077,2026-09-06T03:11:46.151Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
-ARK-TRN-00195,ARK-INC-00091,2026-09-06T03:11:46.488Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
-ARK-TRN-00196,ARK-INC-00114,2026-09-06T03:20:23.017Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
-ARK-TRN-00197,ARK-INC-00107,2026-09-06T03:20:23.250Z,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
-ARK-TRN-00198,ARK-INC-00090,2026-09-06T03:20:23.489Z,new,acknowledged,A. Novak,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
-ARK-TRN-00199,ARK-INC-00107,2026-09-06T03:30:17.282Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
-ARK-TRN-00200,ARK-INC-00090,2026-09-06T03:30:17.473Z,acknowledged,in_containment,A. Novak,casting sectioned for porosity check,P3,casting_cv,visual_inspection
-ARK-TRN-00201,ARK-INC-00102,2026-09-06T03:30:17.674Z,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00202,ARK-INC-00114,2026-09-06T03:40:38.264Z,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
-ARK-TRN-00203,ARK-INC-00090,2026-09-06T03:40:38.476Z,in_containment,resolved,A. Novak,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
-ARK-TRN-00204,ARK-INC-00097,2026-09-06T03:40:38.674Z,new,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
-ARK-TRN-00205,ARK-INC-00114,2026-09-06T03:51:56.185Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
-ARK-TRN-00206,ARK-INC-00090,2026-09-06T03:51:56.450Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,casting_cv,visual_inspection
-ARK-TRN-00207,ARK-INC-00092,2026-09-06T03:51:56.689Z,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
-ARK-TRN-00208,ARK-INC-00092,2026-09-06T04:03:19.917Z,acknowledged,in_containment,A. Novak,coil held for surface inspection by eye,P3,neu_surface,visual_inspection
-ARK-TRN-00209,ARK-INC-00102,2026-09-06T04:03:20.120Z,acknowledged,in_containment,A. Novak,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
-ARK-TRN-00210,ARK-INC-00109,2026-09-06T04:03:20.333Z,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00211,ARK-INC-00119,2026-09-06T04:13:04.646Z,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P2,scania_aps,fleet_reliability
-ARK-TRN-00212,ARK-INC-00092,2026-09-06T04:13:04.931Z,in_containment,resolved,A. Novak,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
-ARK-TRN-00213,ARK-INC-00112,2026-09-06T04:13:05.175Z,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
-ARK-TRN-00214,ARK-INC-00108,2026-09-06T04:23:37.883Z,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00215,ARK-INC-00119,2026-09-06T04:23:38.172Z,acknowledged,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P2,scania_aps,fleet_reliability
-ARK-TRN-00216,ARK-INC-00102,2026-09-06T04:23:38.399Z,in_containment,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
-ARK-TRN-00217,ARK-INC-00117,2026-09-06T04:34:12.519Z,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
-ARK-TRN-00218,ARK-INC-00106,2026-09-06T04:34:12.749Z,new,acknowledged,P. Lindt,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
-ARK-TRN-00219,ARK-INC-00111,2026-09-06T04:34:12.982Z,new,acknowledged,A. Novak,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
-ARK-TRN-00220,ARK-INC-00122,2026-09-06T04:44:08.879Z,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00221,ARK-INC-00108,2026-09-06T04:44:09.132Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00222,ARK-INC-00119,2026-09-06T04:44:09.349Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,scania_aps,fleet_reliability
-ARK-TRN-00223,ARK-INC-00117,2026-09-06T04:55:35.766Z,acknowledged,in_containment,M. Brandt,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
-ARK-TRN-00224,ARK-INC-00104,2026-09-06T04:55:35.993Z,new,acknowledged,P. Lindt,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
-ARK-TRN-00225,ARK-INC-00105,2026-09-06T04:55:36.280Z,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
-ARK-TRN-00226,ARK-INC-00117,2026-09-06T05:05:35.507Z,in_containment,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P2,cmapss_rul,asset_reliability
-ARK-TRN-00227,ARK-INC-00095,2026-09-06T05:05:35.734Z,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00228,ARK-INC-00109,2026-09-06T05:05:35.982Z,acknowledged,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
-ARK-TRN-00229,ARK-INC-00115,2026-09-06T05:15:33.496Z,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00230,ARK-INC-00106,2026-09-06T05:15:33.718Z,acknowledged,resolved,P. Lindt,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
-ARK-TRN-00231,ARK-INC-00111,2026-09-06T05:15:33.958Z,acknowledged,in_containment,A. Novak,casting sectioned for porosity check,P3,casting_cv,visual_inspection
-ARK-TRN-00232,ARK-INC-00126,2026-09-06T05:25:23.345Z,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P1,scania_aps,fleet_reliability
-ARK-TRN-00233,ARK-INC-00115,2026-09-06T05:25:23.589Z,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00234,ARK-INC-00092,2026-09-06T05:25:23.806Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
-ARK-TRN-00235,ARK-INC-00126,2026-09-06T05:37:06.405Z,acknowledged,false_positive,M. Sato,"pressure test within specification, truck released",P1,scania_aps,fleet_reliability
-ARK-TRN-00236,ARK-INC-00095,2026-09-06T05:37:06.643Z,acknowledged,false_positive,P. Lindt,"no defect at the located position, coil dispositioned as prime",P3,gc10_detect,visual_inspection
-ARK-TRN-00237,ARK-INC-00102,2026-09-06T05:37:06.941Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
-ARK-TRN-00238,ARK-INC-00117,2026-09-06T05:46:03.274Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,cmapss_rul,asset_reliability
-ARK-TRN-00239,ARK-INC-00109,2026-09-06T05:46:03.543Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
-ARK-TRN-00240,ARK-INC-00112,2026-09-06T05:46:03.798Z,acknowledged,false_positive,M. Sato,"pressure test within specification, truck released",P3,scania_aps,fleet_reliability
-ARK-TRN-00241,ARK-INC-00122,2026-09-06T05:55:40.551Z,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00242,ARK-INC-00106,2026-09-06T05:55:40.773Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
-ARK-TRN-00243,ARK-INC-00111,2026-09-06T05:55:40.997Z,in_containment,resolved,A. Novak,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
-ARK-TRN-00244,ARK-INC-00129,2026-09-06T06:04:14.839Z,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00245,ARK-INC-00115,2026-09-06T06:04:15.085Z,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00246,ARK-INC-00122,2026-09-06T06:04:15.323Z,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00247,ARK-INC-00131,2026-09-06T06:12:24.226Z,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
-ARK-TRN-00248,ARK-INC-00115,2026-09-06T06:12:24.490Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00249,ARK-INC-00122,2026-09-06T06:12:24.764Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00250,ARK-INC-00129,2026-09-06T06:21:38.158Z,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00251,ARK-INC-00104,2026-09-06T06:21:38.482Z,acknowledged,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
-ARK-TRN-00252,ARK-INC-00110,2026-09-06T06:21:38.714Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
-ARK-TRN-00253,ARK-INC-00131,2026-09-06T06:32:45.506Z,acknowledged,in_containment,M. Brandt,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
-ARK-TRN-00254,ARK-INC-00110,2026-09-06T06:32:45.766Z,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P3,cmapss_rul,asset_reliability
-ARK-TRN-00255,ARK-INC-00110,2026-09-06T06:42:09.207Z,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
-ARK-TRN-00256,ARK-INC-00120,2026-09-06T06:42:09.521Z,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
-ARK-TRN-00257,ARK-INC-00127,2026-09-06T06:42:09.781Z,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
-ARK-TRN-00258,ARK-INC-00101,2026-09-06T06:50:55.471Z,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P3,mvtec_anomaly,visual_inspection
-ARK-TRN-00259,ARK-INC-00110,2026-09-06T06:50:55.699Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
-ARK-TRN-00260,ARK-INC-00120,2026-09-06T06:50:55.978Z,acknowledged,false_positive,A. Novak,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
-ARK-TRN-00261,ARK-INC-00129,2026-09-06T07:01:09.579Z,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00262,ARK-INC-00131,2026-09-06T07:01:09.815Z,in_containment,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P2,cmapss_rul,asset_reliability
-ARK-TRN-00263,ARK-INC-00101,2026-09-06T07:01:10.062Z,acknowledged,in_containment,P. Lindt,lot held pending inspection of the flagged component,P3,mvtec_anomaly,visual_inspection
-ARK-TRN-00264,ARK-INC-00131,2026-09-06T07:10:21.031Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,cmapss_rul,asset_reliability
-ARK-TRN-00265,ARK-INC-00101,2026-09-06T07:10:21.267Z,in_containment,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P3,mvtec_anomaly,visual_inspection
-ARK-TRN-00266,ARK-INC-00127,2026-09-06T07:10:21.521Z,acknowledged,in_containment,A. Novak,coil held for surface inspection by eye,P3,neu_surface,visual_inspection
-ARK-TRN-00267,ARK-INC-00132,2026-09-06T07:19:27.293Z,new,acknowledged,A. Novak,impeller quarantined for QC decision,P2,casting_cv,visual_inspection
-ARK-TRN-00268,ARK-INC-00138,2026-09-06T07:19:27.553Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
-ARK-TRN-00269,ARK-INC-00101,2026-09-06T07:19:27.893Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,mvtec_anomaly,visual_inspection
-ARK-TRN-00270,ARK-INC-00136,2026-09-06T07:30:36.414Z,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00271,ARK-INC-00129,2026-09-06T07:30:36.664Z,resolved,in_containment,A. Novak,"containment did not hold, incident reopened",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00272,ARK-INC-00105,2026-09-06T07:30:36.907Z,acknowledged,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
-ARK-TRN-00273,ARK-INC-00132,2026-09-06T07:41:56.689Z,acknowledged,false_positive,A. Novak,"section clean, part released to machining",P2,casting_cv,visual_inspection
-ARK-TRN-00274,ARK-INC-00105,2026-09-06T07:41:56.916Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
-ARK-TRN-00275,ARK-INC-00111,2026-09-06T07:41:57.136Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,casting_cv,visual_inspection
-ARK-TRN-00276,ARK-INC-00136,2026-09-06T07:53:41.750Z,acknowledged,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00277,ARK-INC-00138,2026-09-06T07:53:42.024Z,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
-ARK-TRN-00278,ARK-INC-00125,2026-09-06T07:53:42.290Z,new,acknowledged,P. Lindt,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
-ARK-TRN-00279,ARK-INC-00142,2026-09-06T08:02:09.892Z,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
-ARK-TRN-00280,ARK-INC-00129,2026-09-06T08:02:10.251Z,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00281,ARK-INC-00136,2026-09-06T08:02:10.528Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00282,ARK-INC-00124,2026-09-06T08:14:00.229Z,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
-ARK-TRN-00283,ARK-INC-00129,2026-09-06T08:14:00.471Z,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00284,ARK-INC-00125,2026-09-06T08:14:00.717Z,acknowledged,in_containment,P. Lindt,casting sectioned for porosity check,P3,casting_cv,visual_inspection
-ARK-TRN-00285,ARK-INC-00142,2026-09-06T08:22:27.010Z,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P2,nhtsa_nlp,field_quality
-ARK-TRN-00286,ARK-INC-00118,2026-09-06T08:22:27.311Z,new,acknowledged,A. Novak,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
-ARK-TRN-00287,ARK-INC-00144,2026-09-06T08:22:27.594Z,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00288,ARK-INC-00124,2026-09-06T08:33:08.777Z,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
-ARK-TRN-00289,ARK-INC-00142,2026-09-06T08:33:09.036Z,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
-ARK-TRN-00290,ARK-INC-00116,2026-09-06T08:33:09.352Z,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
-ARK-TRN-00291,ARK-INC-00143,2026-09-06T08:41:14.605Z,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
-ARK-TRN-00292,ARK-INC-00116,2026-09-06T08:41:14.872Z,acknowledged,in_containment,A. Novak,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
-ARK-TRN-00293,ARK-INC-00118,2026-09-06T08:41:15.192Z,acknowledged,in_containment,A. Novak,casting sectioned for porosity check,P3,casting_cv,visual_inspection
-ARK-TRN-00294,ARK-INC-00147,2026-09-06T08:51:49.976Z,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P1,scania_aps,fleet_reliability
-ARK-TRN-00295,ARK-INC-00124,2026-09-06T08:51:50.433Z,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P2,cmapss_rul,asset_reliability
-ARK-TRN-00296,ARK-INC-00118,2026-09-06T08:51:50.967Z,in_containment,resolved,A. Novak,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
+transition_id,incident_id,recorded_at,recorded_local,from_status,to_status,actor,note,priority,source_module,business_domain
+ARK-TRN-00001,ARK-INC-00013,2026-09-03T19:46:11.291Z,03 Sep 21:46,new,acknowledged,M. Brandt,picked up by the assigned planner,P1,cmapss_rul,asset_reliability
+ARK-TRN-00002,ARK-INC-00013,2026-09-03T19:46:11.473Z,03 Sep 21:46,acknowledged,in_containment,M. Brandt,unit pulled from the schedule pending inspection,P1,cmapss_rul,asset_reliability
+ARK-TRN-00003,ARK-INC-00013,2026-09-03T19:46:11.672Z,03 Sep 21:46,in_containment,resolved,M. Brandt,"inspection completed, part replaced",P1,cmapss_rul,asset_reliability
+ARK-TRN-00004,ARK-INC-00013,2026-09-03T19:46:11.887Z,03 Sep 21:46,resolved,closed,M. Brandt,reviewed and closed,P1,cmapss_rul,asset_reliability
+ARK-TRN-00005,ARK-INC-00016,2026-09-03T19:46:42.884Z,03 Sep 21:46,new,false_positive,S. Kasatov,"attribution test record, not a real engine; kept for threshold tuning",P1,cmapss_rul,asset_reliability
+ARK-TRN-00006,ARK-INC-00032,2026-09-03T19:46:56.749Z,03 Sep 21:46,new,acknowledged,T. Vogel,picked up by the assigned planner,P2,gc10_detect,visual_inspection
+ARK-TRN-00007,ARK-INC-00032,2026-09-03T19:47:21.927Z,03 Sep 21:47,acknowledged,in_containment,T. Vogel,unit pulled from the schedule pending inspection,P2,gc10_detect,visual_inspection
+ARK-TRN-00008,ARK-INC-00032,2026-09-03T19:47:47.094Z,03 Sep 21:47,in_containment,resolved,T. Vogel,"inspection completed, part replaced",P2,gc10_detect,visual_inspection
+ARK-TRN-00009,ARK-INC-00032,2026-09-03T19:48:12.283Z,03 Sep 21:48,resolved,in_containment,T. Vogel,unit pulled from the schedule pending inspection,P2,gc10_detect,visual_inspection
+ARK-TRN-00010,ARK-INC-00032,2026-09-03T19:48:37.455Z,03 Sep 21:48,in_containment,resolved,T. Vogel,"inspection completed, part replaced",P2,gc10_detect,visual_inspection
+ARK-TRN-00011,ARK-INC-00032,2026-09-03T19:49:02.634Z,03 Sep 21:49,resolved,closed,T. Vogel,reviewed and closed,P2,gc10_detect,visual_inspection
+ARK-TRN-00012,ARK-INC-00042,2026-09-05T15:39:03.172Z,05 Sep 17:39,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P1,scania_aps,fleet_reliability
+ARK-TRN-00013,ARK-INC-00040,2026-09-05T15:39:03.323Z,05 Sep 17:39,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
+ARK-TRN-00014,ARK-INC-00040,2026-09-05T15:39:24.305Z,05 Sep 17:39,acknowledged,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
+ARK-TRN-00015,ARK-INC-00045,2026-09-05T15:39:45.343Z,05 Sep 17:39,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00016,ARK-INC-00045,2026-09-05T15:40:06.499Z,05 Sep 17:40,acknowledged,false_positive,A. Novak,"component within drawing tolerance, returned to the line",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00017,ARK-INC-00047,2026-09-05T16:01:49.142Z,05 Sep 18:01,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
+ARK-TRN-00018,ARK-INC-00040,2026-09-05T16:01:49.315Z,05 Sep 18:01,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
+ARK-TRN-00019,ARK-INC-00047,2026-09-05T16:19:31.475Z,05 Sep 18:19,acknowledged,in_containment,M. Brandt,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
+ARK-TRN-00020,ARK-INC-00041,2026-09-05T16:19:31.627Z,05 Sep 18:19,new,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
+ARK-TRN-00021,ARK-INC-00043,2026-09-05T16:19:31.783Z,05 Sep 18:19,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
+ARK-TRN-00022,ARK-INC-00042,2026-09-05T16:30:39.991Z,05 Sep 18:30,acknowledged,resolved,M. Sato,"air dryer cartridge replaced, road test passed",P1,scania_aps,fleet_reliability
+ARK-TRN-00023,ARK-INC-00044,2026-09-05T16:30:40.174Z,05 Sep 18:30,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
+ARK-TRN-00024,ARK-INC-00046,2026-09-05T16:30:40.348Z,05 Sep 18:30,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00025,ARK-INC-00048,2026-09-05T16:42:38.464Z,05 Sep 18:42,new,false_positive,A. Novak,"section clean, part released to machining",P3,casting_cv,visual_inspection
+ARK-TRN-00026,ARK-INC-00050,2026-09-05T16:42:38.650Z,05 Sep 18:42,new,false_positive,P. Lindt,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
+ARK-TRN-00027,ARK-INC-00051,2026-09-05T16:42:38.845Z,05 Sep 18:42,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
+ARK-TRN-00028,ARK-INC-00042,2026-09-05T16:51:23.282Z,05 Sep 18:51,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P1,scania_aps,fleet_reliability
+ARK-TRN-00029,ARK-INC-00044,2026-09-05T16:51:23.469Z,05 Sep 18:51,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
+ARK-TRN-00030,ARK-INC-00047,2026-09-05T17:13:40.572Z,05 Sep 19:13,in_containment,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P2,cmapss_rul,asset_reliability
+ARK-TRN-00031,ARK-INC-00043,2026-09-05T17:13:40.756Z,05 Sep 19:13,acknowledged,false_positive,A. Novak,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
+ARK-TRN-00032,ARK-INC-00044,2026-09-05T17:13:40.943Z,05 Sep 19:13,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
+ARK-TRN-00033,ARK-INC-00051,2026-09-05T17:22:54.323Z,05 Sep 19:22,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
+ARK-TRN-00034,ARK-INC-00055,2026-09-05T17:27:02.161Z,05 Sep 19:27,new,acknowledged,A. Novak,"acknowledged from the cockpit form, part quarantined for QC",P3,casting_cv,visual_inspection
+ARK-TRN-00035,ARK-INC-00046,2026-09-05T17:31:12.186Z,05 Sep 19:31,acknowledged,in_containment,P. Lindt,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
+ARK-TRN-00036,ARK-INC-00055,2026-09-05T17:31:12.383Z,05 Sep 19:31,acknowledged,false_positive,A. Novak,"section clean, part released to machining",P3,casting_cv,visual_inspection
+ARK-TRN-00037,ARK-INC-00053,2026-09-05T17:42:39.889Z,05 Sep 19:42,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00038,ARK-INC-00054,2026-09-05T17:42:40.066Z,05 Sep 19:42,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
+ARK-TRN-00039,ARK-INC-00056,2026-09-05T17:42:40.296Z,05 Sep 19:42,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
+ARK-TRN-00040,ARK-INC-00047,2026-09-05T17:53:21.078Z,05 Sep 19:53,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,cmapss_rul,asset_reliability
+ARK-TRN-00041,ARK-INC-00053,2026-09-05T17:53:21.279Z,05 Sep 19:53,acknowledged,in_containment,A. Novak,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
+ARK-TRN-00042,ARK-INC-00046,2026-09-05T18:02:16.570Z,05 Sep 20:02,in_containment,resolved,P. Lindt,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
+ARK-TRN-00043,ARK-INC-00051,2026-09-05T18:02:16.733Z,05 Sep 20:02,resolved,in_containment,L. Fischer,"containment did not hold, incident reopened",P3,nhtsa_nlp,field_quality
+ARK-TRN-00044,ARK-INC-00054,2026-09-05T18:02:16.904Z,05 Sep 20:02,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P3,cmapss_rul,asset_reliability
+ARK-TRN-00045,ARK-INC-00059,2026-09-05T18:10:24.477Z,05 Sep 20:10,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00046,ARK-INC-00046,2026-09-05T18:10:24.680Z,05 Sep 20:10,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
+ARK-TRN-00047,ARK-INC-00051,2026-09-05T18:10:24.887Z,05 Sep 20:10,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
+ARK-TRN-00048,ARK-INC-00061,2026-09-05T18:21:13.304Z,05 Sep 20:21,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P1,cmapss_rul,asset_reliability
+ARK-TRN-00049,ARK-INC-00051,2026-09-05T18:21:13.558Z,05 Sep 20:21,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
+ARK-TRN-00050,ARK-INC-00053,2026-09-05T18:21:13.737Z,05 Sep 20:21,in_containment,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
+ARK-TRN-00051,ARK-INC-00061,2026-09-05T18:30:48.273Z,05 Sep 20:30,acknowledged,false_positive,D. Keller,"inspection found the sensor drifted, no wear on the unit",P1,cmapss_rul,asset_reliability
+ARK-TRN-00052,ARK-INC-00053,2026-09-05T18:30:48.467Z,05 Sep 20:30,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
+ARK-TRN-00053,ARK-INC-00052,2026-09-05T18:42:45.076Z,05 Sep 20:42,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00054,ARK-INC-00056,2026-09-05T18:54:01.892Z,05 Sep 20:54,acknowledged,resolved,M. Sato,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
+ARK-TRN-00055,ARK-INC-00012,2026-09-05T18:55:09.043Z,05 Sep 20:55,new,false_positive,D. Keller,,P1,cmapss_rul,asset_reliability
+ARK-TRN-00056,ARK-INC-00015,2026-09-05T18:55:24.287Z,05 Sep 20:55,new,acknowledged,D. Keller,,P2,cmapss_rul,asset_reliability
+ARK-TRN-00057,ARK-INC-00056,2026-09-05T19:03:42.911Z,05 Sep 21:03,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
+ARK-TRN-00058,ARK-INC-00062,2026-09-05T19:03:43.125Z,05 Sep 21:03,new,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
+ARK-TRN-00059,ARK-INC-00059,2026-09-05T19:15:39.257Z,05 Sep 21:15,acknowledged,in_containment,P. Lindt,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00060,ARK-INC-00052,2026-09-05T19:27:14.348Z,05 Sep 21:27,acknowledged,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00061,ARK-INC-00058,2026-09-05T19:27:14.555Z,05 Sep 21:27,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
+ARK-TRN-00062,ARK-INC-00060,2026-09-05T19:27:14.810Z,05 Sep 21:27,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00063,ARK-INC-00068,2026-09-05T19:38:49.970Z,05 Sep 21:38,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P1,cmapss_rul,asset_reliability
+ARK-TRN-00064,ARK-INC-00067,2026-09-05T19:38:50.403Z,05 Sep 21:38,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P2,gc10_detect,visual_inspection
+ARK-TRN-00065,ARK-INC-00052,2026-09-05T19:38:50.589Z,05 Sep 21:38,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00066,ARK-INC-00066,2026-09-05T19:48:49.040Z,05 Sep 21:48,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00067,ARK-INC-00069,2026-09-05T19:48:49.247Z,05 Sep 21:48,new,acknowledged,P. Lindt,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
+ARK-TRN-00068,ARK-INC-00065,2026-09-05T19:59:41.427Z,05 Sep 21:59,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
+ARK-TRN-00069,ARK-INC-00068,2026-09-05T19:59:41.605Z,05 Sep 21:59,acknowledged,in_containment,M. Brandt,engine taken off the test schedule pending borescope inspection,P1,cmapss_rul,asset_reliability
+ARK-TRN-00070,ARK-INC-00049,2026-09-05T19:59:41.791Z,05 Sep 21:59,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
+ARK-TRN-00071,ARK-INC-00068,2026-09-05T20:08:21.325Z,05 Sep 22:08,in_containment,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P1,cmapss_rul,asset_reliability
+ARK-TRN-00072,ARK-INC-00049,2026-09-05T20:08:21.661Z,05 Sep 22:08,acknowledged,in_containment,M. Sato,APS compressor and dryer under inspection at the workshop,P3,scania_aps,fleet_reliability
+ARK-TRN-00073,ARK-INC-00058,2026-09-05T20:08:22.005Z,05 Sep 22:08,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P3,nhtsa_nlp,field_quality
+ARK-TRN-00074,ARK-INC-00066,2026-09-05T20:19:11.190Z,05 Sep 22:19,acknowledged,in_containment,P. Lindt,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00075,ARK-INC-00067,2026-09-05T20:19:11.390Z,05 Sep 22:19,acknowledged,in_containment,P. Lindt,sheet marked and coil routed to the inspection bay,P2,gc10_detect,visual_inspection
+ARK-TRN-00076,ARK-INC-00054,2026-09-05T20:19:11.579Z,05 Sep 22:19,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
+ARK-TRN-00077,ARK-INC-00068,2026-09-05T20:29:01.094Z,05 Sep 22:29,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P1,cmapss_rul,asset_reliability
+ARK-TRN-00078,ARK-INC-00065,2026-09-05T20:29:01.314Z,05 Sep 22:29,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
+ARK-TRN-00079,ARK-INC-00066,2026-09-05T20:29:01.505Z,05 Sep 22:29,in_containment,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00080,ARK-INC-00073,2026-09-05T20:39:38.831Z,05 Sep 22:39,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00081,ARK-INC-00066,2026-09-05T20:39:39.056Z,05 Sep 22:39,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00082,ARK-INC-00067,2026-09-05T20:39:39.252Z,05 Sep 22:39,in_containment,resolved,P. Lindt,"defect located on the sheet, coil downgraded and dispatched",P2,gc10_detect,visual_inspection
+ARK-TRN-00083,ARK-INC-00063,2026-09-05T20:50:57.698Z,05 Sep 22:50,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P2,scania_aps,fleet_reliability
+ARK-TRN-00084,ARK-INC-00065,2026-09-05T20:50:57.941Z,05 Sep 22:50,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
+ARK-TRN-00085,ARK-INC-00073,2026-09-05T20:50:58.138Z,05 Sep 22:50,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00086,ARK-INC-00059,2026-09-05T21:01:24.072Z,05 Sep 23:01,in_containment,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00087,ARK-INC-00063,2026-09-05T21:01:24.335Z,05 Sep 23:01,acknowledged,resolved,M. Sato,"air dryer cartridge replaced, road test passed",P2,scania_aps,fleet_reliability
+ARK-TRN-00088,ARK-INC-00058,2026-09-05T21:01:24.558Z,05 Sep 23:01,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
+ARK-TRN-00089,ARK-INC-00063,2026-09-05T21:10:45.274Z,05 Sep 23:10,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,scania_aps,fleet_reliability
+ARK-TRN-00090,ARK-INC-00073,2026-09-05T21:10:45.471Z,05 Sep 23:10,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00091,ARK-INC-00054,2026-09-05T21:10:45.659Z,05 Sep 23:10,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
+ARK-TRN-00092,ARK-INC-00073,2026-09-05T21:19:57.215Z,05 Sep 23:19,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00093,ARK-INC-00058,2026-09-05T21:19:57.458Z,05 Sep 23:19,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
+ARK-TRN-00094,ARK-INC-00064,2026-09-05T21:19:57.645Z,05 Sep 23:19,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
+ARK-TRN-00095,ARK-INC-00060,2026-09-05T21:29:40.809Z,05 Sep 23:29,acknowledged,in_containment,A. Novak,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
+ARK-TRN-00096,ARK-INC-00069,2026-09-05T21:29:40.993Z,05 Sep 23:29,acknowledged,in_containment,P. Lindt,casting sectioned for porosity check,P3,casting_cv,visual_inspection
+ARK-TRN-00097,ARK-INC-00071,2026-09-05T21:29:41.275Z,05 Sep 23:29,new,false_positive,A. Novak,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
+ARK-TRN-00098,ARK-INC-00080,2026-09-05T21:39:25.704Z,05 Sep 23:39,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00099,ARK-INC-00060,2026-09-05T21:39:25.889Z,05 Sep 23:39,in_containment,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
+ARK-TRN-00100,ARK-INC-00064,2026-09-05T21:39:26.095Z,05 Sep 23:39,acknowledged,in_containment,A. Novak,coil held for surface inspection by eye,P3,neu_surface,visual_inspection
+ARK-TRN-00101,ARK-INC-00059,2026-09-05T21:50:42.907Z,05 Sep 23:50,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00102,ARK-INC-00080,2026-09-05T21:50:43.143Z,05 Sep 23:50,acknowledged,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00103,ARK-INC-00049,2026-09-05T21:50:43.489Z,05 Sep 23:50,in_containment,resolved,M. Sato,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
+ARK-TRN-00104,ARK-INC-00079,2026-09-05T21:59:30.392Z,05 Sep 23:59,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
+ARK-TRN-00105,ARK-INC-00069,2026-09-05T21:59:30.706Z,05 Sep 23:59,in_containment,resolved,P. Lindt,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
+ARK-TRN-00106,ARK-INC-00072,2026-09-05T21:59:30.900Z,05 Sep 23:59,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
+ARK-TRN-00107,ARK-INC-00082,2026-09-05T22:08:59.639Z,06 Sep 00:08,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
+ARK-TRN-00108,ARK-INC-00064,2026-09-05T22:08:59.842Z,06 Sep 00:08,in_containment,resolved,A. Novak,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
+ARK-TRN-00109,ARK-INC-00075,2026-09-05T22:09:00.039Z,06 Sep 00:09,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
+ARK-TRN-00110,ARK-INC-00079,2026-09-05T22:18:45.010Z,06 Sep 00:18,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
+ARK-TRN-00111,ARK-INC-00082,2026-09-05T22:18:45.316Z,06 Sep 00:18,acknowledged,false_positive,D. Keller,"inspection found the sensor drifted, no wear on the unit",P2,cmapss_rul,asset_reliability
+ARK-TRN-00112,ARK-INC-00060,2026-09-05T22:18:45.607Z,06 Sep 00:18,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
+ARK-TRN-00113,ARK-INC-00067,2026-09-05T22:28:27.697Z,06 Sep 00:28,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,gc10_detect,visual_inspection
+ARK-TRN-00114,ARK-INC-00049,2026-09-05T22:28:27.896Z,06 Sep 00:28,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
+ARK-TRN-00115,ARK-INC-00057,2026-09-05T22:28:28.093Z,06 Sep 00:28,new,acknowledged,P. Lindt,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
+ARK-TRN-00116,ARK-INC-00074,2026-09-05T22:37:50.112Z,06 Sep 00:37,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00117,ARK-INC-00080,2026-09-05T22:49:23.766Z,06 Sep 00:49,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00118,ARK-INC-00064,2026-09-05T22:49:24.028Z,06 Sep 00:49,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
+ARK-TRN-00119,ARK-INC-00074,2026-09-05T22:49:24.218Z,06 Sep 00:49,acknowledged,in_containment,P. Lindt,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
+ARK-TRN-00120,ARK-INC-00087,2026-09-05T23:01:10.089Z,06 Sep 01:01,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00121,ARK-INC-00072,2026-09-05T23:01:10.504Z,06 Sep 01:01,acknowledged,false_positive,L. Fischer,"reporting change at the OEM explains the movement, no fleet issue",P3,nhtsa_nlp,field_quality
+ARK-TRN-00122,ARK-INC-00088,2026-09-05T23:01:10.877Z,06 Sep 01:01,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00123,ARK-INC-00089,2026-09-05T23:11:46.974Z,06 Sep 01:11,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P1,cmapss_rul,asset_reliability
+ARK-TRN-00124,ARK-INC-00057,2026-09-05T23:11:47.170Z,06 Sep 01:11,acknowledged,in_containment,P. Lindt,coil held for surface inspection by eye,P3,neu_surface,visual_inspection
+ARK-TRN-00125,ARK-INC-00074,2026-09-05T23:11:47.389Z,06 Sep 01:11,in_containment,resolved,P. Lindt,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
+ARK-TRN-00126,ARK-INC-00089,2026-09-05T23:22:31.169Z,06 Sep 01:22,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P1,cmapss_rul,asset_reliability
+ARK-TRN-00127,ARK-INC-00079,2026-09-05T23:22:31.392Z,06 Sep 01:22,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
+ARK-TRN-00128,ARK-INC-00069,2026-09-05T23:22:31.622Z,06 Sep 01:22,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,casting_cv,visual_inspection
+ARK-TRN-00129,ARK-INC-00070,2026-09-05T23:32:03.952Z,06 Sep 01:32,new,false_positive,M. Sato,"pressure test within specification, truck released",P3,scania_aps,fleet_reliability
+ARK-TRN-00130,ARK-INC-00074,2026-09-05T23:32:04.168Z,06 Sep 01:32,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
+ARK-TRN-00131,ARK-INC-00078,2026-09-05T23:32:04.421Z,06 Sep 01:32,new,acknowledged,P. Lindt,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
+ARK-TRN-00132,ARK-INC-00089,2026-09-05T23:41:10.945Z,06 Sep 01:41,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P1,cmapss_rul,asset_reliability
+ARK-TRN-00133,ARK-INC-00087,2026-09-05T23:41:11.134Z,06 Sep 01:41,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00134,ARK-INC-00075,2026-09-05T23:41:11.319Z,06 Sep 01:41,acknowledged,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
+ARK-TRN-00135,ARK-INC-00083,2026-09-05T23:52:38.093Z,06 Sep 01:52,new,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
+ARK-TRN-00136,ARK-INC-00084,2026-09-05T23:52:38.299Z,06 Sep 01:52,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
+ARK-TRN-00137,ARK-INC-00085,2026-09-05T23:52:38.483Z,06 Sep 01:52,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
+ARK-TRN-00138,ARK-INC-00089,2026-09-06T00:02:35.107Z,06 Sep 02:02,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P1,cmapss_rul,asset_reliability
+ARK-TRN-00139,ARK-INC-00075,2026-09-06T00:02:35.301Z,06 Sep 02:02,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
+ARK-TRN-00140,ARK-INC-00078,2026-09-06T00:02:35.519Z,06 Sep 02:02,acknowledged,resolved,P. Lindt,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
+ARK-TRN-00141,ARK-INC-00057,2026-09-06T00:12:30.138Z,06 Sep 02:12,in_containment,resolved,P. Lindt,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
+ARK-TRN-00142,ARK-INC-00084,2026-09-06T00:12:30.389Z,06 Sep 02:12,acknowledged,false_positive,M. Sato,"pressure test within specification, truck released",P3,scania_aps,fleet_reliability
+ARK-TRN-00143,ARK-INC-00091,2026-09-06T00:12:30.657Z,06 Sep 02:12,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
+ARK-TRN-00144,ARK-INC-00088,2026-09-06T00:24:16.018Z,06 Sep 02:24,acknowledged,false_positive,P. Lindt,"no defect at the located position, coil dispositioned as prime",P3,gc10_detect,visual_inspection
+ARK-TRN-00145,ARK-INC-00093,2026-09-06T00:24:16.219Z,06 Sep 02:24,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
+ARK-TRN-00146,ARK-INC-00094,2026-09-06T00:33:20.642Z,06 Sep 02:33,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00147,ARK-INC-00087,2026-09-06T00:33:20.865Z,06 Sep 02:33,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00148,ARK-INC-00057,2026-09-06T00:33:21.066Z,06 Sep 02:33,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
+ARK-TRN-00149,ARK-INC-00098,2026-09-06T00:42:12.934Z,06 Sep 02:42,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P1,scania_aps,fleet_reliability
+ARK-TRN-00150,ARK-INC-00087,2026-09-06T00:42:13.163Z,06 Sep 02:42,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00151,ARK-INC-00094,2026-09-06T00:42:13.471Z,06 Sep 02:42,acknowledged,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00152,ARK-INC-00094,2026-09-06T00:52:30.445Z,06 Sep 02:52,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00153,ARK-INC-00085,2026-09-06T00:52:30.671Z,06 Sep 02:52,acknowledged,false_positive,A. Novak,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
+ARK-TRN-00154,ARK-INC-00099,2026-09-06T00:52:30.923Z,06 Sep 02:52,new,false_positive,P. Lindt,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
+ARK-TRN-00155,ARK-INC-00091,2026-09-06T01:02:49.126Z,06 Sep 03:02,acknowledged,in_containment,J. Winter,APS compressor and dryer under inspection at the workshop,P3,scania_aps,fleet_reliability
+ARK-TRN-00156,ARK-INC-00093,2026-09-06T01:02:49.333Z,06 Sep 03:02,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P3,nhtsa_nlp,field_quality
+ARK-TRN-00157,ARK-INC-00096,2026-09-06T01:02:49.532Z,06 Sep 03:02,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
+ARK-TRN-00158,ARK-INC-00098,2026-09-06T01:11:29.604Z,06 Sep 03:11,acknowledged,false_positive,J. Winter,"pressure test within specification, truck released",P1,scania_aps,fleet_reliability
+ARK-TRN-00159,ARK-INC-00093,2026-09-06T01:11:29.851Z,06 Sep 03:11,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
+ARK-TRN-00160,ARK-INC-00096,2026-09-06T01:11:30.107Z,06 Sep 03:11,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P3,cmapss_rul,asset_reliability
+ARK-TRN-00161,ARK-INC-00081,2026-09-06T01:20:00.303Z,06 Sep 03:20,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00162,ARK-INC-00091,2026-09-06T01:20:00.539Z,06 Sep 03:20,in_containment,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
+ARK-TRN-00163,ARK-INC-00103,2026-09-06T01:29:27.277Z,06 Sep 03:29,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P1,cmapss_rul,asset_reliability
+ARK-TRN-00164,ARK-INC-00076,2026-09-06T01:29:27.514Z,06 Sep 03:29,new,acknowledged,A. Novak,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
+ARK-TRN-00165,ARK-INC-00093,2026-09-06T01:29:27.770Z,06 Sep 03:29,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
+ARK-TRN-00166,ARK-INC-00076,2026-09-06T01:40:43.565Z,06 Sep 03:40,acknowledged,in_containment,A. Novak,casting sectioned for porosity check,P3,casting_cv,visual_inspection
+ARK-TRN-00167,ARK-INC-00078,2026-09-06T01:40:43.780Z,06 Sep 03:40,resolved,in_containment,P. Lindt,"containment did not hold, incident reopened",P3,neu_surface,visual_inspection
+ARK-TRN-00168,ARK-INC-00081,2026-09-06T01:40:44.007Z,06 Sep 03:40,acknowledged,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
+ARK-TRN-00169,ARK-INC-00100,2026-09-06T01:51:29.734Z,06 Sep 03:51,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
+ARK-TRN-00170,ARK-INC-00103,2026-09-06T01:51:29.938Z,06 Sep 03:51,acknowledged,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P1,cmapss_rul,asset_reliability
+ARK-TRN-00171,ARK-INC-00076,2026-09-06T01:51:30.140Z,06 Sep 03:51,in_containment,resolved,A. Novak,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
+ARK-TRN-00172,ARK-INC-00100,2026-09-06T02:00:25.608Z,06 Sep 04:00,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P2,nhtsa_nlp,field_quality
+ARK-TRN-00173,ARK-INC-00081,2026-09-06T02:00:25.816Z,06 Sep 04:00,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
+ARK-TRN-00174,ARK-INC-00091,2026-09-06T02:00:26.028Z,06 Sep 04:00,resolved,in_containment,J. Winter,"containment did not hold, incident reopened",P3,scania_aps,fleet_reliability
+ARK-TRN-00175,ARK-INC-00103,2026-09-06T02:09:27.170Z,06 Sep 04:09,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P1,cmapss_rul,asset_reliability
+ARK-TRN-00176,ARK-INC-00076,2026-09-06T02:09:27.478Z,06 Sep 04:09,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,casting_cv,visual_inspection
+ARK-TRN-00177,ARK-INC-00077,2026-09-06T02:09:27.733Z,06 Sep 04:09,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
+ARK-TRN-00178,ARK-INC-00100,2026-09-06T02:20:56.727Z,06 Sep 04:20,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
+ARK-TRN-00179,ARK-INC-00077,2026-09-06T02:20:56.924Z,06 Sep 04:20,acknowledged,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
+ARK-TRN-00180,ARK-INC-00086,2026-09-06T02:20:57.176Z,06 Sep 04:20,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P3,nhtsa_nlp,field_quality
+ARK-TRN-00181,ARK-INC-00108,2026-09-06T02:30:50.764Z,06 Sep 04:30,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00182,ARK-INC-00100,2026-09-06T02:30:51.021Z,06 Sep 04:30,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
+ARK-TRN-00183,ARK-INC-00078,2026-09-06T02:30:51.280Z,06 Sep 04:30,in_containment,resolved,P. Lindt,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
+ARK-TRN-00184,ARK-INC-00108,2026-09-06T02:39:56.688Z,06 Sep 04:39,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00185,ARK-INC-00086,2026-09-06T02:39:56.912Z,06 Sep 04:39,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P3,nhtsa_nlp,field_quality
+ARK-TRN-00186,ARK-INC-00096,2026-09-06T02:39:57.129Z,06 Sep 04:39,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
+ARK-TRN-00187,ARK-INC-00107,2026-09-06T02:49:48.438Z,06 Sep 04:49,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
+ARK-TRN-00188,ARK-INC-00078,2026-09-06T02:49:48.708Z,06 Sep 04:49,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
+ARK-TRN-00189,ARK-INC-00086,2026-09-06T02:49:48.926Z,06 Sep 04:49,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P3,nhtsa_nlp,field_quality
+ARK-TRN-00190,ARK-INC-00086,2026-09-06T03:01:47.399Z,06 Sep 05:01,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,nhtsa_nlp,field_quality
+ARK-TRN-00191,ARK-INC-00091,2026-09-06T03:01:47.608Z,06 Sep 05:01,in_containment,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
+ARK-TRN-00192,ARK-INC-00096,2026-09-06T03:01:47.813Z,06 Sep 05:01,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
+ARK-TRN-00193,ARK-INC-00107,2026-09-06T03:11:45.812Z,06 Sep 05:11,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P2,nhtsa_nlp,field_quality
+ARK-TRN-00194,ARK-INC-00077,2026-09-06T03:11:46.151Z,06 Sep 05:11,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
+ARK-TRN-00195,ARK-INC-00091,2026-09-06T03:11:46.488Z,06 Sep 05:11,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
+ARK-TRN-00196,ARK-INC-00114,2026-09-06T03:20:23.017Z,06 Sep 05:20,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
+ARK-TRN-00197,ARK-INC-00107,2026-09-06T03:20:23.250Z,06 Sep 05:20,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
+ARK-TRN-00198,ARK-INC-00090,2026-09-06T03:20:23.489Z,06 Sep 05:20,new,acknowledged,A. Novak,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
+ARK-TRN-00199,ARK-INC-00107,2026-09-06T03:30:17.282Z,06 Sep 05:30,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
+ARK-TRN-00200,ARK-INC-00090,2026-09-06T03:30:17.473Z,06 Sep 05:30,acknowledged,in_containment,A. Novak,casting sectioned for porosity check,P3,casting_cv,visual_inspection
+ARK-TRN-00201,ARK-INC-00102,2026-09-06T03:30:17.674Z,06 Sep 05:30,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00202,ARK-INC-00114,2026-09-06T03:40:38.264Z,06 Sep 05:40,acknowledged,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
+ARK-TRN-00203,ARK-INC-00090,2026-09-06T03:40:38.476Z,06 Sep 05:40,in_containment,resolved,A. Novak,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
+ARK-TRN-00204,ARK-INC-00097,2026-09-06T03:40:38.674Z,06 Sep 05:40,new,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
+ARK-TRN-00205,ARK-INC-00114,2026-09-06T03:51:56.185Z,06 Sep 05:51,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
+ARK-TRN-00206,ARK-INC-00090,2026-09-06T03:51:56.450Z,06 Sep 05:51,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,casting_cv,visual_inspection
+ARK-TRN-00207,ARK-INC-00092,2026-09-06T03:51:56.689Z,06 Sep 05:51,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
+ARK-TRN-00208,ARK-INC-00092,2026-09-06T04:03:19.917Z,06 Sep 06:03,acknowledged,in_containment,A. Novak,coil held for surface inspection by eye,P3,neu_surface,visual_inspection
+ARK-TRN-00209,ARK-INC-00102,2026-09-06T04:03:20.120Z,06 Sep 06:03,acknowledged,in_containment,A. Novak,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
+ARK-TRN-00210,ARK-INC-00109,2026-09-06T04:03:20.333Z,06 Sep 06:03,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00211,ARK-INC-00119,2026-09-06T04:13:04.646Z,06 Sep 06:13,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P2,scania_aps,fleet_reliability
+ARK-TRN-00212,ARK-INC-00092,2026-09-06T04:13:04.931Z,06 Sep 06:13,in_containment,resolved,A. Novak,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
+ARK-TRN-00213,ARK-INC-00112,2026-09-06T04:13:05.175Z,06 Sep 06:13,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
+ARK-TRN-00214,ARK-INC-00108,2026-09-06T04:23:37.883Z,06 Sep 06:23,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00215,ARK-INC-00119,2026-09-06T04:23:38.172Z,06 Sep 06:23,acknowledged,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P2,scania_aps,fleet_reliability
+ARK-TRN-00216,ARK-INC-00102,2026-09-06T04:23:38.399Z,06 Sep 06:23,in_containment,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
+ARK-TRN-00217,ARK-INC-00117,2026-09-06T04:34:12.519Z,06 Sep 06:34,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
+ARK-TRN-00218,ARK-INC-00106,2026-09-06T04:34:12.749Z,06 Sep 06:34,new,acknowledged,P. Lindt,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
+ARK-TRN-00219,ARK-INC-00111,2026-09-06T04:34:12.982Z,06 Sep 06:34,new,acknowledged,A. Novak,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
+ARK-TRN-00220,ARK-INC-00122,2026-09-06T04:44:08.879Z,06 Sep 06:44,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00221,ARK-INC-00108,2026-09-06T04:44:09.132Z,06 Sep 06:44,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00222,ARK-INC-00119,2026-09-06T04:44:09.349Z,06 Sep 06:44,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,scania_aps,fleet_reliability
+ARK-TRN-00223,ARK-INC-00117,2026-09-06T04:55:35.766Z,06 Sep 06:55,acknowledged,in_containment,M. Brandt,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
+ARK-TRN-00224,ARK-INC-00104,2026-09-06T04:55:35.993Z,06 Sep 06:55,new,acknowledged,P. Lindt,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
+ARK-TRN-00225,ARK-INC-00105,2026-09-06T04:55:36.280Z,06 Sep 06:55,new,acknowledged,J. Winter,"truck held at the depot, workshop slot requested",P3,scania_aps,fleet_reliability
+ARK-TRN-00226,ARK-INC-00117,2026-09-06T05:05:35.507Z,06 Sep 07:05,in_containment,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P2,cmapss_rul,asset_reliability
+ARK-TRN-00227,ARK-INC-00095,2026-09-06T05:05:35.734Z,06 Sep 07:05,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00228,ARK-INC-00109,2026-09-06T05:05:35.982Z,06 Sep 07:05,acknowledged,resolved,A. Novak,"defect located on the sheet, coil downgraded and dispatched",P3,gc10_detect,visual_inspection
+ARK-TRN-00229,ARK-INC-00115,2026-09-06T05:15:33.496Z,06 Sep 07:15,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00230,ARK-INC-00106,2026-09-06T05:15:33.718Z,06 Sep 07:15,acknowledged,resolved,P. Lindt,"defect confirmed, affected length trimmed and coil downgraded",P3,neu_surface,visual_inspection
+ARK-TRN-00231,ARK-INC-00111,2026-09-06T05:15:33.958Z,06 Sep 07:15,acknowledged,in_containment,A. Novak,casting sectioned for porosity check,P3,casting_cv,visual_inspection
+ARK-TRN-00232,ARK-INC-00126,2026-09-06T05:25:23.345Z,06 Sep 07:25,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P1,scania_aps,fleet_reliability
+ARK-TRN-00233,ARK-INC-00115,2026-09-06T05:25:23.589Z,06 Sep 07:25,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00234,ARK-INC-00092,2026-09-06T05:25:23.806Z,06 Sep 07:25,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
+ARK-TRN-00235,ARK-INC-00126,2026-09-06T05:37:06.405Z,06 Sep 07:37,acknowledged,false_positive,M. Sato,"pressure test within specification, truck released",P1,scania_aps,fleet_reliability
+ARK-TRN-00236,ARK-INC-00095,2026-09-06T05:37:06.643Z,06 Sep 07:37,acknowledged,false_positive,P. Lindt,"no defect at the located position, coil dispositioned as prime",P3,gc10_detect,visual_inspection
+ARK-TRN-00237,ARK-INC-00102,2026-09-06T05:37:06.941Z,06 Sep 07:37,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
+ARK-TRN-00238,ARK-INC-00117,2026-09-06T05:46:03.274Z,06 Sep 07:46,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,cmapss_rul,asset_reliability
+ARK-TRN-00239,ARK-INC-00109,2026-09-06T05:46:03.543Z,06 Sep 07:46,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,gc10_detect,visual_inspection
+ARK-TRN-00240,ARK-INC-00112,2026-09-06T05:46:03.798Z,06 Sep 07:46,acknowledged,false_positive,M. Sato,"pressure test within specification, truck released",P3,scania_aps,fleet_reliability
+ARK-TRN-00241,ARK-INC-00122,2026-09-06T05:55:40.551Z,06 Sep 07:55,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00242,ARK-INC-00106,2026-09-06T05:55:40.773Z,06 Sep 07:55,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,neu_surface,visual_inspection
+ARK-TRN-00243,ARK-INC-00111,2026-09-06T05:55:40.997Z,06 Sep 07:55,in_containment,resolved,A. Novak,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
+ARK-TRN-00244,ARK-INC-00129,2026-09-06T06:04:14.839Z,06 Sep 08:04,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00245,ARK-INC-00115,2026-09-06T06:04:15.085Z,06 Sep 08:04,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00246,ARK-INC-00122,2026-09-06T06:04:15.323Z,06 Sep 08:04,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00247,ARK-INC-00131,2026-09-06T06:12:24.226Z,06 Sep 08:12,new,acknowledged,M. Brandt,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
+ARK-TRN-00248,ARK-INC-00115,2026-09-06T06:12:24.490Z,06 Sep 08:12,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00249,ARK-INC-00122,2026-09-06T06:12:24.764Z,06 Sep 08:12,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00250,ARK-INC-00129,2026-09-06T06:21:38.158Z,06 Sep 08:21,acknowledged,in_containment,A. Novak,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00251,ARK-INC-00104,2026-09-06T06:21:38.482Z,06 Sep 08:21,acknowledged,false_positive,P. Lindt,"section clean, part released to machining",P3,casting_cv,visual_inspection
+ARK-TRN-00252,ARK-INC-00110,2026-09-06T06:21:38.714Z,06 Sep 08:21,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P3,cmapss_rul,asset_reliability
+ARK-TRN-00253,ARK-INC-00131,2026-09-06T06:32:45.506Z,06 Sep 08:32,acknowledged,in_containment,M. Brandt,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
+ARK-TRN-00254,ARK-INC-00110,2026-09-06T06:32:45.766Z,06 Sep 08:32,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P3,cmapss_rul,asset_reliability
+ARK-TRN-00255,ARK-INC-00110,2026-09-06T06:42:09.207Z,06 Sep 08:42,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P3,cmapss_rul,asset_reliability
+ARK-TRN-00256,ARK-INC-00120,2026-09-06T06:42:09.521Z,06 Sep 08:42,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
+ARK-TRN-00257,ARK-INC-00127,2026-09-06T06:42:09.781Z,06 Sep 08:42,new,acknowledged,A. Novak,"coil flagged at the mill, strip sample taken",P3,neu_surface,visual_inspection
+ARK-TRN-00258,ARK-INC-00101,2026-09-06T06:50:55.471Z,06 Sep 08:50,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P3,mvtec_anomaly,visual_inspection
+ARK-TRN-00259,ARK-INC-00110,2026-09-06T06:50:55.699Z,06 Sep 08:50,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,cmapss_rul,asset_reliability
+ARK-TRN-00260,ARK-INC-00120,2026-09-06T06:50:55.978Z,06 Sep 08:50,acknowledged,false_positive,A. Novak,"surface checked by eye, within specification",P3,neu_surface,visual_inspection
+ARK-TRN-00261,ARK-INC-00129,2026-09-06T07:01:09.579Z,06 Sep 09:01,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00262,ARK-INC-00131,2026-09-06T07:01:09.815Z,06 Sep 09:01,in_containment,resolved,M. Brandt,"borescope confirmed HPC blade wear, module swapped and re-run",P2,cmapss_rul,asset_reliability
+ARK-TRN-00263,ARK-INC-00101,2026-09-06T07:01:10.062Z,06 Sep 09:01,acknowledged,in_containment,P. Lindt,lot held pending inspection of the flagged component,P3,mvtec_anomaly,visual_inspection
+ARK-TRN-00264,ARK-INC-00131,2026-09-06T07:10:21.031Z,06 Sep 09:10,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,cmapss_rul,asset_reliability
+ARK-TRN-00265,ARK-INC-00101,2026-09-06T07:10:21.267Z,06 Sep 09:10,in_containment,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P3,mvtec_anomaly,visual_inspection
+ARK-TRN-00266,ARK-INC-00127,2026-09-06T07:10:21.521Z,06 Sep 09:10,acknowledged,in_containment,A. Novak,coil held for surface inspection by eye,P3,neu_surface,visual_inspection
+ARK-TRN-00267,ARK-INC-00132,2026-09-06T07:19:27.293Z,06 Sep 09:19,new,acknowledged,A. Novak,impeller quarantined for QC decision,P2,casting_cv,visual_inspection
+ARK-TRN-00268,ARK-INC-00138,2026-09-06T07:19:27.553Z,06 Sep 09:19,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
+ARK-TRN-00269,ARK-INC-00101,2026-09-06T07:19:27.893Z,06 Sep 09:19,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,mvtec_anomaly,visual_inspection
+ARK-TRN-00270,ARK-INC-00136,2026-09-06T07:30:36.414Z,06 Sep 09:30,new,acknowledged,A. Novak,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00271,ARK-INC-00129,2026-09-06T07:30:36.664Z,06 Sep 09:30,resolved,in_containment,A. Novak,"containment did not hold, incident reopened",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00272,ARK-INC-00105,2026-09-06T07:30:36.907Z,06 Sep 09:30,acknowledged,resolved,J. Winter,"air dryer cartridge replaced, road test passed",P3,scania_aps,fleet_reliability
+ARK-TRN-00273,ARK-INC-00132,2026-09-06T07:41:56.689Z,06 Sep 09:41,acknowledged,false_positive,A. Novak,"section clean, part released to machining",P2,casting_cv,visual_inspection
+ARK-TRN-00274,ARK-INC-00105,2026-09-06T07:41:56.916Z,06 Sep 09:41,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,scania_aps,fleet_reliability
+ARK-TRN-00275,ARK-INC-00111,2026-09-06T07:41:57.136Z,06 Sep 09:41,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P3,casting_cv,visual_inspection
+ARK-TRN-00276,ARK-INC-00136,2026-09-06T07:53:41.750Z,06 Sep 09:53,acknowledged,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00277,ARK-INC-00138,2026-09-06T07:53:42.024Z,06 Sep 09:53,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
+ARK-TRN-00278,ARK-INC-00125,2026-09-06T07:53:42.290Z,06 Sep 09:53,new,acknowledged,P. Lindt,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
+ARK-TRN-00279,ARK-INC-00142,2026-09-06T08:02:09.892Z,06 Sep 10:02,new,acknowledged,L. Fischer,manufacturer and component carried into the monthly review,P2,nhtsa_nlp,field_quality
+ARK-TRN-00280,ARK-INC-00129,2026-09-06T08:02:10.251Z,06 Sep 10:02,in_containment,resolved,A. Novak,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00281,ARK-INC-00136,2026-09-06T08:02:10.528Z,06 Sep 10:02,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00282,ARK-INC-00124,2026-09-06T08:14:00.229Z,06 Sep 10:14,new,acknowledged,D. Keller,"picked up by the maintenance planner, test log pulled",P2,cmapss_rul,asset_reliability
+ARK-TRN-00283,ARK-INC-00129,2026-09-06T08:14:00.471Z,06 Sep 10:14,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00284,ARK-INC-00125,2026-09-06T08:14:00.717Z,06 Sep 10:14,acknowledged,in_containment,P. Lindt,casting sectioned for porosity check,P3,casting_cv,visual_inspection
+ARK-TRN-00285,ARK-INC-00142,2026-09-06T08:22:27.010Z,06 Sep 10:22,acknowledged,in_containment,L. Fischer,"complaint sample read, fleet data requested from the OEM",P2,nhtsa_nlp,field_quality
+ARK-TRN-00286,ARK-INC-00118,2026-09-06T08:22:27.311Z,06 Sep 10:22,new,acknowledged,A. Novak,impeller quarantined for QC decision,P3,casting_cv,visual_inspection
+ARK-TRN-00287,ARK-INC-00144,2026-09-06T08:22:27.594Z,06 Sep 10:22,new,acknowledged,P. Lindt,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00288,ARK-INC-00124,2026-09-06T08:33:08.777Z,06 Sep 10:33,acknowledged,in_containment,D. Keller,engine taken off the test schedule pending borescope inspection,P2,cmapss_rul,asset_reliability
+ARK-TRN-00289,ARK-INC-00142,2026-09-06T08:33:09.036Z,06 Sep 10:33,in_containment,resolved,L. Fischer,movement confirmed against warranty data and passed to engineering,P2,nhtsa_nlp,field_quality
+ARK-TRN-00290,ARK-INC-00116,2026-09-06T08:33:09.352Z,06 Sep 10:33,new,acknowledged,A. Novak,"coil held before dispositioning, defect map printed",P3,gc10_detect,visual_inspection
+ARK-TRN-00291,ARK-INC-00143,2026-09-06T08:41:14.605Z,06 Sep 10:41,new,acknowledged,P. Lindt,component pulled from the line for a look under magnification,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00292,ARK-INC-00116,2026-09-06T08:41:14.872Z,06 Sep 10:41,acknowledged,in_containment,A. Novak,sheet marked and coil routed to the inspection bay,P3,gc10_detect,visual_inspection
+ARK-TRN-00293,ARK-INC-00118,2026-09-06T08:41:15.192Z,06 Sep 10:41,acknowledged,in_containment,A. Novak,casting sectioned for porosity check,P3,casting_cv,visual_inspection
+ARK-TRN-00294,ARK-INC-00147,2026-09-06T08:51:49.976Z,06 Sep 10:51,new,acknowledged,M. Sato,"truck held at the depot, workshop slot requested",P1,scania_aps,fleet_reliability
+ARK-TRN-00295,ARK-INC-00124,2026-09-06T08:51:50.433Z,06 Sep 10:51,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P2,cmapss_rul,asset_reliability
+ARK-TRN-00296,ARK-INC-00118,2026-09-06T08:51:50.967Z,06 Sep 10:51,in_containment,resolved,A. Novak,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection
+ARK-TRN-00297,ARK-INC-00147,2026-09-06T09:01:44.982Z,06 Sep 11:01,acknowledged,in_containment,M. Sato,APS compressor and dryer under inspection at the workshop,P1,scania_aps,fleet_reliability
+ARK-TRN-00298,ARK-INC-00124,2026-09-06T09:01:45.278Z,06 Sep 11:01,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,cmapss_rul,asset_reliability
+ARK-TRN-00299,ARK-INC-00142,2026-09-06T09:01:45.579Z,06 Sep 11:01,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,nhtsa_nlp,field_quality
+ARK-TRN-00300,ARK-INC-00147,2026-09-06T09:10:28.984Z,06 Sep 11:10,in_containment,resolved,M. Sato,"air dryer cartridge replaced, road test passed",P1,scania_aps,fleet_reliability
+ARK-TRN-00301,ARK-INC-00143,2026-09-06T09:10:29.225Z,06 Sep 11:10,acknowledged,in_containment,P. Lindt,lot held pending inspection of the flagged component,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00302,ARK-INC-00118,2026-09-06T09:10:29.488Z,06 Sep 11:10,resolved,in_containment,A. Novak,"containment did not hold, incident reopened",P3,casting_cv,visual_inspection
+ARK-TRN-00303,ARK-INC-00147,2026-09-06T09:22:12.085Z,06 Sep 11:22,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P1,scania_aps,fleet_reliability
+ARK-TRN-00304,ARK-INC-00138,2026-09-06T09:22:12.384Z,06 Sep 11:22,in_containment,resolved,D. Keller,"borescope confirmed HPC blade wear, module swapped and re-run",P2,cmapss_rul,asset_reliability
+ARK-TRN-00305,ARK-INC-00143,2026-09-06T09:22:12.626Z,06 Sep 11:22,in_containment,resolved,P. Lindt,"defect confirmed on the component, part scrapped and lot released",P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00306,ARK-INC-00138,2026-09-06T09:31:03.217Z,06 Sep 11:31,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,cmapss_rul,asset_reliability
+ARK-TRN-00307,ARK-INC-00143,2026-09-06T09:31:03.491Z,06 Sep 11:31,resolved,closed,R. Ortiz,reviewed and closed by the Quality Manager,P2,mvtec_anomaly,visual_inspection
+ARK-TRN-00308,ARK-INC-00118,2026-09-06T09:31:03.794Z,06 Sep 11:31,in_containment,resolved,A. Novak,"porosity confirmed, part scrapped and batch logged",P3,casting_cv,visual_inspection

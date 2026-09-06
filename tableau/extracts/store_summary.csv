@@ -1,2 +1,2 @@
-as_of,total_incidents,open_incidents,overdue_incidents,total_transitions,incidents_with_transitions,acknowledged_incidents,median_minutes_to_acknowledge,acknowledged_within_window,acknowledged_late,closed_incidents,median_minutes_to_close,extract_complete
-2026-09-06T08:59:34.573Z,137,46,14,296,99,88,45.5,34,7,88,140.8,TRUE
+as_of,as_of_local,total_incidents,open_incidents,overdue_incidents,total_transitions,incidents_with_transitions,acknowledged_incidents,median_minutes_to_acknowledge,acknowledged_within_window,acknowledged_late,closed_incidents,median_minutes_to_close,extract_complete
+2026-09-06T09:32:42.536Z,06 Sep 2026 11:32,141,47,14,308,99,88,45.5,34,7,93,131.6,TRUE
