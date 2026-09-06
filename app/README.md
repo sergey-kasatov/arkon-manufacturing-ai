@@ -100,10 +100,34 @@ separate service on purpose: the cockpit reads and the plant writes, and a plain
 ledger lives at `/volume1/docker/arkon/live_plant/` beside the store. It is a
 mini-project of its own: `live_plant/README.md`.
 
+## Who is at the screen
+
+`utils/identity.py` holds one identity per browser session, picked from a roster the
+app derives from the store itself rather than from a list in a file, so it follows
+the plant. Every page shows the same picker at the top of the sidebar, and two
+things read it.
+
+The transition form fills "Recorded as" from it. It used to default to the
+incident's ASSIGNEE, which made the easiest thing an operator could do a move
+recorded under somebody else's name, in the log that every response-time figure on
+this platform is computed from. It also now warns when the move is a closure and the
+person is not the Quality Manager, and notes when the actor is not the assignee -
+allowed, and worth seeing.
+
+The assistant sends it to the canvas as one line in front of the question, so the
+escalation record carries a real name where it used to carry
+`arkon-quality-assistant`, and an answer can say whether a move is the reader's.
+
+**It is a name, not an authentication**, and the distinction is the whole of the
+next boundary.
+
 ## Known boundaries
 
 - **No authentication**, like the two services behind it. LAN and Tailscale only,
-  and it must not be port-forwarded.
+  and it must not be port-forwarded. The identity above is offered by the person,
+  not verified: it makes attribution easy and its absence visible, and it would not
+  survive anyone who wanted to lie. Real identity here means a login, not a better
+  selector.
 - **It writes one thing: lifecycle transitions, from the Steering Cell page.** Until
   2026-09-05 this app was read-only by design (an acknowledge button was judged a
   second, unguarded way to change an incident, the gate in front of a write being

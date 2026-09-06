@@ -440,26 +440,39 @@ model unless `--keep` is passed.
   this project keeps meeting: a claim about a neighbouring system is only as fresh
   as the last time a person compared them.
 
-- **The cockpit throws away the key to the assistant's own history.** Langflow
-  persists every message in its `message` table keyed by `session_id`, and the
-  history is there: on 2026-09-05 that table held 23 messages under
-  `cockpit-b8a125e38ad9`, 32 under an older Playground session and 14 under the demo
-  rehearsal. But `app/pages/02_assistant.py` mints a fresh
-  `"cockpit-" + uuid4().hex[:12]` into `st.session_state` on every page load and
-  never reads the table back, so a browser reload starts an empty conversation over
-  a store that still has the last one. The history is not lost, the pointer to it
-  is. Two fixes, both small: carry the session id in the URL the way the Steering
-  Cell page carries `?incident=`, and read prior turns from
-  `/api/v1/monitor/messages?session_id=`.
+- **CLOSED 2026-09-06: the cockpit no longer throws away the key to its own
+  history.** The session id is in the page URL, the way the Steering Cell page carries
+  `?incident=`, and `api.history()` reads prior turns back from
+  `/api/v1/monitor/messages?session_id=` on load. A reload resumes, and a link to a
+  conversation can be handed to someone else. Verified by opening
+  `/assistant?session=cockpit-b8a125e38ad9` and getting Sergey's conversation of the
+  previous afternoon back in full. The gap it closed is worth keeping in view: the
+  history was never lost, only unreachable, because the page minted a fresh uuid on
+  every load and never read the table back. "Start a new session" still abandons
+  rather than deletes, and the sidebar now says so.
 
-- **Nobody in the conversation has a name.** The assistant does not know which of
-  the nine people in the store it is talking to, and the consequence is not
-  cosmetic: the escalation it records, the one write it can perform, carries
-  `requested_by: arkon-quality-assistant` and `approved_by: operator via approval
-  gate`, so the platform's only audited action is anonymous. It also cannot say
-  "this one is yours" against "this one waits for the Quality Manager", although
-  charter 7.2 makes closure R. Ortiz's alone and the other four moves the
-  assignee's. The Steering Cell page already has the concept - an "Assigned to"
-  selector and a "Recorded as" field on the form - so the gap is that one app
-  holds an identity on one page and not on the other. Raised by Sergey on
-  2026-09-05.
+- **CLOSED 2026-09-06: the conversation has a name in it.** `app/utils/identity.py`
+  holds one identity per browser session, chosen from a roster derived from the store
+  itself (8 people in 5 roles, on the day it was built), and every page shows the same
+  picker. The assistant receives it as one line in front of the question,
+  `[operator: A. Novak, QC Engineer]`, which the prompts are told to read and never to
+  quote back. Two things follow. The escalation record - the one write this assistant
+  can perform, and the platform's only audited action - now carries the operator's real
+  name instead of `arkon-quality-assistant`. And an answer about an incident says
+  whether the move is theirs, because charter 7.2 gives closure to the Quality Manager
+  alone.
+
+  **The instruction that does this was wrong twice before it was right, and both
+  versions are worth knowing about.** The first told the specialists to use the role
+  and nothing else, and asked whether a Maintenance Planner could close an incident it
+  answered "as a Maintenance Planner, you are the assignee and can make this move" -
+  two inventions in one sentence, from a role that cannot close anything and about an
+  assignment it had no way to see, because the procedure specialist has no connection
+  to the incident store. The prompt now states the role rule outright rather than
+  hoping retrieval surfaces it, and says explicitly that the assistant does not know
+  who an incident is assigned to. Verified in both directions: a Maintenance Planner
+  is told closure is the Quality Manager's, and R. Ortiz is told it is his.
+
+  **It is a name, not an authentication.** Nothing in this deployment logs anyone in,
+  so this is attribution the person offers: it makes the honest case easy and the
+  careless one visible, and it would not survive somebody who wanted to lie.

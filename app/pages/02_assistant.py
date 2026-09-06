@@ -17,7 +17,7 @@ import uuid
 
 import streamlit as st
 
-from utils import api, config, ui
+from utils import api, config, identity, ui
 
 ui.page(
     "Arkon Quality Assistant",
@@ -30,19 +30,47 @@ MAX_POLLS = 90
 # keeps context across turns the way it does in a demo.
 
 state = st.session_state
-state.setdefault("messages", [])
+
+# The session id lives in the URL, not only in memory. It used to be minted fresh on
+# every page load and never read back, so a reload started an empty conversation over
+# a store that still held the last one: Langflow persists every message keyed by this
+# id, so what was thrown away was the pointer rather than the history. Carrying it in
+# the query string, the way the Steering Cell page carries ?incident=, means a reload
+# resumes and a link to a conversation can be handed to somebody else.
+from_url = str(st.query_params.get("session", "")).strip()
+if from_url and state.get("session_id") != from_url:
+    state.session_id = from_url
+    state.pop("messages", None)
 state.setdefault("session_id", "cockpit-" + uuid.uuid4().hex[:12])
+if st.query_params.get("session") != state.session_id:
+    st.query_params["session"] = state.session_id
+
 state.setdefault("job", None)
 state.setdefault("pending", None)
 state.setdefault("polls", 0)
+if "messages" not in state:
+    # Reload the turns Langflow already holds for this session, so a refresh does not
+    # look like an erased conversation.
+    state.messages = [
+        {"role": turn["role"], "branch": turn["branch"], "text": turn["text"]}
+        for turn in api.history(state.session_id)
+    ]
 
 with st.sidebar:
+    me = identity.picker()
+    st.divider()
     st.subheader("Session")
     st.code(state.session_id, language=None)
+    st.caption(
+        "This id is in the page URL, so a reload resumes the conversation and the link "
+        "can be shared. Starting a new session abandons this one; it is not deleted, and "
+        "pasting the id back into the URL reopens it."
+    )
     if st.button("Start a new session", width="stretch"):
         for key in ("messages", "job", "pending", "polls"):
             state.pop(key, None)
         state.session_id = "cockpit-" + uuid.uuid4().hex[:12]
+        st.query_params["session"] = state.session_id
         st.rerun()
     st.caption("Flow `%s` on %s" % (config.ASSISTANT_FLOW, config.LANGFLOW_URL))
 
@@ -142,7 +170,17 @@ if question:
     state.messages.append({"role": "user", "text": question})
     try:
         flow = api.flow_id()
-        state.job = {"id": api.start_turn(flow, question, state.session_id), "flow": flow}
+        # Who is asking travels with the question on its own first line, and the
+        # prompts read it. It is not decoration: charter 7.2 gives closure to the
+        # Quality Manager and the other four moves to the assignee, so an answer
+        # about what to do next depends on which of them is reading it; and the
+        # escalation record, the one write this assistant can make, carried
+        # `requested_by: arkon-quality-assistant` until it had a name to put there.
+        # The transcript shows the question the operator typed, not this line.
+        sent = question
+        if me:
+            sent = "[operator: %s, %s]\n%s" % (me["name"], me["role"], question)
+        state.job = {"id": api.start_turn(flow, sent, state.session_id), "flow": flow}
         state.polls = 0
     except api.AssistantError as error:
         state.messages.append({"role": "assistant", "branch": "error", "text": str(error)})

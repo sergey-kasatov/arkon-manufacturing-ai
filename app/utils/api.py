@@ -167,6 +167,36 @@ def resume_turn(job_id, request_id, decision):
     )
 
 
+def history(session_id):
+    """Every turn Langflow has stored under this session, oldest first.
+
+    Langflow persists each message in its own table keyed by session id, so a
+    conversation survives the page that produced it. The cockpit used to mint a
+    fresh uuid on every load and never read this back, which threw away the key to
+    a conversation that was still on disk: the history was not lost, only
+    unreachable. Returns [] rather than raising when the lookup fails, because a
+    conversation that cannot be reloaded is a worse page, not a broken one.
+    """
+    try:
+        rows = _langflow(
+            "/api/v1/monitor/messages?session_id=" + urllib.parse.quote(session_id)
+        ) or []
+    except AssistantError:
+        return []
+    turns = []
+    for row in rows:
+        text = (row.get("text") or "").strip()
+        if not text:
+            continue
+        turns.append({
+            "role": "user" if (row.get("sender") or "").lower() == "user" else "assistant",
+            "branch": row.get("sender_name") if (row.get("sender") or "").lower() != "user" else None,
+            "text": text,
+            "at": row.get("timestamp"),
+        })
+    return turns
+
+
 def answers(state):
     """Every chat output that produced text, with the branch that produced it.
 

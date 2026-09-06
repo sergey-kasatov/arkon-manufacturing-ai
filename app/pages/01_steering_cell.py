@@ -10,13 +10,15 @@ directly would show 29 new incidents and never anything else.
 import pandas as pd
 import streamlit as st
 
-from utils import api, config, modules, ui
+from utils import api, config, identity, modules, ui
 
 ui.page("Quality Steering Cell", "Live incident state, read through the n8n status API")
 
 # Controls
 
 with st.sidebar:
+    me = identity.picker()
+    st.divider()
     st.subheader("Filter")
     priority = st.multiselect("Priority", ["P1", "P2", "P3", "P4"])
     status_filter = st.selectbox("Status", ["any"] + config.LIFECYCLE)
@@ -218,10 +220,31 @@ else:
         to_status = st.selectbox(
             "Next state", options, format_func=lambda s: "%s. %s" % (s, WHAT_IT_MEANS[s])
         )
-        actor = st.text_input("Recorded as", value=incident["assigned_to"] or "")
+        # Defaulted to whoever is at the screen, NOT to the incident's assignee.
+        # It used to default to the assignee, which made the easiest thing an
+        # operator could do a move recorded under someone else's name - in the log
+        # that every response-time number on this platform is computed from.
+        actor = st.text_input(
+            "Recorded as", value=identity.name(),
+            help="Set who you are in the sidebar and this fills itself.",
+        )
         note = st.text_input("Note", placeholder="what was done, in one line")
         submitted = st.form_submit_button("Record transition")
     if submitted:
+        if not actor.strip():
+            st.warning("Say who you are, in the sidebar or in the field, before recording a move.")
+            st.stop()
+        if to_status == "closed" and me and not identity.is_quality_manager():
+            st.warning(
+                "Charter 7.2 gives closure to the Quality Manager (%s). Recording it as %s "
+                "anyway; the log will say so."
+                % (incident["escalation_contact"], actor.strip())
+            )
+        if actor.strip() != (incident["assigned_to"] or "") :
+            st.caption(
+                "Recorded as %s, who is not this incident's assignee (%s). That is allowed and "
+                "the log keeps both names." % (actor.strip(), incident["assigned_to"])
+            )
         reply = api.transition(
             incident["incident_id"], to_status, actor.strip() or "human operator", note.strip()
         )
