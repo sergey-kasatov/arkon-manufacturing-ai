@@ -1,2 +1,2 @@
 as_of,as_of_local,total_incidents,open_incidents,overdue_incidents,total_transitions,incidents_with_transitions,acknowledged_incidents,median_minutes_to_acknowledge,acknowledged_within_window,acknowledged_late,closed_incidents,median_minutes_to_close,extract_complete
-2026-09-06T11:57:02.415Z,06 Sep 2026 13:57,155,50,14,350,113,100,45.5,40,7,102,140.8,TRUE
+2026-09-06T14:12:47.660Z,06 Sep 2026 16:12,169,50,14,392,124,109,48.7,44,7,113,144.1,TRUE

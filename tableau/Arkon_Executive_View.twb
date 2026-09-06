@@ -498,7 +498,7 @@
       <column-instance column='[Calculation_131]' derivation='None' name='[none:Calculation_131:nk]' pivot='key' type='nominal' />
       <column-instance column='[Calculation_142]' derivation='None' name='[none:Calculation_142:nk]' pivot='key' type='nominal' />
       <extract count='-1' enabled='true' units='records'>
-        <connection authentication='auth-none' author-locale='en_US' class='hyper' dbname='D:/-PROJECTS/--Portfolio/arkon-manufacturing-ai/tableau/extracts/incidents.hyper' default-settings='hyper' schema='Extract' tablename='Extract' update-time='09/06/2026 11:57:02 AM'>
+        <connection authentication='auth-none' author-locale='en_US' class='hyper' dbname='D:/-PROJECTS/--Portfolio/arkon-manufacturing-ai/tableau/extracts/incidents.hyper' default-settings='hyper' schema='Extract' tablename='Extract' update-time='09/06/2026 02:12:47 PM'>
           <relation name='Extract' table='[Extract].[Extract]' type='table' />
           <metadata-records>
             <metadata-record class='column'>
@@ -1043,10 +1043,10 @@
         <calculation class='tableau' formula='REPLACE([incident_id], &quot;ARK-INC-&quot;, &quot;&quot;)' />
       </column>
       <column caption='Recent' datatype='boolean' name='[Calculation_322]' role='dimension' type='nominal'>
-        <calculation class='tableau' formula='[recorded_at] &gt;= &quot;2026-09-06T11:40:26.458Z&quot;' />
+        <calculation class='tableau' formula='[recorded_at] &gt;= &quot;2026-09-06T14:02:01.304Z&quot;' />
       </column>
       <extract count='-1' enabled='true' units='records'>
-        <connection authentication='auth-none' author-locale='en_US' class='hyper' dbname='D:/-PROJECTS/--Portfolio/arkon-manufacturing-ai/tableau/extracts/transitions.hyper' default-settings='hyper' schema='Extract' tablename='Extract' update-time='09/06/2026 11:57:02 AM'>
+        <connection authentication='auth-none' author-locale='en_US' class='hyper' dbname='D:/-PROJECTS/--Portfolio/arkon-manufacturing-ai/tableau/extracts/transitions.hyper' default-settings='hyper' schema='Extract' tablename='Extract' update-time='09/06/2026 02:12:47 PM'>
           <relation name='Extract' table='[Extract].[Extract]' type='table' />
           <metadata-records>
             <metadata-record class='column'>
@@ -1663,8 +1663,8 @@
           </filter>
           <manual-sort column='[federated.arkontransitions].[none:recorded_local:nk]' direction='ASC'>
             <dictionary>
-              <bucket>&quot;06 Sep 13:51&quot;</bucket>
-              <bucket>&quot;06 Sep 13:40&quot;</bucket>
+              <bucket>&quot;06 Sep 16:11&quot;</bucket>
+              <bucket>&quot;06 Sep 16:02&quot;</bucket>
             </dictionary>
           </manual-sort>
           <slices>
@@ -2195,6 +2195,20 @@
           </filter>
           <manual-sort column='[federated.arkonincidents].[none:incident_id:nk]' direction='ASC'>
             <dictionary>
+              <bucket>&quot;ARK-INC-00179&quot;</bucket>
+              <bucket>&quot;ARK-INC-00178&quot;</bucket>
+              <bucket>&quot;ARK-INC-00177&quot;</bucket>
+              <bucket>&quot;ARK-INC-00176&quot;</bucket>
+              <bucket>&quot;ARK-INC-00175&quot;</bucket>
+              <bucket>&quot;ARK-INC-00174&quot;</bucket>
+              <bucket>&quot;ARK-INC-00173&quot;</bucket>
+              <bucket>&quot;ARK-INC-00172&quot;</bucket>
+              <bucket>&quot;ARK-INC-00171&quot;</bucket>
+              <bucket>&quot;ARK-INC-00170&quot;</bucket>
+              <bucket>&quot;ARK-INC-00169&quot;</bucket>
+              <bucket>&quot;ARK-INC-00168&quot;</bucket>
+              <bucket>&quot;ARK-INC-00167&quot;</bucket>
+              <bucket>&quot;ARK-INC-00166&quot;</bucket>
               <bucket>&quot;ARK-INC-00165&quot;</bucket>
               <bucket>&quot;ARK-INC-00164&quot;</bucket>
               <bucket>&quot;ARK-INC-00163&quot;</bucket>
@@ -2407,7 +2421,7 @@
                 <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='22'>Arkon Quality Steering Cell</run>
                 <run fontcolor='#55555E' fontname='Tableau Book' fontsize='22'>    Executive view</run>
                 <run>Æ&#10;</run>
-                <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>20 of 50 open incidents have been open more than three days. The 5 raised in the last hour are being worked inside window.</run>
+                <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>20 of 50 open incidents have been open more than three days. The 6 raised in the last hour are being worked inside window.</run>
               </formatted-text>
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -2418,9 +2432,9 @@
             </zone>
             <zone fixed-size='432' forceUpdate='true' h='9333' id='14' is-fixed='true' type-v2='text' w='27835' x='72165' y='0'>
               <formatted-text>
-                <run fontalignment='2' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>as of 06 Sep 2026 13:57</run>
+                <run fontalignment='2' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>as of 06 Sep 2026 16:12</run>
                 <run>Æ&#10;</run>
-                <run fontalignment='2' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>155 incidents, 350 transitions, plant clock</run>
+                <run fontalignment='2' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>169 incidents, 392 transitions, plant clock</run>
               </formatted-text>
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -2616,7 +2630,7 @@
           <zone fixed-size='56' forceUpdate='true' h='6222' id='70' is-fixed='true' type-v2='text' w='100000' x='0' y='93778'>
             <formatted-text>
               <run bold='true' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>What this store is. </run>
-              <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>155 incidents raised by seven models on public datasets. Every timestamp is real. The operational context - people, lines, shifts - is simulated, and so are the response times: a demo crew inside the live plant acknowledges and closes on a schedule, so cards 3 and 4 measure that emitter, not a workforce. Source: the n8n incident status API. github.com/sergey-kasatov/arkon-manufacturing-ai</run>
+              <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>169 incidents raised by seven models on public datasets. Every timestamp is real. The operational context - people, lines, shifts - is simulated, and so are the response times: a demo crew inside the live plant acknowledges and closes on a schedule, so cards 3 and 4 measure that emitter, not a workforce. Source: the n8n incident status API. github.com/sergey-kasatov/arkon-manufacturing-ai</run>
             </formatted-text>
             <zone-style>
               <format attr='border-color' value='#000000' />
@@ -2645,7 +2659,7 @@
                     <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='22'>Arkon Quality Steering Cell</run>
                     <run fontcolor='#55555E' fontname='Tableau Book' fontsize='22'>    Executive view</run>
                     <run>Æ&#10;</run>
-                    <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>20 of 50 open incidents have been open more than three days. The 5 raised in the last hour are being worked inside window.</run>
+                    <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>20 of 50 open incidents have been open more than three days. The 6 raised in the last hour are being worked inside window.</run>
                   </formatted-text>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -2755,9 +2769,9 @@
             </zone>
             <zone fixed-size='432' forceUpdate='true' h='9333' id='214' is-fixed='true' type-v2='text' w='27835' x='72165' y='0'>
               <formatted-text>
-                <run fontalignment='2' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>as of 06 Sep 2026 13:57</run>
+                <run fontalignment='2' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>as of 06 Sep 2026 16:12</run>
                 <run>Æ&#10;</run>
-                <run fontalignment='2' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>155 incidents, 350 transitions, plant clock</run>
+                <run fontalignment='2' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>169 incidents, 392 transitions, plant clock</run>
               </formatted-text>
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -3009,7 +3023,7 @@
           <zone fixed-size='48' forceUpdate='true' h='5333' id='270' is-fixed='true' type-v2='text' w='100000' x='0' y='94667'>
             <formatted-text>
               <run bold='true' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>Same store, same extract. </run>
-              <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>155 incidents as of 06 Sep 2026 13:57, refreshed together with the Executive view. With no filter set, the cards and the aging profile are the Executive view&apos;s own numbers. The operational context and the crew&apos;s response times are simulated; every timestamp is real. github.com/sergey-kasatov/arkon-manufacturing-ai</run>
+              <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>169 incidents as of 06 Sep 2026 16:12, refreshed together with the Executive view. With no filter set, the cards and the aging profile are the Executive view&apos;s own numbers. The operational context and the crew&apos;s response times are simulated; every timestamp is real. github.com/sergey-kasatov/arkon-manufacturing-ai</run>
             </formatted-text>
             <zone-style>
               <format attr='border-color' value='#000000' />
