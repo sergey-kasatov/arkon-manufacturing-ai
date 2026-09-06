@@ -1,0 +1,49 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # The suite is offline by design: no NAS, no Steering Cell, no trained
+      # weights, no datasets. It needs pytest, and tableauhyperapi so the workbook
+      # generator can be imported - without it those tests skip, and a skipped test
+      # is a test that is not running.
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Run the suite
+        run: python -m pytest -q
+
+      # The generator's own claim is that the same extracts produce a byte-identical
+      # workbook. That is checked here rather than asserted in a README, using the
+      # extracts committed with the repository.
+      - name: Rebuild the workbook twice and compare
+        run: |
+          python tableau/build_workbook.py --skip-extracts
+          sha256sum tableau/Arkon_Executive_View.twb > first.sha
+          python tableau/build_workbook.py --skip-extracts
+          sha256sum -c first.sha
+
+      # Rule of the repository: no em dash, no curly quotes, no ellipsis in
+      # authored text. Cheap to check and impossible to notice by eye.
+      - name: Check typography in tracked text
+        run: |
+          if git grep -nP '[\x{2014}\x{201C}\x{201D}\x{2018}\x{2019}\x{2026}]' -- '*.py' '*.md' '*.yml'; then
+            echo "::error::banned typography above: use a spaced hyphen, straight quotes, three dots"
+            exit 1
+          fi

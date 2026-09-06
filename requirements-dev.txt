@@ -1,0 +1,18 @@
+# =============================================================================
+# Arkon Manufacturing AI - test dependencies
+# Python: 3.12  (see .python-version)
+# =============================================================================
+# Everything needed to run `pytest` and nothing else. The suite is offline by
+# design - no NAS, no Steering Cell, no trained weights, no datasets - so this
+# file deliberately does not pull in requirements.txt: a contributor who only
+# wants to run the tests should not be installing PyTorch.
+#
+#   pip install -r requirements-dev.txt
+#   pytest
+# =============================================================================
+
+pytest>=8.0
+
+# The workbook generator imports this to write the .hyper extracts, so without it
+# tests/test_dashboard.py skips rather than runs. Same pin as requirements.txt.
+tableauhyperapi>=0.0.26479

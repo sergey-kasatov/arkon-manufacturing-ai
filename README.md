@@ -1,7 +1,12 @@
-# 🏭 Arkon Manufacturing AI
+# Arkon Manufacturing AI
 
-> Mastery-level portfolio project - an integrated AI quality control platform
-> for a fictional heavy manufacturing company, built on real public datasets.
+> An Industry 4.0 quality platform for a fictional heavy manufacturer. Seven
+> machine-learning models on real public datasets publish one event contract; a
+> Steering Cell on n8n triages what they raise, assigns it and alerts a named
+> person; two operator surfaces and an executive view carry it from there.
+> Deployed on a NAS and running.
+
+[![tests](https://github.com/sergey-kasatov/arkon-manufacturing-ai/actions/workflows/tests.yml/badge.svg)](https://github.com/sergey-kasatov/arkon-manufacturing-ai/actions/workflows/tests.yml)
 
 ---
 
@@ -778,11 +783,26 @@ until 2026-09-03 (`docs/Model_Card_NHTSA_Field_Quality.md`). The last row was th
 BI dashboard, the one that was never a model, and it was built on 2026-09-05
 (`tableau/README.md`).
 
-What is left is not a module. It is depth on what exists: the executive view at a
-board-room standard and live in the cockpit, the manager-notification timer
-deployed rather than only built, and the charter 7.6 intake outcomes, of which
-three exist and one is written down, so a validation regression and a quiet plant
-still look the same from every screen.
+What is left is not a module. It is depth on what exists:
+
+- **The manager-notification timer**, built and offline-checked in
+  `n8n/overdue_escalation_v1.json` and not deployed. Its sibling half, callback
+  buttons on the Telegram card, is closed on this deployment: n8n's `WEBHOOK_URL` is
+  tailnet-only, so a button has nothing reachable to call.
+- **Charter 7.6 intake outcomes.** The webhook has three and writes one down, so
+  duplicate suppression cannot be counted and a validation regression looks exactly
+  like a quiet plant from every screen.
+- **Charter 7.5, a queryable incident store.** The status API parses both JSONL files
+  whole on every request. That is right at demo scale and it has begun to show: the
+  page cap was raised from 50 to 500 on 2026-09-06 after it truncated a headline
+  number on the executive view by twelve.
+- **An origin marker on lifecycle transitions.** The live plant's demo crew and a
+  real operator both post to the same endpoint under a roster name, so the two are
+  indistinguishable in the data. One field would separate them, and the response-time
+  numbers would then mean what a reader assumes they mean.
+
+The executive view left this list on 2026-09-06: it is rebuilt to `tableau/Dashboard_Design_v3.md`
+and live in the cockpit at `/executive`.
 
 ---
 
@@ -798,6 +818,7 @@ Assistant   Langflow 1.11.5, Qdrant, OpenRouter (deployed)
 Automation  n8n (webhooks, incident store, lifecycle endpoint, Telegram alerts) (deployed)
 App         Streamlit cockpit, 9 pages, on the NAS at AK2101:8303 (deployed)
 Demo engine Python service, one re-timed real incident every 8 to 12 min (deployed)
+Tests       pytest, 116 offline tests, GitHub Actions on every push
 BI          Tableau Public 2026.2, workbook generated from XML by tableau/build_workbook.py
 Infra       Docker Compose on a Ugreen NAS, one network, Tailscale for remote access
 Utilities   pandas, numpy, matplotlib, seaborn, plotly
@@ -839,6 +860,54 @@ run in order: `01_eda → 02_preprocessing → 03_modeling` per module.
 ```bash
 streamlit run app/main.py
 ```
+
+---
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+116 tests, under a second, and **offline by design**: no NAS, no Steering Cell, no
+trained weights, no datasets. That is what makes them worth running on a laptop and in
+CI on every push, and it is also the constraint that decided what they cover. They test
+the two things a regression could break silently everywhere else:
+
+- **The event contract** (`tests/test_event_contract.py`). Seven models publish the
+  same twelve-field risk event and nothing downstream knows which model spoke, so a
+  broken adapter is invisible until an incident is wrong. Every required field, every
+  closed vocabulary and the `operational_context: simulated` rule of charter section 5
+  are pinned, and then **all 3,049 events this repository ships are run through the
+  validator** - which is the check that would actually catch the adapter. Plus the id
+  scheme: each module emits from its own hundred-thousand block, because the Steering
+  Cell stores by `event_id` and a collision between two modules would overwrite an
+  incident rather than raise anything.
+- **The lifecycle** (`tests/test_lifecycle.py`). Charter 7.2 is one Python file
+  injected into three deployed n8n workflows, so an edge going missing reaches the
+  transition endpoint, the status API and the escalation record at once. The tests are
+  properties rather than a transcription - every state reachable from `new`, terminal
+  states with no exits, `resolved` not counted as open, `false_positive` reachable from
+  everywhere, and `resolved -> in_containment` as the only backwards edge - because a
+  test that repeats the table back passes for any edit that changes both.
+
+The rest covers the executive view's generated content (`tests/test_dashboard.py`: age
+bands, the status sentence, the two thresholds the workbook ships baked in, the layout
+arithmetic) and the extract layer's plant clock (`tests/test_extracts.py`, including
+both sides of a daylight-saving change, since a board that prints UTC reads two hours
+behind the room and nobody reports it).
+
+CI additionally rebuilds the Tableau workbook twice and compares hashes, because the
+generator's claim is that the same extracts produce a byte-identical file, and checks
+the repository's typography rule.
+
+**What is not covered, and honestly**: the deployed n8n workflows, the Langflow
+assistant and the live plant's transport all need the running NAS, so they are checked
+by `live_plant/check_plant.py` (48 assertions against a fake Steering Cell),
+`n8n/build/check_lifecycle_js.py` and `n8n/build/check_overdue_js.py`, which are run by
+hand. Model training is not tested at all; the model cards carry the held-out numbers
+and the notebooks reproduce them.
 
 ---
 
@@ -894,6 +963,7 @@ arkon-manufacturing-ai/
 │   ├── cv/
 │   ├── nlp/
 │   └── ui/                     Screenshots of the running cockpit, regenerated not hand-taken
+├── tests/                      Offline test suite: the event contract, the charter 7.2 lifecycle, the executive view's generated content, the plant clock
 ├── tools/
 │   ├── make_result_plots.py    Regenerates the result figures from the metrics files
 │   └── make_ui_screenshots.py  Regenerates assets/ui/ from the deployed cockpit
@@ -925,10 +995,14 @@ arkon-manufacturing-ai/
 
 ## Author
 
-**Sergey Kasatov** - Data Analyst with 17 years of background in automotive
-engineering. This project applies ML, Time Series, and Computer Vision to
-industrial manufacturing problems - a domain with direct relevance to
-real-world production environments.
+**Sergey Kasatov** - Data Analyst, previously seventeen years in automotive
+engineering: body-in-white product development and launch management at Ford, GM
+and SEGULA/Stellantis, and supplier and plant quality using 8D, SPC, PPAP/APQP and
+VDA 6.3. Arkon is that domain knowledge written as software - which failure modes
+are worth a model, what a quality engineer does with an alert at 3 a.m., and why an
+incident nobody acknowledged is a worse number than an incident nobody closed.
+
+github.com/sergey-kasatov · linkedin.com/in/sergey-kasatov
 
 ---
 
