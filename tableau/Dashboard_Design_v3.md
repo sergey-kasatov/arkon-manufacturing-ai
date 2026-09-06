@@ -510,7 +510,9 @@ about a third more than the application's own minimum), the phone cards 170 with
 padding, and the figure is 36 pt rather than 38, still inside the 36 to 40 asked for.
 The main row (334) and the Explore list (160) pay for it. The fix can only be
 verified on the published view, so the check after the next Save to Tableau Public
-is to open the public URL and read the four cards.
+is to open the public URL and read the four cards. Verified the same evening after
+Sergey republished: all four cards render on both dashboards and in the phone layout,
+read from the public URL with the same capture.
 
 **Every Explore sheet is its own worksheet.** A filter is worksheet state, not
 dashboard state, so one card sheet placed on both dashboards would let a Priority

@@ -353,7 +353,10 @@ headless Chrome capture at 1640 px, not assumed. The generator now gives the car
 190 px (170 inside the padding) and the phone cards 170, with the figure at 36 pt;
 the main row and the Explore list pay for it. There is no way to verify the fix but
 on the published view, so the check after the next Save to Tableau Public is to open
-the public URL and read the four cards.
+the public URL and read the four cards. **Done: Sergey republished the same evening and
+the public URL was read again the same way (headless Chrome, 1640 px, and 500 px for
+the phone layout): all four cards carry their number and context line on the Executive
+view, the Explore view and the phone layout.**
 
 **Sergey's decision is to publish to Tableau Public.** So the shape is settled:
 the workbook lives at a public URL that this repository and `kasatov.de` can link,
