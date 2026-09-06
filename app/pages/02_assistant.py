@@ -78,7 +78,13 @@ with st.sidebar:
     # operator has to be able to SEE what they had before they can go back to it.
     # Langflow has no endpoint that lists sessions, so this is a grouping of its
     # message table.
-    st.subheader("Past conversations")
+    # "All conversations" rather than "Past conversations", because the second one
+    # reads as the reader's own and they are not. There is no sign-in anywhere in this
+    # deployment, so the list is every conversation anyone has had with this assistant,
+    # and the messages inside them are readable too. Scoping the list to the name in
+    # the identity picker was considered and rejected: it would look like privacy while
+    # providing none, which is worse than saying so.
+    st.subheader("All conversations")
     try:
         past = [s for s in api.sessions(flow=api.flow_id()) if s["id"] != state.session_id]
     except api.AssistantError:
@@ -102,8 +108,10 @@ with st.sidebar:
             st.query_params["session"] = state.session_id
             st.rerun()
         st.caption(
-            "Date, the first thing asked, and the number of messages. Scripted sessions "
-            "this repository's own tools create are filtered out by name."
+            "**Shared, not yours.** Nothing here signs anyone in, so this is every "
+            "conversation held with the assistant, whoever held it, and their messages "
+            "open too. Date, the first thing asked, and the number of messages; only "
+            "conversations started on this page are listed."
         )
 
     st.caption("Flow `%s` on %s" % (config.ASSISTANT_FLOW, config.LANGFLOW_URL))

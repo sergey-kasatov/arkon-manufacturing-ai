@@ -119,7 +119,12 @@ escalation record carries a real name where it used to carry
 `arkon-quality-assistant`, and an answer can say whether a move is the reader's.
 
 **It is a name, not an authentication**, and the distinction is the whole of the
-next boundary.
+next boundary. It is also why the assistant's conversation list is headed "All
+conversations" rather than "Past conversations", and says under itself that it is
+shared: with nothing signing anyone in, every conversation held with the assistant is
+listed for everyone and its messages open too. Scoping that list to the name in the
+picker was considered and rejected - it would look like privacy while providing none,
+which is worse than saying so.
 
 ## Known boundaries
 
