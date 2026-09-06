@@ -115,25 +115,31 @@ budget is therefore solved in `build_workbook.py` and asserted there rather than
 carried in prose, because `bands()` normalises whatever it is handed and a budget that
 does not add up rescales every box silently instead of failing.
 
-The built band heights, which sum to exactly 900 with the zone margins inside them:
+The built band heights of the Executive view, which sum to exactly 900
+(`EXECUTIVE_BANDS` in `build_workbook.py`; the Explore view of section 15 has its own
+list):
 
 | Band | px | Holds |
 |---|---|---|
 | Header | 84 | Title, the generated status sentence, the as-of stamp |
-| Filters | 44 | The three list parameters |
 | KPI row | 150 | Four BANs |
-| Main | 330 | Aging profile (62 percent) and bullet bars (38 percent) |
-| Strip | 236 | Activity feed (62 percent) and models (38 percent) |
+| Main | 374 | Aging profile (62 percent) and bullet bars (38 percent) |
+| Strip | 236 | Activity feed, full width |
 | Footer | 56 | What this store is |
 
-Two of those differ from the plan on purpose. **The filter band survives**: this
-document's layout has no room for it and section 11 argues an executive view should be
-a statement, but the three controls were already built, they work (verified by setting
-Priority to P1 and reading 11 raised, 11 closed, 0 open off the cards), and dropping a
-working feature is Sergey's call rather than the specification's. **The strip grew and
-the main row shrank**: at 186 px, seven model rows and six feed rows had about 14 px
-each and their 11 pt labels overlapped into an unreadable stack, while the main row had
-room to spare with five aging rows.
+The filter band that the first v3 build kept is gone from this view: section 11
+argued an executive view should be a statement, and section 15 records the decision
+that made it one. **The strip had grown and the main row shrunk** in that first build:
+at 186 px, seven model rows and six feed rows had about 14 px each and their 11 pt
+labels overlapped into an unreadable stack. The model chart has since moved to the
+Explore view, where it has the height it needs, and the feed takes the whole strip.
+
+**A fixed band costs its pixels plus 8.** Measured on the render: every band with a
+fixed size takes that size plus its 4 px zone margin above and below, and the one
+flexible band, the main row, gets what is left, so a budget that sums to 900 on paper
+leaves the main row about 50 px short of its own number (326 for the 374 above). The
+lists in the generator are chosen with that in mind rather than corrected for it,
+because the margin is real and wanted.
 
 **A horizontal container does not honour a proportional child box.** The 62/38 split is
 in the XML exactly as written, and Tableau rendered the charts 50/50 and the strip
@@ -458,6 +464,74 @@ an origin marker to the transition endpoint, the endpoint stores it, and the two
 can then separate work done by the crew from work done by a person. It is worth doing
 because it turns "the numbers are simulated" into "the system records who made each move,
 including whether it was a bot".
+
+---
+
+## 15. Two dashboards in one workbook, decided 2026-09-06
+
+**Sergey's two answers that afternoon settled a fork the specification had left
+open.** First, two dashboards rather than one that tries to be both: an Executive view
+with no controls, sized and weighted for a screen someone is shown, and an Explore
+view carrying the filters and the drill-down for someone working the data. Second,
+the demo condition, which had never been stated: screen sharing on a video call.
+That is harsher than a projector, because viewers watch in a window smaller than
+the canvas through a codec that breaks a 3 px bar and turns 11 pt type to mush, and
+it is what made a control nobody can click during a share into decoration rather
+than a feature. Both views stay 1600 x 900, the shape of a shared window.
+
+**The Executive view** keeps the hierarchy of section 2 minus the last item: the
+four BANs, the status sentence, the aging profile, the bullet bars, and the activity
+feed across the whole strip. The model chart left it: ranked last in the hierarchy,
+least decision-relevant for an executive, and with seven rows the one panel that
+could not be made legible in a strip. There is no filter band. Bands: 84, 150, 374,
+236, 56.
+
+**The Explore view**, top to bottom: the title with one line of instruction instead of
+the status sentence (a sentence about the whole store would contradict a filtered
+page one click later); a filter band with a label and three cards, left-aligned like
+everything else; the same four BANs; the aging profile beside the model chart, in
+one row with the same 62/38 split; the incident list across the whole width; a
+footer that says it is the same store and the same extract. Bands: 84, 56, 150,
+362, 200, 48. The cards stay at 150 because at 130 the number no longer fits and
+Tableau prints a row of hashes in its place. The list gives up two visible rows so
+that the seven model rows get about 24 px each, which is where their names stop
+overlapping; it scrolls, and after a click on a bar it is short anyway.
+
+**Every Explore sheet is its own worksheet.** A filter is worksheet state, not
+dashboard state, so one card sheet placed on both dashboards would let a Priority
+picked on Explore change the Executive numbers behind the presenter's back. The
+generator therefore emits the four cards and the aging profile twice under two
+names, and the suite asserts that no sheet is on both dashboards.
+
+**Filter cards, not parameters.** The three Explore controls are real Tableau filters
+in Multiple Values (Dropdown) mode: a caret, a list that opens, "(All)" and a check per
+member. In the XML that is a `type-v2='filter'` zone with `mode='checkdropdown'` on
+the dashboard and, on every sheet the card must move, a categorical `<filter>`
+carrying the same `filter-group` id with a `level-members` group filter (the "(All)"
+state). Priority set to P1 moved all seven Explore panels and none of the Executive
+ones. The parameter controls of the first v3 build rendered as bare text boxes; the
+first reading, that Tableau ignores the zone's `mode`, was wrong. Sergey set one to a
+dropdown in the application and the save wrote `mode='compact'`: a parameter control
+has its own vocabulary in which `compact` is the dropdown, and `dropdown`, a
+filter-card mode, falls back to a type-in box. The cards were built anyway, because
+they select several members at once and a single-value parameter cannot.
+
+**Actions live on Explore and nowhere else**, all on select: the aging profile
+narrows the model chart and the list, the model chart narrows the aging profile and
+the list, and a second click releases. The tooltip-menu drill-down of the first build
+is gone with the hidden sheet it opened: the list is on the page.
+
+**The list is a table and gets Fit Width**, not Entire View: its rows keep a readable
+height and it scrolls, where Entire View would press every incident into a pixel. The
+summary rides in the text cell beside the age rather than as a row header, because
+Fit Width stretches the text column to the panel's edge and holds every header at its
+own width; as a header the summary was cut at 150 px beside 450 px of nothing. Newest
+first, stated as a manual sort the way the feed states its own.
+
+**Seen and left.** When a filter empties the aging profile, Tableau re-flows the main
+row around the empty sheet and the model chart narrows to its content until the filter
+is released. It is the same container behaviour recorded in section 3 and not worth a
+build cycle.
 
 ---
 

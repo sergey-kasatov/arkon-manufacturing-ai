@@ -1,5 +1,5 @@
-"""The executive view's generated content: the age bands, the status sentence and the
-two thresholds the workbook ships baked in.
+"""The executive view's generated content: the age bands, the status sentence, the
+two thresholds the workbook ships baked in, and the shape of the two-dashboard split.
 
 The sentence and the thresholds are computed at build time and written into the XML,
 which is deliberate - the workbook ships WITH the extract it describes - but it also
@@ -168,17 +168,18 @@ def test_no_feed_cutoff_when_there_are_fewer_transitions_than_rows():
 
 # --- layout arithmetic -----------------------------------------------------
 
-def test_the_band_budget_sums_to_the_canvas():
+@pytest.mark.parametrize("budget", [gen.EXECUTIVE_BANDS, gen.EXPLORE_BANDS],
+                         ids=["executive", "explore"])
+def test_each_band_budget_sums_to_the_canvas(budget):
     """bands() normalises whatever it is handed, so a budget that does not add up
     rescales every box instead of failing. The generator asserts this at build time;
-    this is the same assertion where it can be seen."""
-    heights = [84, 44, 150, 330, 236, 56]
-    assert sum(heights) == gen.DASH_H == 900
+    this is the same assertion where it can be seen, once per dashboard."""
+    assert sum(budget) == gen.DASH_H == 900
     assert gen.DASH_W == 1600
 
 
 def test_bands_partition_the_full_height_without_a_gap():
-    boxes = gen.bands([84, 44, 150, 330, 236, 56])
+    boxes = gen.bands(gen.EXECUTIVE_BANDS)
     assert boxes[0].y == 0
     for earlier, later in zip(boxes, boxes[1:]):
         assert earlier.y + earlier.h == later.y
@@ -211,3 +212,103 @@ def test_ids_are_stable_across_runs():
     if the uuids are derived rather than generated."""
     assert gen.stable_uuid("KPI Overdue") == gen.stable_uuid("KPI Overdue")
     assert gen.stable_uuid("KPI Overdue") != gen.stable_uuid("KPI Open")
+
+
+# --- the two-dashboard split ------------------------------------------------
+#
+# Read off the TRACKED workbook rather than a fresh build, so the claims hold for
+# the file a reader opens and CI does not need the Hyper daemon to check them.
+
+from pathlib import Path  # noqa: E402
+import xml.etree.ElementTree as ET  # noqa: E402
+
+WORKBOOK = Path(__file__).resolve().parent.parent / "tableau" / "Arkon_Executive_View.twb"
+
+
+@pytest.fixture(scope="module")
+def workbook():
+    return ET.parse(WORKBOOK).getroot()
+
+
+def placed_sheets(dashboard):
+    """Worksheets placed on a dashboard: the zones that name a sheet and are not a
+    control (a filter zone also carries `name`, the sheet whose filter it shows)."""
+    return {z.get("name") for z in dashboard.iter("zone")
+            if z.get("name") and z.get("type-v2") is None}
+
+
+def control_zones(dashboard):
+    return [z for z in dashboard.iter("zone") if z.get("type-v2") in ("filter", "paramctrl")]
+
+
+def test_the_workbook_holds_exactly_the_two_dashboards(workbook):
+    names = [d.get("name") for d in workbook.findall("./dashboards/dashboard")]
+    assert names == [gen.DASH_EXECUTIVE, gen.DASH_EXPLORE]
+
+
+def test_the_executive_view_carries_nothing_that_needs_a_mouse(workbook):
+    """Sergey's decision of 2026-09-06: the Executive view is a statement. A control
+    nobody can click during a screen share is decoration."""
+    executive = workbook.find("./dashboards/dashboard[@name='%s']" % gen.DASH_EXECUTIVE)
+    assert control_zones(executive) == []
+    sources = {a.find("source").get("dashboard") for a in workbook.findall("./actions/action")}
+    assert sources == {gen.DASH_EXPLORE}
+
+
+def test_the_explore_view_has_three_real_filter_cards(workbook):
+    """Filter cards, not parameter controls: a parameter zone was measured to render
+    as a bare text box whatever its mode said. `checkdropdown` is what the GUI calls
+    Multiple Values (Dropdown)."""
+    explore = workbook.find("./dashboards/dashboard[@name='%s']" % gen.DASH_EXPLORE)
+    desktop = explore.find("zones")
+    cards = [z for z in desktop.iter("zone") if z.get("type-v2") == "filter"]
+    assert [z.get("mode") for z in cards] == ["checkdropdown"] * 3
+    assert [z.get("param").split(".")[-1] for z in cards] == [
+        "[none:priority:nk]", "[none:source_module:nk]", "[none:status:nk]"]
+    assert not [z for z in explore.iter("zone") if z.get("type-v2") == "paramctrl"]
+    # The card is the filter of one sheet, and that sheet is on the page.
+    assert {z.get("name") for z in cards} <= placed_sheets(explore)
+
+
+def test_no_sheet_is_placed_on_both_dashboards(workbook):
+    """A filter is worksheet state. One sheet shared by both dashboards would let a
+    card picked on Explore change the Executive numbers behind the presenter's back."""
+    executive, explore = workbook.findall("./dashboards/dashboard")
+    assert placed_sheets(executive) & placed_sheets(explore) == set()
+    assert len(placed_sheets(executive)) == 7
+    assert len(placed_sheets(explore)) == 7
+
+
+def shared_filter_groups(worksheet):
+    return sorted(f.get("filter-group") for f in worksheet.iter("filter") if f.get("filter-group"))
+
+
+def test_one_card_drives_every_explore_sheet_and_no_executive_sheet(workbook):
+    """`filter-group` is what makes one card apply to several sheets. Every Explore
+    sheet carries all three groups; no Executive sheet carries any."""
+    executive, explore = workbook.findall("./dashboards/dashboard")
+    sheets = {w.get("name"): w for w in workbook.findall("./worksheets/worksheet")}
+    for name in placed_sheets(explore):
+        assert shared_filter_groups(sheets[name]) == ["2", "3", "4"], name
+    for name in placed_sheets(executive):
+        assert shared_filter_groups(sheets[name]) == [], name
+
+
+def test_the_shared_filters_start_at_all_members(workbook):
+    """`level-members` with an enumeration of `all` is the state Tableau writes for
+    "(All)" selected, so the Explore view opens showing the same numbers as the
+    Executive view."""
+    for f in workbook.iter("filter"):
+        if f.get("filter-group"):
+            group = f.find("groupfilter")
+            assert group.get("function") == "level-members"
+            assert group.get("{http://www.tableausoftware.com/xml/user}ui-enumeration") == "all"
+
+
+def test_the_workbook_opens_on_the_executive_view_and_the_list_scrolls(workbook):
+    windows = workbook.findall("./windows/window")
+    maximized = [w.get("name") for w in windows if w.get("maximized") == "true"]
+    assert maximized == [gen.DASH_EXECUTIVE]
+    zoom = {w.get("name"): w.find(".//zoom").get("type") for w in windows}
+    assert zoom[gen.S_LIST] == "fit-width"
+    assert {z for n, z in zoom.items() if n != gen.S_LIST} == {"entire-view"}

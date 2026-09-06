@@ -17,12 +17,14 @@ this generator can be checked against its own artifact before it is trusted.
 `--skip-extracts` exists because an open workbook holds its `.hyper` files locked;
 it lets the XML be regenerated while Tableau still has the previous build open.
 
-Design authority is `tableau/Dashboard_Design.md` (the v2 specification written
-2026-09-05 after the first build was judged a Tableau default): one dominant red
-metric, KPI cards with a context line, a Z-layout at 1300 x 900, a neutral palette
-with one accent and red reserved for a response window that has run out, no
-gridlines, three parameter-driven filters, drill-down and cross-filter actions,
-and a phone layout.
+Design authority is `tableau/Dashboard_Design_v3.md`. Since 2026-09-06 the
+workbook holds TWO dashboards from one set of extracts (its section 15): an
+Executive view with no controls at all, weighted for a screen someone is shown, and
+an Explore view carrying three real filter cards, the model chart and the incident
+list, for someone working the data. Every sheet the Explore view filters is its
+OWN worksheet, because a filter is worksheet state: one sheet shared by both
+dashboards would let a card picked on Explore change the Executive numbers behind
+the presenter's back.
 
 Schema provenance, because none of it was invented:
 
@@ -32,6 +34,11 @@ Schema provenance, because none of it was invented:
   at document version 18.1.
 - The extract (`hyper`) connection form comes from the same workbook's extract
   block; the `textscan` form from this machine's Tableau logs.
+- The filter-card zone (`type-v2='filter'`, `mode='checkdropdown'`) and the
+  worksheet-side `level-members` group filter come from the same workbook. The
+  `filter-group` attribute that makes one card drive several sheets is in the
+  string table of `tabfileformat.dll` beside `level-members` and `groupfilter`;
+  its effect is verified by opening, not assumed.
 - A categorical color map lives in the DATASOURCE style and names the field by
   its bare instance (`[none:Calculation_102:nk]`), never with the datasource
   prefix. The first build wrote the prefixed form and Tableau silently ignored
@@ -124,7 +131,8 @@ FONT_BOOK = "Tableau Book"
 # which is what both reference workbooks on this machine carry.
 SOURCE_BUILD = "2026.2.0 (20262.26.0819.2015)"
 
-DASHBOARD = "Arkon Executive View"
+DASH_EXECUTIVE = "Arkon Executive View"
+DASH_EXPLORE = "Arkon Explore View"
 # 1600 x 900: a presentation screen rather than a laptop, which is what Sergey
 # asked for and what buys the number grid of section 3.
 DASH_W, DASH_H = 1600, 900
@@ -139,6 +147,18 @@ BULLET_CAP = 4.0
 # 0.38 of the usable canvas. Stated in pixels because a layout-flow container
 # ignores a proportional box: see the comment at the main row.
 RIGHT_COLUMN = 600
+
+# Band heights in pixels, one list per dashboard, top to bottom. Each MUST sum to
+# DASH_H: bands() normalises whatever it is handed, so a budget that does not add
+# up rescales every box silently instead of failing. build() asserts it, and so
+# does the test suite.
+EXECUTIVE_BANDS = [84, 150, 374, 236, 56]  # header, cards, main row, feed, footer
+# Measured 2026-09-06: a fixed band costs its pixels PLUS its 4 px margin on each
+# side, and the one flexible band (the main row) gets what is left. The Explore
+# list gives up two rows so that seven model rows get about 24 px each instead of
+# the 15 that made their names overlap. The cards stay at 150: at 130 the number
+# no longer fit and Tableau printed a row of hashes in its place.
+EXPLORE_BANDS = [84, 56, 150, 362, 200, 48]  # header, filters, cards, main row, list, footer
 
 BULLET_ROWS = 6
 
@@ -155,7 +175,10 @@ BULLET_ROWS = 6
 MARK_SIZE = "1.7"
 FEED_ROWS = 6
 
-# Sheet names, used by zones, windows and actions alike
+# Sheet names, used by zones, windows and actions alike. The Explore view gets its
+# OWN copies of the sheets it shares with the Executive view (the four cards and the
+# aging profile): a filter is worksheet state, so one shared sheet would let a card
+# picked on Explore change the Executive numbers behind the presenter's back.
 S_KPI_OVERDUE = "KPI Overdue"
 S_KPI_OPEN = "KPI Open"
 S_KPI_ACK = "KPI Time to acknowledge"
@@ -163,8 +186,13 @@ S_KPI_CLOSE = "KPI Time to close"
 S_AGING = "Open incidents by age"
 S_TIME = "Time to acknowledge"
 S_FEED = "Who acted, and when"
+S_X_KPI_OVERDUE = "Explore KPI Overdue"
+S_X_KPI_OPEN = "Explore KPI Open"
+S_X_KPI_ACK = "Explore KPI Time to acknowledge"
+S_X_KPI_CLOSE = "Explore KPI Time to close"
+S_X_AGING = "Explore open incidents by age"
 S_MODULES = "Incidents by model"
-S_DRILL = "Incidents behind this bar"
+S_LIST = "Incidents behind the filters"
 
 # Deterministic ids, so the generator reproduces its own artifact
 UUID_NS = uuid.UUID("6f2a7c14-0a1e-5f3b-9d47-2c9f1b4e88a0")
@@ -455,48 +483,6 @@ class Datasource:
         return out
 
 
-class Parameter:
-    """One string list parameter, a global filter control across datasources."""
-
-    def __init__(self, name, caption, members):
-        self.name = name  # "[Parameter 1]"
-        self.caption = caption
-        self.members = members  # the first member is the default
-
-    @property
-    def ref(self):
-        return "[Parameters].%s" % self.name
-
-    def column_lines(self, indent):
-        pad = " " * indent
-        out = [
-            "%s<column caption='%s' datatype='string' name='%s' param-domain-type='list' "
-            "role='measure' type='nominal' value='&quot;%s&quot;'>"
-            % (pad, esc(self.caption), self.name, esc(self.members[0]))
-        ]
-        out.append(
-            "%s  <calculation class='tableau' formula='&quot;%s&quot;' />"
-            % (pad, esc(self.members[0]))
-        )
-        out.append("%s  <members>" % pad)
-        for member in self.members:
-            out.append("%s    <member value='&quot;%s&quot;' />" % (pad, esc(member)))
-        out.append("%s  </members>" % pad)
-        out.append("%s</column>" % pad)
-        return out
-
-
-def parameters_xml(params):
-    out = [
-        "    <datasource hasconnection='false' inline='true' name='Parameters' version='18.1'>",
-        "      <aliases enabled='yes' />",
-    ]
-    for param in params:
-        out.extend(param.column_lines(6))
-    out.append("    </datasource>")
-    return out
-
-
 # Column-instance helpers
 #
 # Tableau names an instance by its derivation and its role: `none:` for a raw
@@ -671,25 +657,29 @@ def shelf(fields):
     return "(%s / %s)" % (fields[0].ref, shelf(fields[1:]))
 
 
-def worksheet(name, ds, params=(), title=None, subtitle=None, rows=(), cols=(), mark="Bar",
+def worksheet(name, ds, title=None, subtitle=None, rows=(), cols=(), mark="Bar",
               color=None, mark_color=None, texts=(), lods=(), label_runs=None,
               tooltip_runs=None, filters=(), bool_filters=(), manual_sorts=(),
               shelf_sorts=(), reference_lines=(), hide_axes=(), gridlines_off=False,
-              show_labels=False, label_font_size=None, mark_size=None, label_color=None):
+              show_labels=False, label_font_size=None, mark_size=None, label_color=None,
+              shared_filters=()):
     """Emit one worksheet.
 
     `filters` are (Field, [members]) keep-only categorical filters; `bool_filters`
-    are boolean row-level calculations kept at `true`; `manual_sorts` are
-    (Field, [ordered members]); `shelf_sorts` are (dimension, measure) descending;
-    `reference_lines` are dicts with `axis` and `value` Fields (a per-cell average
-    of `value` drawn on the `axis` measure); `hide_axes` are measure Fields whose
-    axis is switched off because the marks carry their labels.
+    are boolean row-level calculations kept at `true`; `shared_filters` are
+    (Field, filter-group id) pairs, the filters a dashboard card drives on every
+    sheet that carries the same id; `manual_sorts` are (Field, [ordered members]);
+    `shelf_sorts` are (dimension, measure) descending; `reference_lines` are dicts
+    with `axis` and `value` Fields (a per-cell average of `value` drawn on the
+    `axis` measure); `hide_axes` are measure Fields whose axis is switched off
+    because the marks carry their labels.
     """
     used = list(rows) + list(cols) + list(texts) + list(lods)
     if color is not None:
         used.append(color)
     used.extend(field for field, _members in filters)
     used.extend(bool_filters)
+    used.extend(field for field, _group in shared_filters)
     used.extend(field for field, _order in manual_sorts)
     for dim, meas in shelf_sorts:
         used.extend([dim, meas])
@@ -713,14 +703,7 @@ def worksheet(name, ds, params=(), title=None, subtitle=None, rows=(), cols=(), 
     out.append("        <view>")
     out.append("          <datasources>")
     out.append("            <datasource caption='%s' name='%s' />" % (esc(ds.caption), ds.name))
-    if params:
-        out.append("            <datasource name='Parameters' />")
     out.append("          </datasources>")
-    if params:
-        out.append("          <datasource-dependencies datasource='Parameters'>")
-        for param in params:
-            out.extend(param.column_lines(12))
-        out.append("          </datasource-dependencies>")
     out.append("          <datasource-dependencies datasource='%s'>" % ds.name)
     for field in unique:
         out.extend(field.dependency_lines())
@@ -753,6 +736,20 @@ def worksheet(name, ds, params=(), title=None, subtitle=None, rows=(), cols=(), 
             "            <groupfilter function='member' level='%s' member='true' "
             "user:ui-domain='relevant' user:ui-enumeration='inclusive' "
             "user:ui-marker='enumerate' />" % field.instance
+        )
+        out.append("          </filter>")
+        slices.append(field.ref)
+    for field, group in shared_filters:
+        # A filter card on a dashboard is the filter of ONE worksheet. `filter-group`
+        # is what makes the same card drive every sheet carrying the group id, which
+        # the GUI calls "Apply to Worksheets"; `level-members` with an enumeration
+        # of `all` is the state Tableau writes for "(All)" selected, read out of the
+        # reference workbook.
+        out.append("          <filter class='categorical' column='%s' filter-group='%d'>"
+                   % (field.ref, group))
+        out.append(
+            "            <groupfilter function='level-members' level='%s' "
+            "user:ui-enumeration='all' user:ui-marker='enumerate' />" % field.instance
         )
         out.append("          </filter>")
         slices.append(field.ref)
@@ -894,16 +891,23 @@ def worksheet(name, ds, params=(), title=None, subtitle=None, rows=(), cols=(), 
     return out
 
 
-def window(name, is_dashboard=False, sheets=()):
+def window(name, is_dashboard=False, sheets=(), zoom="entire-view", maximized=False):
+    """One window per sheet and per dashboard.
+
+    `zoom` is `entire-view`, `fit-width` or `fit-height`, the enumeration read out of
+    `tabwbfileformat.dll`. For a dashboard, `sheets` is a list of (name, zoom) pairs,
+    one per placed sheet. `maximized` marks the dashboard the workbook opens on.
+    """
     out = []
     if is_dashboard:
         # `device-preview` must be left out even though Tableau's content model
         # lists it; `viewpoints` needs one entry per placed sheet.
-        out.append("    <window class='dashboard' maximized='true' name='%s'>" % esc(name))
+        out.append("    <window class='dashboard'%s name='%s'>"
+                   % (" maximized='true'" if maximized else "", esc(name)))
         out.append("      <viewpoints>")
-        for sheet in sheets:
+        for sheet, sheet_zoom in sheets:
             out.append("        <viewpoint name='%s'>" % esc(sheet))
-            out.append("          <zoom type='entire-view' />")
+            out.append("          <zoom type='%s' />" % sheet_zoom)
             out.append("        </viewpoint>")
         out.append("      </viewpoints>")
         out.append("      <active id='-1' />")
@@ -939,14 +943,14 @@ def window(name, is_dashboard=False, sheets=()):
     # Tableau writes there when the toolbar dropdown is changed by hand - found by
     # setting it on one sheet in the application and diffing the saved file.
     out.append("      <viewpoint>")
-    out.append("        <zoom type='entire-view' />")
+    out.append("        <zoom type='%s' />" % zoom)
     out.append("      </viewpoint>")
     out.append("      <simple-id uuid='%s' />" % stable_uuid("win:" + name))
     out.append("    </window>")
     return out
 
 
-def action(number, caption, source_sheet, target, activation):
+def action(number, caption, source_sheet, target, activation, dashboard):
     """A dashboard action. `tsc:tsl-filter` with all fields is "use as filter".
 
     Activation is one of `on-select`, `on-hover` and `explicit`; the last is what
@@ -957,7 +961,7 @@ def action(number, caption, source_sheet, target, activation):
     return [
         "    <action caption='%s' name='%s'>" % (esc(caption), name),
         "      <activation auto-clear='true' type='%s' />" % activation,
-        "      <source dashboard='%s' type='sheet' worksheet='%s' />" % (esc(DASHBOARD), esc(source_sheet)),
+        "      <source dashboard='%s' type='sheet' worksheet='%s' />" % (esc(dashboard), esc(source_sheet)),
         "      <command command='tsc:tsl-filter'>",
         "        <param name='special-fields' value='all' />",
         "        <param name='target' value='%s' />" % esc(target),
@@ -1075,17 +1079,26 @@ def flow_zone(zone_id, box, direction, children, fixed_px=None, even=False, colo
     return out
 
 
-def param_zone(zone_id, box, parameter, fixed_px=None, mode="dropdown"):
-    """A parameter control zone.
+def filter_zone(zone_id, box, field, sheet, fixed_px=None, mode="checkdropdown"):
+    """A real filter card: the filter of `sheet` on `field`, shown as a control.
 
-    `mode` is kept as an argument and is CURRENTLY DEAD, which is worth knowing before
-    anyone spends an afternoon on it. Measured 2026-09-06: setting this zone to
-    `radiolist` while its neighbours stayed `dropdown` produced three identical bare
-    text boxes on the dashboard. Tableau ignores the attribute here, so no value of it
-    turns these into a control with a visible list. A real filter card is the route to
-    a dropdown that opens.
+    `checkdropdown` is what the GUI calls Multiple Values (Dropdown): a caret, a list
+    that opens on click and a check per member. The enumeration in
+    `tabwbfileformat.dll` is `checklist | radiolist | dropdown | slider | pattern |
+    typeinlist | checkdropdown`. `values='database'` lists every member in the
+    extract rather than only the ones the other cards leave, so a card never hides
+    a choice.
+
+    v3 put PARAMETER controls here (`type-v2='paramctrl'`) and they rendered as a bare
+    text box. That was first read as Tableau ignoring the `mode` attribute; it was
+    not. Sergey set the control to a dropdown in the application on 2026-09-06 and
+    the save wrote `mode='compact'`: a parameter control has its own vocabulary, in
+    which `compact` is the dropdown, and `dropdown` (a FILTER-card mode) falls back
+    to a type-in box. Filter cards are used here anyway, because they select several
+    members at once and carry the "(All)" state a single-value parameter cannot.
     """
-    extra = {"mode": mode, "param": parameter.ref, "type-v2": "paramctrl"}
+    extra = {"mode": mode, "name": sheet, "param": field.ref, "type-v2": "filter",
+             "values": "database"}
     extra.update(fixed(fixed_px))
     return [zone_open(zone_id, box, extra)] + indent(zone_style(4)) + ["</zone>"]
 
@@ -1248,19 +1261,10 @@ def build(skip_extracts=False, phone=True, actions=True):
     facts = cross_check(incidents, summary)
     update_time, as_of_text = extract_update_time(summary)
 
-    # Filters: three list parameters, members read from the data
-    priorities = sorted({r["priority"] for r in incidents.rows})
-    modules = sorted({r["source_module"] for r in incidents.rows})
-    statuses = sorted({r["status"] for r in incidents.rows})
-    p_priority = Parameter("[Parameter 1]", "Priority", ["All"] + priorities)
-    p_module = Parameter("[Parameter 2]", "Model", ["All"] + modules)
-    p_status = Parameter("[Parameter 3]", "Status", ["All"] + statuses)
-    params = (p_priority, p_module, p_status)
-
     incidents.captions.update({
         "priority": "Priority", "source_module": "Model", "business_domain": "Domain",
         "incident_id": "Incident", "status": "Status", "assigned_to": "Assignee",
-        "created_at": "Raised at", "summary": "Summary",
+        "created_at": "Raised at", "created_local": "Raised", "summary": "Summary",
         "minutes_to_acknowledge": "Minutes to acknowledge",
         "acknowledge_due_minutes": "Window (minutes)",
     })
@@ -1346,18 +1350,6 @@ def build(skip_extracts=False, phone=True, actions=True):
         'THEN ">%dx" ELSE "" END' % (BULLET_CAP, BULLET_CAP),
     )
     incidents.add_calculation(
-        "[Calculation_110]", "Priority filter", "boolean", "dimension", "nominal",
-        '%s = "All" OR [priority] = %s' % (p_priority.ref, p_priority.ref),
-    )
-    incidents.add_calculation(
-        "[Calculation_111]", "Model filter", "boolean", "dimension", "nominal",
-        '%s = "All" OR [source_module] = %s' % (p_module.ref, p_module.ref),
-    )
-    incidents.add_calculation(
-        "[Calculation_112]", "Status filter", "boolean", "dimension", "nominal",
-        '%s = "All" OR [status] = %s' % (p_status.ref, p_status.ref),
-    )
-    incidents.add_calculation(
         "[Calculation_120]", "Overdue incidents", "integer", "measure", "quantitative",
         "SUM(IF [overdue] THEN 1 ELSE 0 END)",
     )
@@ -1430,14 +1422,6 @@ def build(skip_extracts=False, phone=True, actions=True):
         "[Calculation_301]", "Transitions", "integer", "measure", "quantitative",
         "COUNT([transition_id])",
     )
-    transitions.add_calculation(
-        "[Calculation_310]", "Priority filter", "boolean", "dimension", "nominal",
-        '%s = "All" OR [priority] = %s' % (p_priority.ref, p_priority.ref),
-    )
-    transitions.add_calculation(
-        "[Calculation_311]", "Model filter", "boolean", "dimension", "nominal",
-        '%s = "All" OR [source_module] = %s' % (p_module.ref, p_module.ref),
-    )
     # Section 8. This panel is the transition log, which is a real audit trail with
     # an actor and a timestamp on every row. It is NOT a notification log: whether a
     # Telegram card was delivered lives only in an n8n execution record and no store
@@ -1463,7 +1447,6 @@ def build(skip_extracts=False, phone=True, actions=True):
     open_state = calc_dimension(incidents, "[Calculation_103]")
     open_count = calc_measure(incidents, "[Calculation_106]")
     age_hours = calc_string(incidents, "[Calculation_108]")
-    inc_filters = [calc_dimension(incidents, "[Calculation_%d]" % n, "boolean") for n in (110, 111, 112)]
     overdue_count = calc_measure(incidents, "[Calculation_120]")
     overdue_context = calc_string(incidents, "[Calculation_121]")
     open_context = calc_string(incidents, "[Calculation_124]")
@@ -1498,7 +1481,6 @@ def build(skip_extracts=False, phone=True, actions=True):
     t_when = dimension(transitions, "recorded_local")
     t_recent = (calc_dimension(transitions, "[Calculation_322]", "boolean")
                 if since is not None else None)
-    t_filters = [calc_dimension(transitions, "[Calculation_%d]" % n, "boolean") for n in (310, 311)]
 
     # Section 9. Priority is an ORDERED category, so its levels are three intensities
     # of one navy; breach is the only other ink on the page and it is never a series
@@ -1507,6 +1489,18 @@ def build(skip_extracts=False, phone=True, actions=True):
     ramp = [(COLOR_P1, "P1"), (COLOR_P2, "P2"), (COLOR_P3, "P3"), (COLOR_P4, "P4")]
     incidents.add_palette(aging_segment, [(COLOR_ALERT, "Overdue")] + ramp)
     incidents.add_palette(ack_segment, [(COLOR_ALERT, "Late")] + ramp)
+
+    # The Explore view's three filter cards: one field and one filter-group id each,
+    # written as the same filter on every Explore sheet so that one card drives the
+    # whole page. Section 15 of the specification.
+    explore_filters = [(priority, 2), (module, 3), (status, 4)]
+
+    # The incident list reads newest first. Incident ids are zero-padded, so the
+    # alphabet puts the oldest first; the order is stated outright, the way the feed
+    # states its own, rather than sorted by a measure the row does not carry.
+    newest_first = [
+        r["incident_id"] for r in sorted(incidents.rows, key=lambda r: r["created_at"], reverse=True)
+    ]
 
     # Extracts
     hyper_parameters = {"log_dir": tempfile.gettempdir()}
@@ -1523,7 +1517,6 @@ def build(skip_extracts=False, phone=True, actions=True):
 
     soft = {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}
     bold = {"bold": "true", "fontcolor": COLOR_INK, "fontname": FONT_BOOK, "fontsize": "11"}
-    sheets = []
 
     # Section 4, the KPI row: four BANs, each three left-aligned lines. A BAN without
     # context is a number without a claim, so every card carries one. Card 1 is the
@@ -1531,32 +1524,24 @@ def build(skip_extracts=False, phone=True, actions=True):
     # makes four identical objects read as one shouting and three answering.
     #
     # Every figure is recomputed from the incident rows rather than read off the
-    # snapshot, so the cards follow the filters; cross_check() has already proved that
-    # recomputation equals what the status API computed independently.
-    sheets.append(worksheet(
-        S_KPI_OVERDUE, incidents, params, mark="Text",
-        texts=[overdue_count, overdue_context], bool_filters=inc_filters,
-        label_runs=kpi_runs("Overdue", overdue_count, overdue_context, alert=True),
-        show_labels=True,
-    ))
-    sheets.append(worksheet(
-        S_KPI_OPEN, incidents, params, mark="Text",
-        texts=[open_count, open_context], bool_filters=inc_filters,
-        label_runs=kpi_runs("Open", open_count, open_context),
-        show_labels=True,
-    ))
-    sheets.append(worksheet(
-        S_KPI_ACK, incidents, params, mark="Text",
-        texts=[mtta_text, windows_text], bool_filters=inc_filters,
-        label_runs=kpi_runs("Time to acknowledge", mtta_text, windows_text),
-        show_labels=True,
-    ))
-    sheets.append(worksheet(
-        S_KPI_CLOSE, incidents, params, mark="Text",
-        texts=[mttc_text, closed_context], bool_filters=inc_filters,
-        label_runs=kpi_runs("Time to close", mttc_text, closed_context),
-        show_labels=True,
-    ))
+    # snapshot, so the Explore copies follow the filter cards; cross_check() has
+    # already proved that recomputation equals what the status API computed.
+    def kpi_sheets(names, shared=()):
+        overdue, opened, ack, close = names
+        common = dict(mark="Text", show_labels=True, shared_filters=shared)
+        return [
+            worksheet(overdue, incidents, texts=[overdue_count, overdue_context],
+                      label_runs=kpi_runs("Overdue", overdue_count, overdue_context, alert=True),
+                      **common),
+            worksheet(opened, incidents, texts=[open_count, open_context],
+                      label_runs=kpi_runs("Open", open_count, open_context), **common),
+            worksheet(ack, incidents, texts=[mtta_text, windows_text],
+                      label_runs=kpi_runs("Time to acknowledge", mtta_text, windows_text),
+                      **common),
+            worksheet(close, incidents, texts=[mttc_text, closed_context],
+                      label_runs=kpi_runs("Time to close", mttc_text, closed_context),
+                      **common),
+        ]
 
     # Section 6, the dominant view. This is the chart neither v1 nor v2 had, and it
     # is where the store's bimodality shows: a live stream being worked inside window
@@ -1567,38 +1552,47 @@ def build(skip_extracts=False, phone=True, actions=True):
     # over them reconstructs today's backlog and calls it history - section 6 of the
     # specification, and the comment in build_extracts.py.
     band_order = [name for name, _low, _high in AGE_BANDS]
-    sheets.append(worksheet(
-        S_AGING, incidents, params,
-        title="Where the backlog is",
-        subtitle="Open incidents by age, stacked by priority. Red is the part already past "
-                 "its response window.",
-        rows=[age_band], cols=[count], mark="Bar",
-        color=aging_segment,
-        filters=[(open_state, ["Open"])], bool_filters=inc_filters,
-        manual_sorts=[(age_band, band_order),
-                      (aging_segment, ["P4", "P3", "P2", "P1", "Overdue"])],
-        # AXIS ON, LABELS OFF, and this reverses a rule that was applied where it does
-        # not hold. "No axis where the marks carry their labels" is right when the
-        # labels have room; these had 17 px rows and a stack of segments to sit inside,
-        # so the page ended up with no axis AND unreadable numbers. Three passes of
-        # tuning colour, size and thickness all failed on the same geometry. An axis
-        # costs one row of small grey text and cannot collide with anything.
-        gridlines_off=True, show_labels=False,
-        mark_size=MARK_SIZE,
-        tooltip_runs=[
-            field_run(count, bold), run_xml(" open ", soft), field_run(aging_segment, bold),
-            run_xml(" incidents, open ", soft), field_run(age_band, bold), run_xml(".", soft),
-        ],
-    ))
+
+    def aging_sheet(name, shared=()):
+        return worksheet(
+            name, incidents,
+            title="Where the backlog is",
+            subtitle="Open incidents by age, stacked by priority. Red is the part already past "
+                     "its response window.",
+            rows=[age_band], cols=[count], mark="Bar",
+            color=aging_segment,
+            filters=[(open_state, ["Open"])],
+            manual_sorts=[(age_band, band_order),
+                          (aging_segment, ["P4", "P3", "P2", "P1", "Overdue"])],
+            # AXIS ON, LABELS OFF, and this reverses a rule that was applied where it
+            # does not hold. "No axis where the marks carry their labels" is right when
+            # the labels have room; these had 17 px rows and a stack of segments to sit
+            # inside, so the page ended up with no axis AND unreadable numbers. Three
+            # passes of tuning colour, size and thickness all failed on the same
+            # geometry. An axis costs one row of small grey text and cannot collide
+            # with anything.
+            gridlines_off=True, show_labels=False,
+            mark_size=MARK_SIZE,
+            tooltip_runs=[
+                field_run(count, bold), run_xml(" open ", soft), field_run(aging_segment, bold),
+                run_xml(" incidents, open ", soft), field_run(age_band, bold), run_xml(".", soft),
+            ],
+            shared_filters=shared,
+        )
+
+    # The Executive view: no controls, nothing that needs a mouse.
+    sheets = []
+    sheets.extend(kpi_sheets((S_KPI_OVERDUE, S_KPI_OPEN, S_KPI_ACK, S_KPI_CLOSE)))
+    sheets.append(aging_sheet(S_AGING))
 
     # Section 7, the bullet chart. Few designed it to replace the gauges dashboards
     # accumulate: a featured measure, one comparative measure as a perpendicular tick,
     # and two qualitative ranges - inside the window and past it - encoded as
     # intensities of one hue rather than distinct ones, so the chart survives colour
     # blindness. The bar is the ratio to each incident's own window; see Calculation_141.
-    bullet_filters = list(inc_filters) + [has_window] + ([slowest] if slowest else [])
+    bullet_filters = [has_window] + ([slowest] if slowest else [])
     sheets.append(worksheet(
-        S_TIME, incidents, params,
+        S_TIME, incidents,
         title="How late is late",
         subtitle="As a multiple of the window that incident was allowed.",
         rows=[ack_label], cols=[ack_ratio], mark="Bar",
@@ -1626,8 +1620,9 @@ def build(skip_extracts=False, phone=True, actions=True):
         ],
     ))
 
-    # Section 8, demoted to the strip: who acted, and when.
-    feed_filters = list(t_filters) + ([t_recent] if t_recent else [])
+    # Section 8, the strip: who acted, and when. Full width since the model chart
+    # moved to the Explore view; a text table reads at any width.
+    feed_filters = [t_recent] if t_recent else []
     feed_order = []
     if t_recent is not None:
         seen_stamps = set()
@@ -1636,7 +1631,7 @@ def build(skip_extracts=False, phone=True, actions=True):
                 seen_stamps.add(row["recorded_local"])
                 feed_order.append(row["recorded_local"])
     sheets.append(worksheet(
-        S_FEED, transitions, params,
+        S_FEED, transitions,
         title="Who acted, and when",
         subtitle="The %d most recent transitions, newest first, on the plant clock. "
                  "An audit trail, not a notification log." % FEED_ROWS,
@@ -1645,51 +1640,66 @@ def build(skip_extracts=False, phone=True, actions=True):
         manual_sorts=[(t_when, feed_order)] if feed_order else (),
     ))
 
+    # The Explore view: the same cards and aging profile as their own sheets, so the
+    # filter cards move them and not the Executive view; the model chart, which had
+    # seven rows in a strip on the Executive view and could not be made legible
+    # there; and the incident list, which the two bar charts narrow on a click.
+    sheets.extend(kpi_sheets((S_X_KPI_OVERDUE, S_X_KPI_OPEN, S_X_KPI_ACK, S_X_KPI_CLOSE),
+                             explore_filters))
+    sheets.append(aging_sheet(S_X_AGING, explore_filters))
     sheets.append(worksheet(
-        S_MODULES, incidents, params,
+        S_MODULES, incidents,
         title="Which models raise the work",
-        subtitle="All incidents, one event per inspected object.",
+        subtitle="All incidents the filters leave, one event per inspected object.",
         rows=[module], cols=[count], mark="Bar",
-        mark_color=COLOR_BAR, lods=[domain], bool_filters=inc_filters,
+        mark_color=COLOR_BAR, lods=[domain],
         shelf_sorts=[(module, count)],
-        # Seven rows in a strip panel is the worst case on the page, so the same
-        # decision as the aging chart and for the same reason: the axis reads, the
-        # crammed labels did not.
+        # The same decision as the aging chart beside it, for consistency across the
+        # row: the axis reads, and two charts on one row should carry their numbers
+        # the same way.
         gridlines_off=True, show_labels=False,
         mark_size=MARK_SIZE,
         tooltip_runs=[
             field_run(module, bold), run_xml(" raised ", soft), field_run(count, bold),
             run_xml(" incidents in ", soft), field_run(domain, bold), run_xml(".", soft),
         ],
+        shared_filters=explore_filters,
     ))
-
-    # Drill-down, reached from the tooltip menu of the two bar charts
     sheets.append(worksheet(
-        S_DRILL, incidents, params,
-        title="Incidents behind this bar",
-        subtitle="Filtered by the bar you came from. Age is hours since the incident was raised.",
-        rows=[incident_id, priority, status, module, assignee, summary_text],
-        texts=[age_hours], mark="Text", bool_filters=inc_filters,
+        S_LIST, incidents,
+        title="The incidents behind the filters",
+        subtitle="Every incident the filters leave, newest first. Click a bar above to narrow "
+                 "the list to that bar, and click it again to release it. Age is hours since "
+                 "the incident was raised.",
+        # The summary rides in the text cell beside the age rather than as a row
+        # header: Fit Width stretches the text column to the panel's edge and holds
+        # every header at its own width, so a header summary was truncated at 150 px
+        # next to 450 px of nothing.
+        rows=[incident_id, priority, status, module, assignee, created_local],
+        texts=[age_hours, summary_text], mark="Text",
+        manual_sorts=[(incident_id, newest_first)],
+        show_labels=True,
+        label_runs=[field_run(age_hours, bold), run_xml("    ", soft),
+                    field_run(summary_text, {"fontcolor": COLOR_INK, "fontname": FONT_BOOK,
+                                             "fontsize": "11"})],
+        shared_filters=explore_filters,
     ))
 
-    dashboard_sheets = [S_KPI_OVERDUE, S_KPI_OPEN, S_KPI_ACK, S_KPI_CLOSE,
-                        S_AGING, S_TIME, S_FEED, S_MODULES]
-    sheet_names = dashboard_sheets + [S_DRILL]
+    exec_sheets = [S_KPI_OVERDUE, S_KPI_OPEN, S_KPI_ACK, S_KPI_CLOSE, S_AGING, S_TIME, S_FEED]
+    explore_sheets = [S_X_KPI_OVERDUE, S_X_KPI_OPEN, S_X_KPI_ACK, S_X_KPI_CLOSE,
+                      S_X_AGING, S_MODULES, S_LIST]
+    sheet_names = exec_sheets + explore_sheets
 
     # Section 3, the layout. White space is planned arithmetically rather than
     # nudged: the bands are pixel heights that MUST sum to DASH_H, because bands()
     # normalises whatever it is given, so a budget that does not add up rescales
     # every box silently. The assertion below is the guard.
-    #
-    # The specification's own arithmetic slipped here: it subtracts a gap and margin
-    # budget from 984 and lands on 352 where the subtraction gives 316. The numbers
-    # are therefore solved in code, and Dashboard_Design_v3.md is corrected to match
-    # what this builds rather than the other way round.
-    band_heights = [84, 44, 150, 330, 236, 56]
-    if sum(band_heights) != DASH_H:
-        raise SystemExit("the band budget is %d px and the canvas is %d px"
-                         % (sum(band_heights), DASH_H))
-    b_title, b_filters, b_kpi, b_main, b_detail, b_footer = bands(band_heights)
+    for budget in (EXECUTIVE_BANDS, EXPLORE_BANDS):
+        if sum(budget) != DASH_H:
+            raise SystemExit("a band budget is %d px and the canvas is %d px"
+                             % (sum(budget), DASH_H))
+    b_title, b_kpi, b_main, b_detail, b_footer = bands(EXECUTIVE_BANDS)
+    x_title, x_filters, x_kpi, x_main, x_list, x_footer = bands(EXPLORE_BANDS)
 
     heading = [
         run_xml("Arkon Quality Steering Cell",
@@ -1702,6 +1712,19 @@ def build(skip_extracts=False, phone=True, actions=True):
         run_xml(status_sentence(incidents),
                 {"fontcolor": COLOR_INK, "fontname": FONT_BOOK, "fontsize": "13"}),
     ]
+    # The Explore view carries an instruction where the Executive view carries the
+    # status sentence: a sentence about the whole store would contradict a filtered
+    # page one click later.
+    x_heading = [
+        run_xml("Arkon Quality Steering Cell",
+                {"fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "22"}),
+        run_xml("    Explore view",
+                {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "22"}),
+        NEWLINE,
+        run_xml("Every panel on this page follows the three filters. Click a bar to narrow "
+                "the other chart and the list to it, and click it again to release.",
+                {"fontcolor": COLOR_INK, "fontname": FONT_BOOK, "fontsize": "13"}),
+    ]
     stamp = [
         run_xml("as of %s" % summary["as_of_local"],
                 {"fontalignment": "2", "fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "11"}),
@@ -1709,6 +1732,12 @@ def build(skip_extracts=False, phone=True, actions=True):
         run_xml("%s incidents, %s transitions, plant clock"
                 % (summary["total_incidents"], summary["total_transitions"]),
                 {"fontalignment": "2", "fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}),
+    ]
+    filter_label = [
+        run_xml("FILTERS", {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_MEDIUM, "fontsize": "11"}),
+        NEWLINE,
+        run_xml("every panel follows them",
+                {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}),
     ]
     footer = [
         run_xml("What this store is. ",
@@ -1721,14 +1750,28 @@ def build(skip_extracts=False, phone=True, actions=True):
                 % (summary["total_incidents"], REPO_URL),
                 {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}),
     ]
+    x_footer_runs = [
+        run_xml("Same store, same extract. ",
+                {"bold": "true", "fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "11"}),
+        run_xml("%s incidents as of %s, refreshed together with the Executive view. With no "
+                "filter set, the cards and the aging profile are the Executive view's own "
+                "numbers. The operational context and the crew's response times are "
+                "simulated; every timestamp is real. %s"
+                % (summary["total_incidents"], summary["as_of_local"], REPO_URL),
+                {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}),
+    ]
 
     t_left, t_right = split(b_title, [1120, 432])
-    f_space, f1, f2, f3 = split(b_filters, [772, 240, 300, 240])
     cards = split(b_kpi, [1, 1, 1, 1])
     # 0.62 of the usable width, which puts the dominant chart on the left and gives
     # both rows the same vertical line down the page.
     m_left, m_right = split(b_main, [62, 38])
-    d_left, d_right = split(b_detail, [62, 38])
+    xt_left, xt_right = split(x_title, [1120, 432])
+    # Left-aligned like every other block on the page: the label, three cards, and
+    # the slack at the right.
+    xf_label, xf1, xf2, xf3, xf_slack = split(x_filters, [160, 300, 300, 300, 492])
+    x_cards = split(x_kpi, [1, 1, 1, 1])
+    xm_left, xm_right = split(x_main, [62, 38])
 
     def card(container_id, stripe_id, sheet_id, box, sheet, stripe_color):
         stripe_box, sheet_box = split(box, [6, 382])
@@ -1742,12 +1785,6 @@ def build(skip_extracts=False, phone=True, actions=True):
         text_zone(13, t_left, heading),
         text_zone(14, t_right, stamp, fixed_px=432),
     ], fixed_px=84))
-    zones.extend(flow_zone(15, b_filters, "horz", [
-        text_zone(16, f_space, [run_xml(" ")]),
-        param_zone(17, f1, p_priority, fixed_px=240),
-        param_zone(18, f2, p_module, fixed_px=300),
-        param_zone(19, f3, p_status, fixed_px=240),
-    ], fixed_px=44))
     zones.extend(flow_zone(20, b_kpi, "horz", [
         card(21, 31, 41, cards[0], S_KPI_OVERDUE, COLOR_ALERT),
         card(22, 32, 42, cards[1], S_KPI_OPEN, COLOR_RULE),
@@ -1759,72 +1796,121 @@ def build(skip_extracts=False, phone=True, actions=True):
         sheet_zone(52, m_right, S_TIME, color=COLOR_CARD, margin=8, padding=10,
                    fixed_px=RIGHT_COLUMN),
     ]))
-    zones.extend(flow_zone(60, b_detail, "horz", [
-        sheet_zone(61, d_left, S_FEED, color=COLOR_CARD, margin=8, padding=10),
-        sheet_zone(62, d_right, S_MODULES, color=COLOR_CARD, margin=8, padding=10,
-                   fixed_px=RIGHT_COLUMN),
-    ], fixed_px=236))
+    zones.extend(sheet_zone(61, b_detail, S_FEED, color=COLOR_CARD, margin=8, padding=10,
+                            fixed_px=236))
     zones.extend(text_zone(70, b_footer, footer, fixed_px=56))
 
-    # Content model, as Tableau states it when it refuses a file:
-    # ((layout-options? | repository-location?), style, size?, datasources,
-    #  datasource-dependencies*, zones, devicelayouts, simple-id).
-    dashboard = ["    <dashboard name='%s'>" % esc(DASHBOARD), "      <style />"]
-    dashboard.append(
-        "      <size maxheight='%d' maxwidth='%d' minheight='%d' minwidth='%d' />"
-        % (DASH_H, DASH_W, DASH_H, DASH_W)
-    )
-    dashboard.append("      <datasources>")
-    for ds in (incidents, transitions):
-        dashboard.append("        <datasource caption='%s' name='%s' />" % (esc(ds.caption), ds.name))
-    dashboard.append("        <datasource name='Parameters' />")
-    dashboard.append("      </datasources>")
-    dashboard.append("      <datasource-dependencies datasource='Parameters'>")
-    for param in params:
-        dashboard.extend(param.column_lines(8))
-    dashboard.append("      </datasource-dependencies>")
-    dashboard.append("      <zones>")
-    dashboard.extend(indent(flow_zone(1, Box(0, 0, 100000, 100000), "vert", [zones],
-                                      color=COLOR_CANVAS, margin=8), 8))
-    dashboard.append("      </zones>")
+    # Explore zone ids sit in their own range so that no id means two things.
+    x_zones = []
+    x_zones.extend(flow_zone(212, x_title, "horz", [
+        text_zone(213, xt_left, x_heading),
+        text_zone(214, xt_right, stamp, fixed_px=432),
+    ], fixed_px=84))
+    x_zones.extend(flow_zone(215, x_filters, "horz", [
+        text_zone(216, xf_label, filter_label, fixed_px=160),
+        filter_zone(217, xf1, priority, S_X_AGING, fixed_px=300),
+        filter_zone(218, xf2, module, S_X_AGING, fixed_px=300),
+        filter_zone(219, xf3, status, S_X_AGING, fixed_px=300),
+        text_zone(229, xf_slack, [run_xml(" ")]),
+    ], fixed_px=56))
+    x_zones.extend(flow_zone(220, x_kpi, "horz", [
+        card(221, 231, 241, x_cards[0], S_X_KPI_OVERDUE, COLOR_ALERT),
+        card(222, 232, 242, x_cards[1], S_X_KPI_OPEN, COLOR_RULE),
+        card(223, 233, 243, x_cards[2], S_X_KPI_ACK, COLOR_RULE),
+        card(224, 234, 244, x_cards[3], S_X_KPI_CLOSE, COLOR_RULE),
+    ], fixed_px=150, even=True))
+    x_zones.extend(flow_zone(250, x_main, "horz", [
+        sheet_zone(251, xm_left, S_X_AGING, color=COLOR_CARD, margin=8, padding=10),
+        sheet_zone(252, xm_right, S_MODULES, color=COLOR_CARD, margin=8, padding=10,
+                   fixed_px=RIGHT_COLUMN),
+    ]))
+    x_zones.extend(sheet_zone(261, x_list, S_LIST, color=COLOR_CARD, margin=8, padding=10,
+                              fixed_px=200))
+    x_zones.extend(text_zone(270, x_footer, x_footer_runs, fixed_px=48))
+
+    def dashboard_xml(name, datasources, root_id, root_zones, phone_ids, phone_zones):
+        # Content model, as Tableau states it when it refuses a file:
+        # ((layout-options? | repository-location?), style, size?, datasources,
+        #  datasource-dependencies*, zones, devicelayouts, simple-id).
+        out = ["    <dashboard name='%s'>" % esc(name), "      <style />"]
+        out.append(
+            "      <size maxheight='%d' maxwidth='%d' minheight='%d' minwidth='%d' />"
+            % (DASH_H, DASH_W, DASH_H, DASH_W)
+        )
+        out.append("      <datasources>")
+        for ds in datasources:
+            out.append("        <datasource caption='%s' name='%s' />" % (esc(ds.caption), ds.name))
+        out.append("      </datasources>")
+        out.append("      <zones>")
+        out.extend(indent(flow_zone(root_id, Box(0, 0, 100000, 100000), "vert", [root_zones],
+                                    color=COLOR_CANVAS, margin=8), 8))
+        out.append("      </zones>")
+        if phone_zones:
+            # Leaf zones keep their desktop ids; the containers are the layout's own.
+            basic_id, flow_id = phone_ids
+            out.append("      <devicelayouts>")
+            out.append("        <devicelayout name='Phone'>")
+            out.append("          <size maxheight='800' minheight='800' sizing-mode='vscroll' />")
+            out.append("          <zones>")
+            root = [zone_open(basic_id, Box(0, 0, 100000, 100000), {"type-v2": "layout-basic"})]
+            root.extend(indent(flow_zone(flow_id, Box(0, 0, 100000, 100000), "vert", phone_zones,
+                                         color=COLOR_CANVAS, margin=8)))
+            root.extend(indent(zone_style(8)))
+            root.append("</zone>")
+            out.extend(indent(root, 12))
+            out.append("          </zones>")
+            out.append("        </devicelayout>")
+            out.append("      </devicelayouts>")
+        else:
+            out.append("      <devicelayouts />")
+        out.append("      <simple-id uuid='%s' />" % stable_uuid(name))
+        out.append("    </dashboard>")
+        return out
+
+    phone_zones = x_phone_zones = None
     if phone:
-        # Phone: title, the overdue card alone, the priority view, the other
-        # three cards. The detail strip is desktop-only. Leaf zones keep their
-        # desktop ids; the containers are the layout's own.
-        # One card per row: a phone is too narrow for two three-line cards side
-        # by side (the label of the narrower one came out as asterisks).
-        p_title, p_overdue, p_priority_box, p_open, p_ack, p_median = bands([70, 110, 300, 90, 90, 90])
+        # Phone, Executive: title, the overdue card alone, the aging profile, the other
+        # three cards. The feed and the bullet chart are desktop-only. One card per
+        # row: a phone is too narrow for two three-line cards side by side (the label
+        # of the narrower one came out as asterisks).
+        p_title, p_overdue, p_aging, p_open, p_ack, p_close = bands([70, 110, 300, 90, 90, 90])
         phone_zones = [
             text_zone(13, p_title, heading, fixed_px=70, padding=0),
             sheet_zone(41, p_overdue, S_KPI_OVERDUE, kpi=True, fixed_px=110, color=COLOR_CARD, padding=0),
-            sheet_zone(51, p_priority_box, S_AGING, fixed_px=300, color=COLOR_CARD, padding=0),
+            sheet_zone(51, p_aging, S_AGING, fixed_px=300, color=COLOR_CARD, padding=0),
             sheet_zone(42, p_open, S_KPI_OPEN, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
             sheet_zone(43, p_ack, S_KPI_ACK, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
-            sheet_zone(44, p_median, S_KPI_CLOSE, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
+            sheet_zone(44, p_close, S_KPI_CLOSE, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
         ]
-        dashboard.append("      <devicelayouts>")
-        dashboard.append("        <devicelayout name='Phone'>")
-        dashboard.append("          <size maxheight='800' minheight='800' sizing-mode='vscroll' />")
-        dashboard.append("          <zones>")
-        root = [zone_open(100, Box(0, 0, 100000, 100000), {"type-v2": "layout-basic"})]
-        root.extend(indent(flow_zone(101, Box(0, 0, 100000, 100000), "vert", phone_zones,
-                                     color=COLOR_CANVAS, margin=8)))
-        root.extend(indent(zone_style(8)))
-        root.append("</zone>")
-        dashboard.extend(indent(root, 12))
-        dashboard.append("          </zones>")
-        dashboard.append("        </devicelayout>")
-        dashboard.append("      </devicelayouts>")
-    dashboard.append("      <simple-id uuid='%s' />" % stable_uuid(DASHBOARD))
-    dashboard.append("    </dashboard>")
+        # Phone, Explore: title, the priority card, the overdue card, both bar charts.
+        # The list is desktop-only; a seven-column table has no phone form.
+        q_title, q_filter, q_overdue, q_aging, q_models = bands([70, 60, 110, 300, 260])
+        x_phone_zones = [
+            text_zone(213, q_title, x_heading, fixed_px=70, padding=0),
+            filter_zone(217, q_filter, priority, S_X_AGING, fixed_px=60),
+            sheet_zone(241, q_overdue, S_X_KPI_OVERDUE, kpi=True, fixed_px=110, color=COLOR_CARD, padding=0),
+            sheet_zone(251, q_aging, S_X_AGING, fixed_px=300, color=COLOR_CARD, padding=0),
+            sheet_zone(252, q_models, S_MODULES, fixed_px=260, color=COLOR_CARD, padding=0),
+        ]
 
+    dashboards = dashboard_xml(DASH_EXECUTIVE, (incidents, transitions), 1, zones,
+                               (100, 101), phone_zones)
+    dashboards += dashboard_xml(DASH_EXPLORE, (incidents,), 201, x_zones,
+                                (300, 301), x_phone_zones)
+
+    # Every action lives on the Explore view. The Executive view is a statement and
+    # carries nothing that needs a mouse.
     action_lines = []
     if actions:
         action_lines.append("  <actions>")
-        action_lines.extend(action(1, "Age selection filters the model view", S_AGING, S_MODULES, "on-select"))
-        action_lines.extend(action(2, "Model selection filters the age view", S_MODULES, S_AGING, "on-select"))
-        action_lines.extend(action(3, "Incidents behind this bar", S_AGING, S_DRILL, "explicit"))
-        action_lines.extend(action(4, "Incidents behind this module", S_MODULES, S_DRILL, "explicit"))
+        action_lines.extend(action(1, "Age selection filters the model view",
+                                   S_X_AGING, S_MODULES, "on-select", DASH_EXPLORE))
+        action_lines.extend(action(2, "Model selection filters the age view",
+                                   S_MODULES, S_X_AGING, "on-select", DASH_EXPLORE))
+        action_lines.extend(action(3, "Age selection filters the incident list",
+                                   S_X_AGING, S_LIST, "on-select", DASH_EXPLORE))
+        action_lines.extend(action(4, "Model selection filters the incident list",
+                                   S_MODULES, S_LIST, "on-select", DASH_EXPLORE))
         action_lines.append("  </actions>")
 
     out = []
@@ -1857,7 +1943,6 @@ def build(skip_extracts=False, phone=True, actions=True):
     out.append("    </color-palette>")
     out.append("  </preferences>")
     out.append("  <datasources>")
-    out.extend(parameters_xml(params))
     for ds in (incidents, transitions):
         out.extend(ds.xml(update_time))
     out.append("  </datasources>")
@@ -1867,20 +1952,28 @@ def build(skip_extracts=False, phone=True, actions=True):
         out.extend(sheet)
     out.append("  </worksheets>")
     out.append("  <dashboards>")
-    out.extend(dashboard)
+    out.extend(dashboards)
     out.append("  </dashboards>")
+    # The list is a table and gets Fit Width: its rows keep a readable height and it
+    # scrolls, where entire-view would squeeze every incident into one pixel row.
+    zoom_of = {S_LIST: "fit-width"}
     out.append("  <windows>")
-    out.extend(window(DASHBOARD, is_dashboard=True, sheets=dashboard_sheets))
+    out.extend(window(DASH_EXECUTIVE, is_dashboard=True, maximized=True,
+                      sheets=[(s, zoom_of.get(s, "entire-view")) for s in exec_sheets]))
+    out.extend(window(DASH_EXPLORE, is_dashboard=True,
+                      sheets=[(s, zoom_of.get(s, "entire-view")) for s in explore_sheets]))
     for name in sheet_names:
-        out.extend(window(name))
+        out.extend(window(name, zoom=zoom_of.get(name, "entire-view")))
     out.append("  </windows>")
     out.append("</workbook>")
 
     text = "\n".join(out) + "\n"
     OUTPUT.write_text(text, encoding="utf-8")
     print("wrote %s" % OUTPUT)
-    print("  worksheets  : %d (%d on the dashboard)" % (len(sheet_names), len(dashboard_sheets)))
-    print("  dashboard   : %s, %d x %d%s" % (DASHBOARD, DASH_W, DASH_H, ", phone layout" if phone else ""))
+    print("  worksheets  : %d (%d on the Executive view, %d on the Explore view)"
+          % (len(sheet_names), len(exec_sheets), len(explore_sheets)))
+    print("  dashboards  : %s and %s, %d x %d%s"
+          % (DASH_EXECUTIVE, DASH_EXPLORE, DASH_W, DASH_H, ", phone layouts" if phone else ""))
     print("  facts       : open %d, overdue %d, acknowledged %d (%d in window), as of %s" % (
         facts["open_incidents"], facts["overdue_incidents"], facts["acknowledged_incidents"],
         facts["acknowledged_within_window"], as_of_text))
@@ -1900,7 +1993,6 @@ def build(skip_extracts=False, phone=True, actions=True):
         for ds in (incidents, transitions):
             archive.write(ds.hyper, "Data/Extracts/%s" % ds.hyper.name)
     print("wrote %s" % OUTPUT_TWBX)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])

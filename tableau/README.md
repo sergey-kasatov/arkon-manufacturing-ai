@@ -25,10 +25,12 @@ story neither earlier version told. And it specifies TWO surfaces from one
 document: this workbook as the published snapshot, and an Executive page in the
 cockpit as the surface that is live without a publish step.
 
-**The Streamlit half is built** (`app/pages/00_executive.py`, deployed at
-`/executive`); **the Tableau v3 rebuild is not**, and the live page is the
-working reference for it. Three findings from building that half are worth
-having before starting: an aging TREND must not be built from these extracts,
+**Both halves are built.** The Streamlit page (`app/pages/00_executive.py`,
+deployed at `/executive`) came first and was the working reference for the
+workbook, which was rebuilt to v3 on 2026-09-06 and split the same afternoon into
+two dashboards, an Executive view and an Explore view (section 15 of the design,
+and "What is on the two dashboards" below). Three findings from the Streamlit half
+shaped the Tableau one: an aging TREND must not be built from these extracts,
 which hold current state only; a response-time bar has to be a ratio to each
 incident's own window rather than raw minutes, because a 600-fold range puts
 every window tick inside a pixel of the axis; and overdue has to be its own
@@ -109,46 +111,86 @@ so the `.hyper` files are build outputs, not tracked files: binary, rebuilt in
 seconds, referenced by absolute path from the `.twb` and by relative path from
 inside the `.twbx`.
 
-### What is on the dashboard, and where every number comes from
+### What is on the two dashboards, and where every number comes from
 
-One dashboard, `Arkon Executive View`, **1600 by 900**, plus a phone layout,
-answering one question for a plant manager: **is the Steering Cell keeping up, and if
-not, where is it behind?** Built from `Dashboard_Design_v3.md`, which is one
-specification for two surfaces - this workbook is the published snapshot and the
-cockpit's `/executive` page is the always-live one, and they carry the same hierarchy,
-the same numbers and the same colour rules, because two executive views of one plant
-that look different are two claims about that plant.
+Two dashboards in one workbook, both **1600 by 900** with a phone layout, from one
+set of extracts. `Arkon Executive View` answers one question for a plant manager in
+five seconds, **is the Steering Cell keeping up, and if not, where is it behind?**,
+and carries nothing that needs a mouse. `Arkon Explore View` is the same numbers for
+someone working the data: three filter cards, the model chart, and the incident list
+behind whatever is filtered or clicked. Sergey decided the split on 2026-09-06 once
+the demo condition was named (screen sharing on a video call, where a control nobody
+can click is decoration): section 15 of `Dashboard_Design_v3.md`. Both are built
+from that specification, which is one specification for two surfaces - this workbook
+is the published snapshot and the cockpit's `/executive` page is the always-live one,
+and they carry the same hierarchy, the same numbers and the same colour rules,
+because two executive views of one plant that look different are two claims about
+that plant.
 
-Read top to bottom, left to right:
+**The Executive view**, read top to bottom, left to right:
 
 | Band | What it shows | Where the number comes from |
 |---|---|---|
 | Header | the title, a generated status sentence, the "as of" stamp on the plant clock | `store_summary.as_of_local`, `total_incidents`, `total_transitions`; the sentence is computed from `incidents.csv` by `status_sentence()` |
-| Filters | Priority, Model, Status | three list parameters whose members are read from `incidents.csv` at build time; every sheet carries a boolean filter calculation against them |
 | **OVERDUE** card, red rule, red number | open incidents past their response window, and their share of open | `SUM(IF [overdue] THEN 1 ELSE 0 END)`, context `of N open, P percent` |
 | OPEN card | open incidents, with what has been through the plant beside it | `SUM(IF [is_open] ...)`, context `N raised, M closed, R resolved`. `resolved` is deliberately not counted as open: the status API's `open_incidents` is new + acknowledged + in_containment, and a workbook that defined it otherwise would disagree with the cockpit and the assistant |
 | TIME TO ACKNOWLEDGE card | MTTA in minutes | `MEDIAN([minutes_to_acknowledge])`, context lists the windows the store carries (15 min P1, 60 min P2; P3 has none) |
 | TIME TO CLOSE card | MTTR in minutes | `MEDIAN([minutes_to_close])`, context `median over N closed` |
 | **Where the backlog is** (the dominant view) | open incidents by age band, stacked by priority, with the overdue part of each band as its own red segment | `incidents`, filter `is_open`, rows `Age band`, colour `IF [overdue] THEN "Overdue" ELSE [priority] END` |
 | How late is late | the six slowest acknowledgements as bullet bars, each a ratio to its own allowed window, with that window as a tick at 1.0 | `minutes_to_acknowledge / acknowledge_due_minutes`, capped at 4x and marked `>4x` past the cap; the tick is a per-cell reference line |
-| Who acted, and when | the six most recent lifecycle transitions on the plant clock | `transitions.csv`: `recorded_local`, `actor`, incident, `from_status to to_status` |
-| Which models raise the work | composition by model, sorted | `COUNT([incident_id])` by `source_module`; `nhtsa_nlp` is a count of signals, not parts |
+| Who acted, and when | the six most recent lifecycle transitions on the plant clock, full width | `transitions.csv`: `recorded_local`, `actor`, incident, `from_status to to_status` |
 | Footer | what this store is, including what is simulated | text |
 
-The KPI cards recompute from the incident rows rather than reading the API's summary,
-so that they follow the three filters like every other sheet. The generator refuses to
-build if that recomputation disagrees with `store_summary.csv` (open, overdue,
-acknowledged, acknowledged within window), so the API stays the reference and any drift
-is loud rather than silent.
+**The Explore view**, in the same order:
 
-Interactivity: the three filters apply to every sheet; clicking a bar in the aging view
-filters the model view and vice versa; the tooltip of either bar chart carries a menu
-link, "Incidents behind this bar", that opens the drill-down sheet filtered to that bar.
-Tooltips are sentences built from the fields in the view. **The filters work and do not
-look like they do**: a Tableau compact list shows no arrow until it is hovered, so the
-control reads as a text box. Verified by setting Priority to P1 and reading `11 raised,
-11 closed, 0 open` off the cards, which matches the store's eleven P1 incidents.
-`radiolist` instead of `dropdown` in `param_zone()` would put the choices on one line.
+| Band | What it shows | Where the number comes from |
+|---|---|---|
+| Header | the title, one line of instructions, the same "as of" stamp | text; the status sentence is left off, because a sentence about the whole store would contradict a filtered page one click later |
+| Filters | Priority, Model, Status as Multiple Values (Dropdown) cards | real Tableau filters on `priority`, `source_module` and `status`, one `filter-group` each, carried by all seven Explore sheets |
+| The four cards | the same four BANs, recomputed from the rows the filters leave | the same calculations, on the Explore copies of the card sheets |
+| Where the backlog is | the same aging profile, filtered and clickable | the Explore copy of the aging sheet |
+| Which models raise the work | composition by model, sorted, seven rows with the height to be read | `COUNT([incident_id])` by `source_module`; `nhtsa_nlp` is a count of signals, not parts |
+| The incidents behind the filters | every incident the filters leave, newest first, with its age and summary; narrowed to a bar on click | `incidents.csv`, one row per incident, at Fit Width so the rows keep their height and the list scrolls |
+| Footer | that it is the same store and the same extract | text |
+
+The KPI cards recompute from the incident rows rather than reading the API's summary,
+so that the Explore copies follow the three filter cards like every other sheet. The
+generator refuses to build if that recomputation disagrees with `store_summary.csv`
+(open, overdue, acknowledged, acknowledged within window), so the API stays the
+reference and any drift is loud rather than silent.
+
+**Interactivity lives on the Explore view and nowhere else.** The three cards filter
+all seven Explore sheets; clicking a bar in the aging profile narrows the model chart
+and the list to that bar, clicking a model bar narrows the aging profile and the list,
+and clicking the bar again releases it. Tooltips are sentences built from the fields in
+the view. The Executive view has no control at all, by decision.
+
+**Every Explore sheet is its own worksheet**, including the four cards and the aging
+profile it shares with the Executive view. A filter is worksheet state, not dashboard
+state: one sheet placed on both dashboards would let a card picked on Explore change
+the Executive numbers behind the presenter's back. So the workbook holds fourteen
+sheets, seven per dashboard, and none on both; `tests/test_dashboard.py` reads the
+tracked `.twb` and says so.
+
+Verified by opening on 2026-09-06: Priority set to P1 moved every Explore panel
+(OVERDUE 0, OPEN 0 with 13 raised, 12 closed, 1 resolved; time to close 50.5 min over
+12 closed; two models; thirteen P1 rows in the list) and left the Executive view as it
+was; clicking the red "over 3 d" segment narrowed the model chart to four models and
+the list to the eleven overdue incidents behind it.
+
+**Why filter cards, and not the parameter controls v3 shipped with.** The parameters
+rendered as bare text boxes. The first reading, that Tableau ignores the zone's `mode`,
+was wrong: Sergey set one to a dropdown in the application and the save wrote
+`mode='compact'`, so a parameter control has its own vocabulary in which `compact` is
+the dropdown and `dropdown` (a filter-card mode) falls back to a type-in box. Filter
+cards were built regardless: they select several members at once, carry an "(All)"
+state a single-value parameter cannot, and are what Tableau itself offers for the job.
+
+**One cosmetic quirk, seen and left.** When a filter leaves the aging profile empty
+(Priority = P1 does, since no P1 is open), Tableau re-flows the main row around the
+empty sheet and the model chart narrows to its content. It comes back when the filter
+does. It is the same layout behaviour recorded in section 3 of the design, and not
+worth a build cycle.
 
 **Design rules, from `Dashboard_Design_v3.md`:** one message in five seconds; four BANs
 with a label, a number and a context line, all left-aligned on one baseline so the row
@@ -157,8 +199,11 @@ backlog behind a healthy live stream is the thing this dashboard exists to expos
 bullet bars as ratios rather than minutes, because this store spans 0 to about 9,000
 minutes against windows of 15 and 60 and on a minutes axis every window tick lands
 inside a pixel of the left edge; a single navy family for priority, which is an ordered
-category, plus one reserved red; no gridlines, no zero lines, thin sorted bars and
-direct labels. **Red appears in exactly three places**: the OVERDUE card, the overdue
+category, plus one reserved red; no gridlines, no zero lines, bars thick enough to
+survive a video codec (`MARK_SIZE`), and an axis rather than direct labels wherever
+the rows are too tight to hold one (the aging profiles and the model chart; the
+bullet chart keeps its minutes, because there the number is the point). **Red appears
+in exactly three places**: the OVERDUE card, the overdue
 segment of an aging band, and a bullet bar past its tick. If a viewer sees red, a
 response window has run out.
 
@@ -192,6 +237,19 @@ wrote. The answer is a `<column-instance>` declared at datasource level for the
 coloured field, without which the map is parsed and silently ignored; that single
 line is why the first two builds came up blue and orange. Every one of these is a
 comment in `build_workbook.py` next to the code it explains.
+
+The split of 2026-09-06 added two forms. The filter-card zone (`type-v2='filter'`,
+`mode='checkdropdown'`, `values='database'`) and the worksheet-side `level-members`
+group filter with an enumeration of `all` were read out of the same reference
+workbook; the `filter-group` attribute that lets one card drive seven sheets is in the
+string table of `tabfileformat.dll` beside `level-members`, and its effect was
+verified by opening rather than assumed. The fit enumeration (`entire-view`,
+`fit-width`, `fit-height`) and the filter-card modes (`checklist | radiolist |
+dropdown | slider | pattern | typeinlist | checkdropdown`) come from
+`tabwbfileformat.dll`. One layout fact was measured rather than read: a fixed band
+costs its pixels plus its 4 px margin on each side, and the single flexible band gets
+what is left, so a budget that sums to 900 on paper leaves the main row about 50 px
+short of its number; the band lists in the generator are chosen with that in mind.
 
 The custom palette `Arkon status` is embedded in the workbook's `<preferences>`, as
 Tableau does on save, so the published view does not depend on a `Preferences.tps`.
@@ -279,11 +337,17 @@ be checked against each other.
 **The sign-in is his and cannot be delegated.** An agent does not enter a password
 into any field. The sequence is: `python tableau/build_workbook.py`, open
 `tableau/Arkon_Executive_View.twbx` in Tableau Public, File > Save to Tableau
-Public. On publishing: show only the dashboard (hide the sheets; the drill-down
-sheet must stay reachable, which the menu action guarantees), name the viz "Arkon
-Quality Steering Cell, executive view", set the description to the footer sentence
-plus the repository link, and tag it (manufacturing, quality, incident management,
-n8n, Tableau Public).
+Public. On publishing: show the two dashboards as tabs and hide the fourteen sheets
+(every action targets a sheet placed on the Explore view, so nothing reachable is
+lost), name the viz "Arkon Quality Steering Cell, executive view", set the
+description to the footer sentence plus the repository link, and tag it
+(manufacturing, quality, incident management, n8n, Tableau Public).
+
+**Save As, never Save, when experimenting in the application.** File > Save writes
+Tableau's own rewrite of the workbook over the file that was opened; on 2026-09-06 at
+14:58 that was the tracked `.twbx`, and the next generator run replaced it. A hand
+experiment belongs in a copy under another name, which is also the form the diff
+method needs.
 
 **The reference workbook did its job.** `~/Downloads/P3_Unicorn_SK_Draft_v2025.2.twbx`
 is Sergey's own 23-sheet, 2-dashboard workbook at version 18.1, and the generator's

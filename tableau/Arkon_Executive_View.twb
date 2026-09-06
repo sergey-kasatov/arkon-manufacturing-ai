@@ -22,43 +22,6 @@
     </color-palette>
   </preferences>
   <datasources>
-    <datasource hasconnection='false' inline='true' name='Parameters' version='18.1'>
-      <aliases enabled='yes' />
-      <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-        <calculation class='tableau' formula='&quot;All&quot;' />
-        <members>
-          <member value='&quot;All&quot;' />
-          <member value='&quot;P1&quot;' />
-          <member value='&quot;P2&quot;' />
-          <member value='&quot;P3&quot;' />
-        </members>
-      </column>
-      <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-        <calculation class='tableau' formula='&quot;All&quot;' />
-        <members>
-          <member value='&quot;All&quot;' />
-          <member value='&quot;casting_cv&quot;' />
-          <member value='&quot;cmapss_rul&quot;' />
-          <member value='&quot;gc10_detect&quot;' />
-          <member value='&quot;mvtec_anomaly&quot;' />
-          <member value='&quot;neu_surface&quot;' />
-          <member value='&quot;nhtsa_nlp&quot;' />
-          <member value='&quot;scania_aps&quot;' />
-        </members>
-      </column>
-      <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-        <calculation class='tableau' formula='&quot;All&quot;' />
-        <members>
-          <member value='&quot;All&quot;' />
-          <member value='&quot;acknowledged&quot;' />
-          <member value='&quot;closed&quot;' />
-          <member value='&quot;false_positive&quot;' />
-          <member value='&quot;in_containment&quot;' />
-          <member value='&quot;new&quot;' />
-          <member value='&quot;resolved&quot;' />
-        </members>
-      </column>
-    </datasource>
     <datasource caption='Arkon incidents' inline='true' name='federated.arkonincidents' version='18.1'>
       <connection class='federated'>
         <named-connections>
@@ -450,6 +413,7 @@
       <column caption='Assignee' datatype='string' name='[assigned_to]' role='dimension' type='nominal' />
       <column caption='Domain' datatype='string' name='[business_domain]' role='dimension' type='nominal' />
       <column caption='Raised at' datatype='string' name='[created_at]' role='dimension' type='nominal' />
+      <column caption='Raised' datatype='string' name='[created_local]' role='dimension' type='nominal' />
       <column caption='Incident' datatype='string' name='[incident_id]' role='dimension' type='nominal' />
       <column caption='Minutes to acknowledge' datatype='real' name='[minutes_to_acknowledge]' role='measure' type='quantitative' />
       <column caption='Priority' datatype='string' name='[priority]' role='dimension' type='nominal' />
@@ -494,15 +458,6 @@
       </column>
       <column caption='Ratio to window' datatype='string' name='[Calculation_146]' role='measure' type='nominal'>
         <calculation class='tableau' formula='IF SUM([minutes_to_acknowledge]) / SUM([acknowledge_due_minutes]) &gt; 4.0 THEN &quot;&gt;4x&quot; ELSE &quot;&quot; END' />
-      </column>
-      <column caption='Priority filter' datatype='boolean' name='[Calculation_110]' role='dimension' type='nominal'>
-        <calculation class='tableau' formula='[Parameters].[Parameter 1] = &quot;All&quot; OR [priority] = [Parameters].[Parameter 1]' />
-      </column>
-      <column caption='Model filter' datatype='boolean' name='[Calculation_111]' role='dimension' type='nominal'>
-        <calculation class='tableau' formula='[Parameters].[Parameter 2] = &quot;All&quot; OR [source_module] = [Parameters].[Parameter 2]' />
-      </column>
-      <column caption='Status filter' datatype='boolean' name='[Calculation_112]' role='dimension' type='nominal'>
-        <calculation class='tableau' formula='[Parameters].[Parameter 3] = &quot;All&quot; OR [status] = [Parameters].[Parameter 3]' />
       </column>
       <column caption='Overdue incidents' datatype='integer' name='[Calculation_120]' role='measure' type='quantitative'>
         <calculation class='tableau' formula='SUM(IF [overdue] THEN 1 ELSE 0 END)' />
@@ -1081,12 +1036,6 @@
       <column caption='Transitions' datatype='integer' name='[Calculation_301]' role='measure' type='quantitative'>
         <calculation class='tableau' formula='COUNT([transition_id])' />
       </column>
-      <column caption='Priority filter' datatype='boolean' name='[Calculation_310]' role='dimension' type='nominal'>
-        <calculation class='tableau' formula='[Parameters].[Parameter 1] = &quot;All&quot; OR [priority] = [Parameters].[Parameter 1]' />
-      </column>
-      <column caption='Model filter' datatype='boolean' name='[Calculation_311]' role='dimension' type='nominal'>
-        <calculation class='tableau' formula='[Parameters].[Parameter 2] = &quot;All&quot; OR [source_module] = [Parameters].[Parameter 2]' />
-      </column>
       <column caption='Move' datatype='string' name='[Calculation_320]' role='measure' type='nominal'>
         <calculation class='tableau' formula='MAX([from_status] + &quot; to &quot; + [to_status])' />
       </column>
@@ -1231,7 +1180,7 @@
   <actions>
     <action caption='Age selection filters the model view' name='[Action1_FFAD3E0BBC4650C0BD2D14E6905E3451]'>
       <activation auto-clear='true' type='on-select' />
-      <source dashboard='Arkon Executive View' type='sheet' worksheet='Open incidents by age' />
+      <source dashboard='Arkon Explore View' type='sheet' worksheet='Explore open incidents by age' />
       <command command='tsc:tsl-filter'>
         <param name='special-fields' value='all' />
         <param name='target' value='Incidents by model' />
@@ -1239,26 +1188,26 @@
     </action>
     <action caption='Model selection filters the age view' name='[Action2_1FFACB3C78C35C6F9F1EC6AC46B15F8D]'>
       <activation auto-clear='true' type='on-select' />
-      <source dashboard='Arkon Executive View' type='sheet' worksheet='Incidents by model' />
+      <source dashboard='Arkon Explore View' type='sheet' worksheet='Incidents by model' />
       <command command='tsc:tsl-filter'>
         <param name='special-fields' value='all' />
-        <param name='target' value='Open incidents by age' />
+        <param name='target' value='Explore open incidents by age' />
       </command>
     </action>
-    <action caption='Incidents behind this bar' name='[Action3_D39589DA60C458D9BED1243E1B0D6411]'>
-      <activation auto-clear='true' type='explicit' />
-      <source dashboard='Arkon Executive View' type='sheet' worksheet='Open incidents by age' />
+    <action caption='Age selection filters the incident list' name='[Action3_0AB126BD2E3D53D69BE6FE4C9519E262]'>
+      <activation auto-clear='true' type='on-select' />
+      <source dashboard='Arkon Explore View' type='sheet' worksheet='Explore open incidents by age' />
       <command command='tsc:tsl-filter'>
         <param name='special-fields' value='all' />
-        <param name='target' value='Incidents behind this bar' />
+        <param name='target' value='Incidents behind the filters' />
       </command>
     </action>
-    <action caption='Incidents behind this module' name='[Action4_A9F3553FDC735C96A1AF59092818EEF7]'>
-      <activation auto-clear='true' type='explicit' />
-      <source dashboard='Arkon Executive View' type='sheet' worksheet='Incidents by model' />
+    <action caption='Model selection filters the incident list' name='[Action4_85F412B6671B55A09A5868DC723AD303]'>
+      <activation auto-clear='true' type='on-select' />
+      <source dashboard='Arkon Explore View' type='sheet' worksheet='Incidents by model' />
       <command command='tsc:tsl-filter'>
         <param name='special-fields' value='all' />
-        <param name='target' value='Incidents behind this bar' />
+        <param name='target' value='Incidents behind the filters' />
       </command>
     </action>
   </actions>
@@ -1268,70 +1217,13 @@
         <view>
           <datasources>
             <datasource caption='Arkon incidents' name='federated.arkonincidents' />
-            <datasource name='Parameters' />
           </datasources>
-          <datasource-dependencies datasource='Parameters'>
-            <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;P1&quot;' />
-                <member value='&quot;P2&quot;' />
-                <member value='&quot;P3&quot;' />
-              </members>
-            </column>
-            <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;casting_cv&quot;' />
-                <member value='&quot;cmapss_rul&quot;' />
-                <member value='&quot;gc10_detect&quot;' />
-                <member value='&quot;mvtec_anomaly&quot;' />
-                <member value='&quot;neu_surface&quot;' />
-                <member value='&quot;nhtsa_nlp&quot;' />
-                <member value='&quot;scania_aps&quot;' />
-              </members>
-            </column>
-            <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;acknowledged&quot;' />
-                <member value='&quot;closed&quot;' />
-                <member value='&quot;false_positive&quot;' />
-                <member value='&quot;in_containment&quot;' />
-                <member value='&quot;new&quot;' />
-                <member value='&quot;resolved&quot;' />
-              </members>
-            </column>
-          </datasource-dependencies>
           <datasource-dependencies datasource='federated.arkonincidents'>
             <column datatype='integer' name='[Calculation_120]' role='measure' type='quantitative' />
             <column-instance column='[Calculation_120]' derivation='User' name='[usr:Calculation_120:qk]' pivot='key' type='quantitative' />
             <column datatype='string' name='[Calculation_121]' role='measure' type='nominal' />
             <column-instance column='[Calculation_121]' derivation='User' name='[usr:Calculation_121:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_110]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_110]' derivation='None' name='[none:Calculation_110:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_111]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_111]' derivation='None' name='[none:Calculation_111:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_112]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_112]' derivation='None' name='[none:Calculation_112:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_110:nk]'>
-            <groupfilter function='member' level='[none:Calculation_110:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_111:nk]'>
-            <groupfilter function='member' level='[none:Calculation_111:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_112:nk]'>
-            <groupfilter function='member' level='[none:Calculation_112:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <slices>
-            <column>[federated.arkonincidents].[none:Calculation_110:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_111:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_112:nk]</column>
-          </slices>
           <aggregation value='true' />
         </view>
         <style />
@@ -1372,70 +1264,13 @@
         <view>
           <datasources>
             <datasource caption='Arkon incidents' name='federated.arkonincidents' />
-            <datasource name='Parameters' />
           </datasources>
-          <datasource-dependencies datasource='Parameters'>
-            <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;P1&quot;' />
-                <member value='&quot;P2&quot;' />
-                <member value='&quot;P3&quot;' />
-              </members>
-            </column>
-            <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;casting_cv&quot;' />
-                <member value='&quot;cmapss_rul&quot;' />
-                <member value='&quot;gc10_detect&quot;' />
-                <member value='&quot;mvtec_anomaly&quot;' />
-                <member value='&quot;neu_surface&quot;' />
-                <member value='&quot;nhtsa_nlp&quot;' />
-                <member value='&quot;scania_aps&quot;' />
-              </members>
-            </column>
-            <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;acknowledged&quot;' />
-                <member value='&quot;closed&quot;' />
-                <member value='&quot;false_positive&quot;' />
-                <member value='&quot;in_containment&quot;' />
-                <member value='&quot;new&quot;' />
-                <member value='&quot;resolved&quot;' />
-              </members>
-            </column>
-          </datasource-dependencies>
           <datasource-dependencies datasource='federated.arkonincidents'>
             <column datatype='integer' name='[Calculation_106]' role='measure' type='quantitative' />
             <column-instance column='[Calculation_106]' derivation='User' name='[usr:Calculation_106:qk]' pivot='key' type='quantitative' />
             <column datatype='string' name='[Calculation_124]' role='measure' type='nominal' />
             <column-instance column='[Calculation_124]' derivation='User' name='[usr:Calculation_124:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_110]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_110]' derivation='None' name='[none:Calculation_110:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_111]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_111]' derivation='None' name='[none:Calculation_111:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_112]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_112]' derivation='None' name='[none:Calculation_112:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_110:nk]'>
-            <groupfilter function='member' level='[none:Calculation_110:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_111:nk]'>
-            <groupfilter function='member' level='[none:Calculation_111:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_112:nk]'>
-            <groupfilter function='member' level='[none:Calculation_112:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <slices>
-            <column>[federated.arkonincidents].[none:Calculation_110:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_111:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_112:nk]</column>
-          </slices>
           <aggregation value='true' />
         </view>
         <style />
@@ -1476,70 +1311,13 @@
         <view>
           <datasources>
             <datasource caption='Arkon incidents' name='federated.arkonincidents' />
-            <datasource name='Parameters' />
           </datasources>
-          <datasource-dependencies datasource='Parameters'>
-            <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;P1&quot;' />
-                <member value='&quot;P2&quot;' />
-                <member value='&quot;P3&quot;' />
-              </members>
-            </column>
-            <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;casting_cv&quot;' />
-                <member value='&quot;cmapss_rul&quot;' />
-                <member value='&quot;gc10_detect&quot;' />
-                <member value='&quot;mvtec_anomaly&quot;' />
-                <member value='&quot;neu_surface&quot;' />
-                <member value='&quot;nhtsa_nlp&quot;' />
-                <member value='&quot;scania_aps&quot;' />
-              </members>
-            </column>
-            <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;acknowledged&quot;' />
-                <member value='&quot;closed&quot;' />
-                <member value='&quot;false_positive&quot;' />
-                <member value='&quot;in_containment&quot;' />
-                <member value='&quot;new&quot;' />
-                <member value='&quot;resolved&quot;' />
-              </members>
-            </column>
-          </datasource-dependencies>
           <datasource-dependencies datasource='federated.arkonincidents'>
             <column datatype='string' name='[Calculation_126]' role='measure' type='nominal' />
             <column-instance column='[Calculation_126]' derivation='User' name='[usr:Calculation_126:nk]' pivot='key' type='nominal' />
             <column datatype='string' name='[Calculation_127]' role='measure' type='nominal' />
             <column-instance column='[Calculation_127]' derivation='User' name='[usr:Calculation_127:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_110]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_110]' derivation='None' name='[none:Calculation_110:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_111]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_111]' derivation='None' name='[none:Calculation_111:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_112]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_112]' derivation='None' name='[none:Calculation_112:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_110:nk]'>
-            <groupfilter function='member' level='[none:Calculation_110:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_111:nk]'>
-            <groupfilter function='member' level='[none:Calculation_111:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_112:nk]'>
-            <groupfilter function='member' level='[none:Calculation_112:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <slices>
-            <column>[federated.arkonincidents].[none:Calculation_110:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_111:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_112:nk]</column>
-          </slices>
           <aggregation value='true' />
         </view>
         <style />
@@ -1580,70 +1358,13 @@
         <view>
           <datasources>
             <datasource caption='Arkon incidents' name='federated.arkonincidents' />
-            <datasource name='Parameters' />
           </datasources>
-          <datasource-dependencies datasource='Parameters'>
-            <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;P1&quot;' />
-                <member value='&quot;P2&quot;' />
-                <member value='&quot;P3&quot;' />
-              </members>
-            </column>
-            <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;casting_cv&quot;' />
-                <member value='&quot;cmapss_rul&quot;' />
-                <member value='&quot;gc10_detect&quot;' />
-                <member value='&quot;mvtec_anomaly&quot;' />
-                <member value='&quot;neu_surface&quot;' />
-                <member value='&quot;nhtsa_nlp&quot;' />
-                <member value='&quot;scania_aps&quot;' />
-              </members>
-            </column>
-            <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;acknowledged&quot;' />
-                <member value='&quot;closed&quot;' />
-                <member value='&quot;false_positive&quot;' />
-                <member value='&quot;in_containment&quot;' />
-                <member value='&quot;new&quot;' />
-                <member value='&quot;resolved&quot;' />
-              </members>
-            </column>
-          </datasource-dependencies>
           <datasource-dependencies datasource='federated.arkonincidents'>
             <column datatype='string' name='[Calculation_129]' role='measure' type='nominal' />
             <column-instance column='[Calculation_129]' derivation='User' name='[usr:Calculation_129:nk]' pivot='key' type='nominal' />
             <column datatype='string' name='[Calculation_133]' role='measure' type='nominal' />
             <column-instance column='[Calculation_133]' derivation='User' name='[usr:Calculation_133:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_110]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_110]' derivation='None' name='[none:Calculation_110:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_111]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_111]' derivation='None' name='[none:Calculation_111:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_112]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_112]' derivation='None' name='[none:Calculation_112:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_110:nk]'>
-            <groupfilter function='member' level='[none:Calculation_110:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_111:nk]'>
-            <groupfilter function='member' level='[none:Calculation_111:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_112:nk]'>
-            <groupfilter function='member' level='[none:Calculation_112:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <slices>
-            <column>[federated.arkonincidents].[none:Calculation_110:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_111:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_112:nk]</column>
-          </slices>
           <aggregation value='true' />
         </view>
         <style />
@@ -1693,44 +1414,7 @@
         <view>
           <datasources>
             <datasource caption='Arkon incidents' name='federated.arkonincidents' />
-            <datasource name='Parameters' />
           </datasources>
-          <datasource-dependencies datasource='Parameters'>
-            <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;P1&quot;' />
-                <member value='&quot;P2&quot;' />
-                <member value='&quot;P3&quot;' />
-              </members>
-            </column>
-            <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;casting_cv&quot;' />
-                <member value='&quot;cmapss_rul&quot;' />
-                <member value='&quot;gc10_detect&quot;' />
-                <member value='&quot;mvtec_anomaly&quot;' />
-                <member value='&quot;neu_surface&quot;' />
-                <member value='&quot;nhtsa_nlp&quot;' />
-                <member value='&quot;scania_aps&quot;' />
-              </members>
-            </column>
-            <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;acknowledged&quot;' />
-                <member value='&quot;closed&quot;' />
-                <member value='&quot;false_positive&quot;' />
-                <member value='&quot;in_containment&quot;' />
-                <member value='&quot;new&quot;' />
-                <member value='&quot;resolved&quot;' />
-              </members>
-            </column>
-          </datasource-dependencies>
           <datasource-dependencies datasource='federated.arkonincidents'>
             <column datatype='string' name='[Calculation_130]' role='dimension' type='nominal' />
             <column-instance column='[Calculation_130]' derivation='None' name='[none:Calculation_130:nk]' pivot='key' type='nominal' />
@@ -1740,24 +1424,9 @@
             <column-instance column='[Calculation_131]' derivation='None' name='[none:Calculation_131:nk]' pivot='key' type='nominal' />
             <column datatype='string' name='[Calculation_103]' role='dimension' type='nominal' />
             <column-instance column='[Calculation_103]' derivation='None' name='[none:Calculation_103:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_110]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_110]' derivation='None' name='[none:Calculation_110:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_111]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_111]' derivation='None' name='[none:Calculation_111:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_112]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_112]' derivation='None' name='[none:Calculation_112:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
           <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_103:nk]'>
             <groupfilter function='member' level='[none:Calculation_103:nk]' member='&quot;Open&quot;' user:ui-domain='database' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_110:nk]'>
-            <groupfilter function='member' level='[none:Calculation_110:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_111:nk]'>
-            <groupfilter function='member' level='[none:Calculation_111:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_112:nk]'>
-            <groupfilter function='member' level='[none:Calculation_112:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
           </filter>
           <manual-sort column='[federated.arkonincidents].[none:Calculation_130:nk]' direction='ASC'>
             <dictionary>
@@ -1779,9 +1448,6 @@
           </manual-sort>
           <slices>
             <column>[federated.arkonincidents].[none:Calculation_103:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_110:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_111:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_112:nk]</column>
           </slices>
           <aggregation value='true' />
         </view>
@@ -1838,44 +1504,7 @@
         <view>
           <datasources>
             <datasource caption='Arkon incidents' name='federated.arkonincidents' />
-            <datasource name='Parameters' />
           </datasources>
-          <datasource-dependencies datasource='Parameters'>
-            <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;P1&quot;' />
-                <member value='&quot;P2&quot;' />
-                <member value='&quot;P3&quot;' />
-              </members>
-            </column>
-            <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;casting_cv&quot;' />
-                <member value='&quot;cmapss_rul&quot;' />
-                <member value='&quot;gc10_detect&quot;' />
-                <member value='&quot;mvtec_anomaly&quot;' />
-                <member value='&quot;neu_surface&quot;' />
-                <member value='&quot;nhtsa_nlp&quot;' />
-                <member value='&quot;scania_aps&quot;' />
-              </members>
-            </column>
-            <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;acknowledged&quot;' />
-                <member value='&quot;closed&quot;' />
-                <member value='&quot;false_positive&quot;' />
-                <member value='&quot;in_containment&quot;' />
-                <member value='&quot;new&quot;' />
-                <member value='&quot;resolved&quot;' />
-              </members>
-            </column>
-          </datasource-dependencies>
           <datasource-dependencies datasource='federated.arkonincidents'>
             <column datatype='string' name='[Calculation_143]' role='dimension' type='nominal' />
             <column-instance column='[Calculation_143]' derivation='None' name='[none:Calculation_143:nk]' pivot='key' type='nominal' />
@@ -1897,26 +1526,11 @@
             <column-instance column='[Calculation_140]' derivation='Sum' name='[sum:Calculation_140:qk]' pivot='key' type='quantitative' />
             <column datatype='string' name='[Calculation_142]' role='dimension' type='nominal' />
             <column-instance column='[Calculation_142]' derivation='None' name='[none:Calculation_142:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_110]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_110]' derivation='None' name='[none:Calculation_110:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_111]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_111]' derivation='None' name='[none:Calculation_111:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_112]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_112]' derivation='None' name='[none:Calculation_112:nk]' pivot='key' type='nominal' />
             <column datatype='boolean' name='[Calculation_144]' role='dimension' type='nominal' />
             <column-instance column='[Calculation_144]' derivation='None' name='[none:Calculation_144:nk]' pivot='key' type='nominal' />
             <column datatype='boolean' name='[Calculation_147]' role='dimension' type='nominal' />
             <column-instance column='[Calculation_147]' derivation='None' name='[none:Calculation_147:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_110:nk]'>
-            <groupfilter function='member' level='[none:Calculation_110:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_111:nk]'>
-            <groupfilter function='member' level='[none:Calculation_111:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_112:nk]'>
-            <groupfilter function='member' level='[none:Calculation_112:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
           <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_144:nk]'>
             <groupfilter function='member' level='[none:Calculation_144:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
           </filter>
@@ -1936,9 +1550,6 @@
             <shelf-sort-v2 dimension-to-sort='[federated.arkonincidents].[none:Calculation_143:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.arkonincidents].[sum:Calculation_141:qk]' shelf='rows' />
           </shelf-sorts>
           <slices>
-            <column>[federated.arkonincidents].[none:Calculation_110:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_111:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_112:nk]</column>
             <column>[federated.arkonincidents].[none:Calculation_144:nk]</column>
             <column>[federated.arkonincidents].[none:Calculation_147:nk]</column>
           </slices>
@@ -2034,44 +1645,7 @@
         <view>
           <datasources>
             <datasource caption='Arkon lifecycle transitions' name='federated.arkontransitions' />
-            <datasource name='Parameters' />
           </datasources>
-          <datasource-dependencies datasource='Parameters'>
-            <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;P1&quot;' />
-                <member value='&quot;P2&quot;' />
-                <member value='&quot;P3&quot;' />
-              </members>
-            </column>
-            <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;casting_cv&quot;' />
-                <member value='&quot;cmapss_rul&quot;' />
-                <member value='&quot;gc10_detect&quot;' />
-                <member value='&quot;mvtec_anomaly&quot;' />
-                <member value='&quot;neu_surface&quot;' />
-                <member value='&quot;nhtsa_nlp&quot;' />
-                <member value='&quot;scania_aps&quot;' />
-              </members>
-            </column>
-            <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;acknowledged&quot;' />
-                <member value='&quot;closed&quot;' />
-                <member value='&quot;false_positive&quot;' />
-                <member value='&quot;in_containment&quot;' />
-                <member value='&quot;new&quot;' />
-                <member value='&quot;resolved&quot;' />
-              </members>
-            </column>
-          </datasource-dependencies>
           <datasource-dependencies datasource='federated.arkontransitions'>
             <column datatype='string' name='[recorded_local]' role='dimension' type='nominal' />
             <column-instance column='[recorded_local]' derivation='None' name='[none:recorded_local:nk]' pivot='key' type='nominal' />
@@ -2081,19 +1655,9 @@
             <column-instance column='[Calculation_321]' derivation='None' name='[none:Calculation_321:nk]' pivot='key' type='nominal' />
             <column datatype='string' name='[Calculation_320]' role='measure' type='nominal' />
             <column-instance column='[Calculation_320]' derivation='User' name='[usr:Calculation_320:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_310]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_310]' derivation='None' name='[none:Calculation_310:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_311]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_311]' derivation='None' name='[none:Calculation_311:nk]' pivot='key' type='nominal' />
             <column datatype='boolean' name='[Calculation_322]' role='dimension' type='nominal' />
             <column-instance column='[Calculation_322]' derivation='None' name='[none:Calculation_322:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.arkontransitions].[none:Calculation_310:nk]'>
-            <groupfilter function='member' level='[none:Calculation_310:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
-          <filter class='categorical' column='[federated.arkontransitions].[none:Calculation_311:nk]'>
-            <groupfilter function='member' level='[none:Calculation_311:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
-          </filter>
           <filter class='categorical' column='[federated.arkontransitions].[none:Calculation_322:nk]'>
             <groupfilter function='member' level='[none:Calculation_322:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
           </filter>
@@ -2104,8 +1668,6 @@
             </dictionary>
           </manual-sort>
           <slices>
-            <column>[federated.arkontransitions].[none:Calculation_310:nk]</column>
-            <column>[federated.arkontransitions].[none:Calculation_311:nk]</column>
             <column>[federated.arkontransitions].[none:Calculation_322:nk]</column>
           </slices>
           <aggregation value='true' />
@@ -2127,13 +1689,281 @@
       </table>
       <simple-id uuid='{5AC194B9-C1EF-529B-A76F-F63628AD4087}' />
     </worksheet>
-    <worksheet name='Incidents by model'>
+    <worksheet name='Explore KPI Overdue'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Arkon incidents' name='federated.arkonincidents' />
+          </datasources>
+          <datasource-dependencies datasource='federated.arkonincidents'>
+            <column datatype='integer' name='[Calculation_120]' role='measure' type='quantitative' />
+            <column-instance column='[Calculation_120]' derivation='User' name='[usr:Calculation_120:qk]' pivot='key' type='quantitative' />
+            <column datatype='string' name='[Calculation_121]' role='measure' type='nominal' />
+            <column-instance column='[Calculation_121]' derivation='User' name='[usr:Calculation_121:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[priority]' role='dimension' type='nominal' />
+            <column-instance column='[priority]' derivation='None' name='[none:priority:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[source_module]' role='dimension' type='nominal' />
+            <column-instance column='[source_module]' derivation='None' name='[none:source_module:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[status]' role='dimension' type='nominal' />
+            <column-instance column='[status]' derivation='None' name='[none:status:nk]' pivot='key' type='nominal' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.arkonincidents].[none:priority:nk]' filter-group='2'>
+            <groupfilter function='level-members' level='[none:priority:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:source_module:nk]' filter-group='3'>
+            <groupfilter function='level-members' level='[none:source_module:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:status:nk]' filter-group='4'>
+            <groupfilter function='level-members' level='[none:status:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <slices>
+            <column>[federated.arkonincidents].[none:priority:nk]</column>
+            <column>[federated.arkonincidents].[none:source_module:nk]</column>
+            <column>[federated.arkonincidents].[none:status:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Text' />
+            <encodings>
+              <text column='[federated.arkonincidents].[usr:Calculation_120:qk]' />
+              <text column='[federated.arkonincidents].[usr:Calculation_121:nk]' />
+            </encodings>
+            <customized-label>
+              <formatted-text>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>OVERDUE</run>
+                <run fontalignment='0'>Æ&#10;</run>
+                <run bold='true' fontalignment='0' fontcolor='#C0392B' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_120:qk]>]]></run>
+                <run fontalignment='0'>Æ&#10;</run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_121:nk]>]]></run>
+              </formatted-text>
+            </customized-label>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='false' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows />
+        <cols />
+      </table>
+      <simple-id uuid='{13040B64-6CD3-5DD2-A3AA-A705A3F18AC0}' />
+    </worksheet>
+    <worksheet name='Explore KPI Open'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Arkon incidents' name='federated.arkonincidents' />
+          </datasources>
+          <datasource-dependencies datasource='federated.arkonincidents'>
+            <column datatype='integer' name='[Calculation_106]' role='measure' type='quantitative' />
+            <column-instance column='[Calculation_106]' derivation='User' name='[usr:Calculation_106:qk]' pivot='key' type='quantitative' />
+            <column datatype='string' name='[Calculation_124]' role='measure' type='nominal' />
+            <column-instance column='[Calculation_124]' derivation='User' name='[usr:Calculation_124:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[priority]' role='dimension' type='nominal' />
+            <column-instance column='[priority]' derivation='None' name='[none:priority:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[source_module]' role='dimension' type='nominal' />
+            <column-instance column='[source_module]' derivation='None' name='[none:source_module:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[status]' role='dimension' type='nominal' />
+            <column-instance column='[status]' derivation='None' name='[none:status:nk]' pivot='key' type='nominal' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.arkonincidents].[none:priority:nk]' filter-group='2'>
+            <groupfilter function='level-members' level='[none:priority:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:source_module:nk]' filter-group='3'>
+            <groupfilter function='level-members' level='[none:source_module:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:status:nk]' filter-group='4'>
+            <groupfilter function='level-members' level='[none:status:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <slices>
+            <column>[federated.arkonincidents].[none:priority:nk]</column>
+            <column>[federated.arkonincidents].[none:source_module:nk]</column>
+            <column>[federated.arkonincidents].[none:status:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Text' />
+            <encodings>
+              <text column='[federated.arkonincidents].[usr:Calculation_106:qk]' />
+              <text column='[federated.arkonincidents].[usr:Calculation_124:nk]' />
+            </encodings>
+            <customized-label>
+              <formatted-text>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>OPEN</run>
+                <run fontalignment='0'>Æ&#10;</run>
+                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_106:qk]>]]></run>
+                <run fontalignment='0'>Æ&#10;</run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_124:nk]>]]></run>
+              </formatted-text>
+            </customized-label>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='false' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows />
+        <cols />
+      </table>
+      <simple-id uuid='{0A5CFCA0-9ED8-5766-9B75-031D32EE9BD5}' />
+    </worksheet>
+    <worksheet name='Explore KPI Time to acknowledge'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Arkon incidents' name='federated.arkonincidents' />
+          </datasources>
+          <datasource-dependencies datasource='federated.arkonincidents'>
+            <column datatype='string' name='[Calculation_126]' role='measure' type='nominal' />
+            <column-instance column='[Calculation_126]' derivation='User' name='[usr:Calculation_126:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[Calculation_127]' role='measure' type='nominal' />
+            <column-instance column='[Calculation_127]' derivation='User' name='[usr:Calculation_127:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[priority]' role='dimension' type='nominal' />
+            <column-instance column='[priority]' derivation='None' name='[none:priority:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[source_module]' role='dimension' type='nominal' />
+            <column-instance column='[source_module]' derivation='None' name='[none:source_module:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[status]' role='dimension' type='nominal' />
+            <column-instance column='[status]' derivation='None' name='[none:status:nk]' pivot='key' type='nominal' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.arkonincidents].[none:priority:nk]' filter-group='2'>
+            <groupfilter function='level-members' level='[none:priority:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:source_module:nk]' filter-group='3'>
+            <groupfilter function='level-members' level='[none:source_module:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:status:nk]' filter-group='4'>
+            <groupfilter function='level-members' level='[none:status:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <slices>
+            <column>[federated.arkonincidents].[none:priority:nk]</column>
+            <column>[federated.arkonincidents].[none:source_module:nk]</column>
+            <column>[federated.arkonincidents].[none:status:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Text' />
+            <encodings>
+              <text column='[federated.arkonincidents].[usr:Calculation_126:nk]' />
+              <text column='[federated.arkonincidents].[usr:Calculation_127:nk]' />
+            </encodings>
+            <customized-label>
+              <formatted-text>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>TIME TO ACKNOWLEDGE</run>
+                <run fontalignment='0'>Æ&#10;</run>
+                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_126:nk]>]]></run>
+                <run fontalignment='0'>Æ&#10;</run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_127:nk]>]]></run>
+              </formatted-text>
+            </customized-label>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='false' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows />
+        <cols />
+      </table>
+      <simple-id uuid='{48C59633-8729-5854-80BD-5B941AAA67BF}' />
+    </worksheet>
+    <worksheet name='Explore KPI Time to close'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Arkon incidents' name='federated.arkonincidents' />
+          </datasources>
+          <datasource-dependencies datasource='federated.arkonincidents'>
+            <column datatype='string' name='[Calculation_129]' role='measure' type='nominal' />
+            <column-instance column='[Calculation_129]' derivation='User' name='[usr:Calculation_129:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[Calculation_133]' role='measure' type='nominal' />
+            <column-instance column='[Calculation_133]' derivation='User' name='[usr:Calculation_133:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[priority]' role='dimension' type='nominal' />
+            <column-instance column='[priority]' derivation='None' name='[none:priority:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[source_module]' role='dimension' type='nominal' />
+            <column-instance column='[source_module]' derivation='None' name='[none:source_module:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[status]' role='dimension' type='nominal' />
+            <column-instance column='[status]' derivation='None' name='[none:status:nk]' pivot='key' type='nominal' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.arkonincidents].[none:priority:nk]' filter-group='2'>
+            <groupfilter function='level-members' level='[none:priority:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:source_module:nk]' filter-group='3'>
+            <groupfilter function='level-members' level='[none:source_module:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:status:nk]' filter-group='4'>
+            <groupfilter function='level-members' level='[none:status:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <slices>
+            <column>[federated.arkonincidents].[none:priority:nk]</column>
+            <column>[federated.arkonincidents].[none:source_module:nk]</column>
+            <column>[federated.arkonincidents].[none:status:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Text' />
+            <encodings>
+              <text column='[federated.arkonincidents].[usr:Calculation_129:nk]' />
+              <text column='[federated.arkonincidents].[usr:Calculation_133:nk]' />
+            </encodings>
+            <customized-label>
+              <formatted-text>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>TIME TO CLOSE</run>
+                <run fontalignment='0'>Æ&#10;</run>
+                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_129:nk]>]]></run>
+                <run fontalignment='0'>Æ&#10;</run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_133:nk]>]]></run>
+              </formatted-text>
+            </customized-label>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='false' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows />
+        <cols />
+      </table>
+      <simple-id uuid='{B726D32C-DC70-50E7-A154-D92B819C05C9}' />
+    </worksheet>
+    <worksheet name='Explore open incidents by age'>
       <layout-options>
         <title>
           <formatted-text>
-            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>Which models raise the work</run>
+            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>Where the backlog is</run>
             <run>Æ&#10;</run>
-            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>All incidents, one event per inspected object.</run>
+            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>Open incidents by age, stacked by priority. Red is the part already past its response window.</run>
           </formatted-text>
         </title>
       </layout-options>
@@ -2141,44 +1971,115 @@
         <view>
           <datasources>
             <datasource caption='Arkon incidents' name='federated.arkonincidents' />
-            <datasource name='Parameters' />
           </datasources>
-          <datasource-dependencies datasource='Parameters'>
-            <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;P1&quot;' />
-                <member value='&quot;P2&quot;' />
-                <member value='&quot;P3&quot;' />
-              </members>
-            </column>
-            <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;casting_cv&quot;' />
-                <member value='&quot;cmapss_rul&quot;' />
-                <member value='&quot;gc10_detect&quot;' />
-                <member value='&quot;mvtec_anomaly&quot;' />
-                <member value='&quot;neu_surface&quot;' />
-                <member value='&quot;nhtsa_nlp&quot;' />
-                <member value='&quot;scania_aps&quot;' />
-              </members>
-            </column>
-            <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;acknowledged&quot;' />
-                <member value='&quot;closed&quot;' />
-                <member value='&quot;false_positive&quot;' />
-                <member value='&quot;in_containment&quot;' />
-                <member value='&quot;new&quot;' />
-                <member value='&quot;resolved&quot;' />
-              </members>
-            </column>
+          <datasource-dependencies datasource='federated.arkonincidents'>
+            <column datatype='string' name='[Calculation_130]' role='dimension' type='nominal' />
+            <column-instance column='[Calculation_130]' derivation='None' name='[none:Calculation_130:nk]' pivot='key' type='nominal' />
+            <column datatype='integer' name='[Calculation_101]' role='measure' type='quantitative' />
+            <column-instance column='[Calculation_101]' derivation='User' name='[usr:Calculation_101:qk]' pivot='key' type='quantitative' />
+            <column datatype='string' name='[Calculation_131]' role='dimension' type='nominal' />
+            <column-instance column='[Calculation_131]' derivation='None' name='[none:Calculation_131:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[Calculation_103]' role='dimension' type='nominal' />
+            <column-instance column='[Calculation_103]' derivation='None' name='[none:Calculation_103:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[priority]' role='dimension' type='nominal' />
+            <column-instance column='[priority]' derivation='None' name='[none:priority:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[source_module]' role='dimension' type='nominal' />
+            <column-instance column='[source_module]' derivation='None' name='[none:source_module:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[status]' role='dimension' type='nominal' />
+            <column-instance column='[status]' derivation='None' name='[none:status:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
+          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_103:nk]'>
+            <groupfilter function='member' level='[none:Calculation_103:nk]' member='&quot;Open&quot;' user:ui-domain='database' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:priority:nk]' filter-group='2'>
+            <groupfilter function='level-members' level='[none:priority:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:source_module:nk]' filter-group='3'>
+            <groupfilter function='level-members' level='[none:source_module:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.arkonincidents].[none:status:nk]' filter-group='4'>
+            <groupfilter function='level-members' level='[none:status:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <manual-sort column='[federated.arkonincidents].[none:Calculation_130:nk]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;under 1 h&quot;</bucket>
+              <bucket>&quot;1 to 4 h&quot;</bucket>
+              <bucket>&quot;4 to 24 h&quot;</bucket>
+              <bucket>&quot;1 to 3 d&quot;</bucket>
+              <bucket>&quot;over 3 d&quot;</bucket>
+            </dictionary>
+          </manual-sort>
+          <manual-sort column='[federated.arkonincidents].[none:Calculation_131:nk]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;P4&quot;</bucket>
+              <bucket>&quot;P3&quot;</bucket>
+              <bucket>&quot;P2&quot;</bucket>
+              <bucket>&quot;P1&quot;</bucket>
+              <bucket>&quot;Overdue&quot;</bucket>
+            </dictionary>
+          </manual-sort>
+          <slices>
+            <column>[federated.arkonincidents].[none:Calculation_103:nk]</column>
+            <column>[federated.arkonincidents].[none:priority:nk]</column>
+            <column>[federated.arkonincidents].[none:source_module:nk]</column>
+            <column>[federated.arkonincidents].[none:status:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='gridline'>
+            <format attr='line-visibility' value='off' />
+          </style-rule>
+          <style-rule element='zeroline'>
+            <format attr='line-visibility' value='off' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Bar' />
+            <encodings>
+              <color column='[federated.arkonincidents].[none:Calculation_131:nk]' />
+            </encodings>
+            <customized-tooltip>
+              <formatted-text>
+                <run bold='true' fontcolor='#16161A' fontname='Tableau Book' fontsize='11'><![CDATA[<[federated.arkonincidents].[usr:Calculation_101:qk]>]]></run>
+                <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'> open </run>
+                <run bold='true' fontcolor='#16161A' fontname='Tableau Book' fontsize='11'><![CDATA[<[federated.arkonincidents].[none:Calculation_131:nk]>]]></run>
+                <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'> incidents, open </run>
+                <run bold='true' fontcolor='#16161A' fontname='Tableau Book' fontsize='11'><![CDATA[<[federated.arkonincidents].[none:Calculation_130:nk]>]]></run>
+                <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>.</run>
+              </formatted-text>
+            </customized-tooltip>
+            <style>
+              <style-rule element='mark'>
+                <format attr='size' value='1.7' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows>[federated.arkonincidents].[none:Calculation_130:nk]</rows>
+        <cols>[federated.arkonincidents].[usr:Calculation_101:qk]</cols>
+      </table>
+      <simple-id uuid='{3985DCA0-53D9-5AA2-AD57-35379119CD56}' />
+    </worksheet>
+    <worksheet name='Incidents by model'>
+      <layout-options>
+        <title>
+          <formatted-text>
+            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>Which models raise the work</run>
+            <run>Æ&#10;</run>
+            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>All incidents the filters leave, one event per inspected object.</run>
+          </formatted-text>
+        </title>
+      </layout-options>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Arkon incidents' name='federated.arkonincidents' />
+          </datasources>
           <datasource-dependencies datasource='federated.arkonincidents'>
             <column datatype='string' name='[source_module]' role='dimension' type='nominal' />
             <column-instance column='[source_module]' derivation='None' name='[none:source_module:nk]' pivot='key' type='nominal' />
@@ -2186,29 +2087,27 @@
             <column-instance column='[Calculation_101]' derivation='User' name='[usr:Calculation_101:qk]' pivot='key' type='quantitative' />
             <column datatype='string' name='[business_domain]' role='dimension' type='nominal' />
             <column-instance column='[business_domain]' derivation='None' name='[none:business_domain:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_110]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_110]' derivation='None' name='[none:Calculation_110:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_111]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_111]' derivation='None' name='[none:Calculation_111:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_112]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_112]' derivation='None' name='[none:Calculation_112:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[priority]' role='dimension' type='nominal' />
+            <column-instance column='[priority]' derivation='None' name='[none:priority:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[status]' role='dimension' type='nominal' />
+            <column-instance column='[status]' derivation='None' name='[none:status:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_110:nk]'>
-            <groupfilter function='member' level='[none:Calculation_110:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          <filter class='categorical' column='[federated.arkonincidents].[none:priority:nk]' filter-group='2'>
+            <groupfilter function='level-members' level='[none:priority:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
           </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_111:nk]'>
-            <groupfilter function='member' level='[none:Calculation_111:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          <filter class='categorical' column='[federated.arkonincidents].[none:source_module:nk]' filter-group='3'>
+            <groupfilter function='level-members' level='[none:source_module:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
           </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_112:nk]'>
-            <groupfilter function='member' level='[none:Calculation_112:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          <filter class='categorical' column='[federated.arkonincidents].[none:status:nk]' filter-group='4'>
+            <groupfilter function='level-members' level='[none:status:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
           </filter>
           <shelf-sorts>
             <shelf-sort-v2 dimension-to-sort='[federated.arkonincidents].[none:source_module:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.arkonincidents].[usr:Calculation_101:qk]' shelf='rows' />
           </shelf-sorts>
           <slices>
-            <column>[federated.arkonincidents].[none:Calculation_110:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_111:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_112:nk]</column>
+            <column>[federated.arkonincidents].[none:priority:nk]</column>
+            <column>[federated.arkonincidents].[none:source_module:nk]</column>
+            <column>[federated.arkonincidents].[none:status:nk]</column>
           </slices>
           <aggregation value='true' />
         </view>
@@ -2252,13 +2151,13 @@
       </table>
       <simple-id uuid='{E2C7C86A-C3F9-5C76-9AEB-A3703C86DC65}' />
     </worksheet>
-    <worksheet name='Incidents behind this bar'>
+    <worksheet name='Incidents behind the filters'>
       <layout-options>
         <title>
           <formatted-text>
-            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>Incidents behind this bar</run>
+            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>The incidents behind the filters</run>
             <run>Æ&#10;</run>
-            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>Filtered by the bar you came from. Age is hours since the incident was raised.</run>
+            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>Every incident the filters leave, newest first. Click a bar above to narrow the list to that bar, and click it again to release it. Age is hours since the incident was raised.</run>
           </formatted-text>
         </title>
       </layout-options>
@@ -2266,44 +2165,7 @@
         <view>
           <datasources>
             <datasource caption='Arkon incidents' name='federated.arkonincidents' />
-            <datasource name='Parameters' />
           </datasources>
-          <datasource-dependencies datasource='Parameters'>
-            <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;P1&quot;' />
-                <member value='&quot;P2&quot;' />
-                <member value='&quot;P3&quot;' />
-              </members>
-            </column>
-            <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;casting_cv&quot;' />
-                <member value='&quot;cmapss_rul&quot;' />
-                <member value='&quot;gc10_detect&quot;' />
-                <member value='&quot;mvtec_anomaly&quot;' />
-                <member value='&quot;neu_surface&quot;' />
-                <member value='&quot;nhtsa_nlp&quot;' />
-                <member value='&quot;scania_aps&quot;' />
-              </members>
-            </column>
-            <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-              <calculation class='tableau' formula='&quot;All&quot;' />
-              <members>
-                <member value='&quot;All&quot;' />
-                <member value='&quot;acknowledged&quot;' />
-                <member value='&quot;closed&quot;' />
-                <member value='&quot;false_positive&quot;' />
-                <member value='&quot;in_containment&quot;' />
-                <member value='&quot;new&quot;' />
-                <member value='&quot;resolved&quot;' />
-              </members>
-            </column>
-          </datasource-dependencies>
           <datasource-dependencies datasource='federated.arkonincidents'>
             <column datatype='string' name='[incident_id]' role='dimension' type='nominal' />
             <column-instance column='[incident_id]' derivation='None' name='[none:incident_id:nk]' pivot='key' type='nominal' />
@@ -2315,30 +2177,185 @@
             <column-instance column='[source_module]' derivation='None' name='[none:source_module:nk]' pivot='key' type='nominal' />
             <column datatype='string' name='[assigned_to]' role='dimension' type='nominal' />
             <column-instance column='[assigned_to]' derivation='None' name='[none:assigned_to:nk]' pivot='key' type='nominal' />
-            <column datatype='string' name='[summary]' role='dimension' type='nominal' />
-            <column-instance column='[summary]' derivation='None' name='[none:summary:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[created_local]' role='dimension' type='nominal' />
+            <column-instance column='[created_local]' derivation='None' name='[none:created_local:nk]' pivot='key' type='nominal' />
             <column datatype='string' name='[Calculation_108]' role='measure' type='nominal' />
             <column-instance column='[Calculation_108]' derivation='User' name='[usr:Calculation_108:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_110]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_110]' derivation='None' name='[none:Calculation_110:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_111]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_111]' derivation='None' name='[none:Calculation_111:nk]' pivot='key' type='nominal' />
-            <column datatype='boolean' name='[Calculation_112]' role='dimension' type='nominal' />
-            <column-instance column='[Calculation_112]' derivation='None' name='[none:Calculation_112:nk]' pivot='key' type='nominal' />
+            <column datatype='string' name='[summary]' role='dimension' type='nominal' />
+            <column-instance column='[summary]' derivation='None' name='[none:summary:nk]' pivot='key' type='nominal' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_110:nk]'>
-            <groupfilter function='member' level='[none:Calculation_110:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          <filter class='categorical' column='[federated.arkonincidents].[none:priority:nk]' filter-group='2'>
+            <groupfilter function='level-members' level='[none:priority:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
           </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_111:nk]'>
-            <groupfilter function='member' level='[none:Calculation_111:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          <filter class='categorical' column='[federated.arkonincidents].[none:source_module:nk]' filter-group='3'>
+            <groupfilter function='level-members' level='[none:source_module:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
           </filter>
-          <filter class='categorical' column='[federated.arkonincidents].[none:Calculation_112:nk]'>
-            <groupfilter function='member' level='[none:Calculation_112:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          <filter class='categorical' column='[federated.arkonincidents].[none:status:nk]' filter-group='4'>
+            <groupfilter function='level-members' level='[none:status:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
           </filter>
+          <manual-sort column='[federated.arkonincidents].[none:incident_id:nk]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;ARK-INC-00165&quot;</bucket>
+              <bucket>&quot;ARK-INC-00164&quot;</bucket>
+              <bucket>&quot;ARK-INC-00163&quot;</bucket>
+              <bucket>&quot;ARK-INC-00162&quot;</bucket>
+              <bucket>&quot;ARK-INC-00161&quot;</bucket>
+              <bucket>&quot;ARK-INC-00160&quot;</bucket>
+              <bucket>&quot;ARK-INC-00159&quot;</bucket>
+              <bucket>&quot;ARK-INC-00158&quot;</bucket>
+              <bucket>&quot;ARK-INC-00157&quot;</bucket>
+              <bucket>&quot;ARK-INC-00156&quot;</bucket>
+              <bucket>&quot;ARK-INC-00155&quot;</bucket>
+              <bucket>&quot;ARK-INC-00154&quot;</bucket>
+              <bucket>&quot;ARK-INC-00153&quot;</bucket>
+              <bucket>&quot;ARK-INC-00152&quot;</bucket>
+              <bucket>&quot;ARK-INC-00151&quot;</bucket>
+              <bucket>&quot;ARK-INC-00150&quot;</bucket>
+              <bucket>&quot;ARK-INC-00149&quot;</bucket>
+              <bucket>&quot;ARK-INC-00148&quot;</bucket>
+              <bucket>&quot;ARK-INC-00147&quot;</bucket>
+              <bucket>&quot;ARK-INC-00146&quot;</bucket>
+              <bucket>&quot;ARK-INC-00145&quot;</bucket>
+              <bucket>&quot;ARK-INC-00144&quot;</bucket>
+              <bucket>&quot;ARK-INC-00143&quot;</bucket>
+              <bucket>&quot;ARK-INC-00142&quot;</bucket>
+              <bucket>&quot;ARK-INC-00141&quot;</bucket>
+              <bucket>&quot;ARK-INC-00140&quot;</bucket>
+              <bucket>&quot;ARK-INC-00139&quot;</bucket>
+              <bucket>&quot;ARK-INC-00138&quot;</bucket>
+              <bucket>&quot;ARK-INC-00137&quot;</bucket>
+              <bucket>&quot;ARK-INC-00136&quot;</bucket>
+              <bucket>&quot;ARK-INC-00135&quot;</bucket>
+              <bucket>&quot;ARK-INC-00134&quot;</bucket>
+              <bucket>&quot;ARK-INC-00133&quot;</bucket>
+              <bucket>&quot;ARK-INC-00132&quot;</bucket>
+              <bucket>&quot;ARK-INC-00131&quot;</bucket>
+              <bucket>&quot;ARK-INC-00130&quot;</bucket>
+              <bucket>&quot;ARK-INC-00129&quot;</bucket>
+              <bucket>&quot;ARK-INC-00128&quot;</bucket>
+              <bucket>&quot;ARK-INC-00127&quot;</bucket>
+              <bucket>&quot;ARK-INC-00126&quot;</bucket>
+              <bucket>&quot;ARK-INC-00125&quot;</bucket>
+              <bucket>&quot;ARK-INC-00124&quot;</bucket>
+              <bucket>&quot;ARK-INC-00123&quot;</bucket>
+              <bucket>&quot;ARK-INC-00122&quot;</bucket>
+              <bucket>&quot;ARK-INC-00121&quot;</bucket>
+              <bucket>&quot;ARK-INC-00120&quot;</bucket>
+              <bucket>&quot;ARK-INC-00119&quot;</bucket>
+              <bucket>&quot;ARK-INC-00118&quot;</bucket>
+              <bucket>&quot;ARK-INC-00117&quot;</bucket>
+              <bucket>&quot;ARK-INC-00116&quot;</bucket>
+              <bucket>&quot;ARK-INC-00115&quot;</bucket>
+              <bucket>&quot;ARK-INC-00114&quot;</bucket>
+              <bucket>&quot;ARK-INC-00113&quot;</bucket>
+              <bucket>&quot;ARK-INC-00112&quot;</bucket>
+              <bucket>&quot;ARK-INC-00111&quot;</bucket>
+              <bucket>&quot;ARK-INC-00110&quot;</bucket>
+              <bucket>&quot;ARK-INC-00109&quot;</bucket>
+              <bucket>&quot;ARK-INC-00108&quot;</bucket>
+              <bucket>&quot;ARK-INC-00107&quot;</bucket>
+              <bucket>&quot;ARK-INC-00106&quot;</bucket>
+              <bucket>&quot;ARK-INC-00105&quot;</bucket>
+              <bucket>&quot;ARK-INC-00104&quot;</bucket>
+              <bucket>&quot;ARK-INC-00103&quot;</bucket>
+              <bucket>&quot;ARK-INC-00102&quot;</bucket>
+              <bucket>&quot;ARK-INC-00101&quot;</bucket>
+              <bucket>&quot;ARK-INC-00100&quot;</bucket>
+              <bucket>&quot;ARK-INC-00099&quot;</bucket>
+              <bucket>&quot;ARK-INC-00098&quot;</bucket>
+              <bucket>&quot;ARK-INC-00097&quot;</bucket>
+              <bucket>&quot;ARK-INC-00096&quot;</bucket>
+              <bucket>&quot;ARK-INC-00095&quot;</bucket>
+              <bucket>&quot;ARK-INC-00094&quot;</bucket>
+              <bucket>&quot;ARK-INC-00093&quot;</bucket>
+              <bucket>&quot;ARK-INC-00092&quot;</bucket>
+              <bucket>&quot;ARK-INC-00091&quot;</bucket>
+              <bucket>&quot;ARK-INC-00090&quot;</bucket>
+              <bucket>&quot;ARK-INC-00089&quot;</bucket>
+              <bucket>&quot;ARK-INC-00088&quot;</bucket>
+              <bucket>&quot;ARK-INC-00087&quot;</bucket>
+              <bucket>&quot;ARK-INC-00086&quot;</bucket>
+              <bucket>&quot;ARK-INC-00085&quot;</bucket>
+              <bucket>&quot;ARK-INC-00084&quot;</bucket>
+              <bucket>&quot;ARK-INC-00083&quot;</bucket>
+              <bucket>&quot;ARK-INC-00082&quot;</bucket>
+              <bucket>&quot;ARK-INC-00081&quot;</bucket>
+              <bucket>&quot;ARK-INC-00080&quot;</bucket>
+              <bucket>&quot;ARK-INC-00079&quot;</bucket>
+              <bucket>&quot;ARK-INC-00078&quot;</bucket>
+              <bucket>&quot;ARK-INC-00077&quot;</bucket>
+              <bucket>&quot;ARK-INC-00076&quot;</bucket>
+              <bucket>&quot;ARK-INC-00075&quot;</bucket>
+              <bucket>&quot;ARK-INC-00074&quot;</bucket>
+              <bucket>&quot;ARK-INC-00073&quot;</bucket>
+              <bucket>&quot;ARK-INC-00072&quot;</bucket>
+              <bucket>&quot;ARK-INC-00071&quot;</bucket>
+              <bucket>&quot;ARK-INC-00070&quot;</bucket>
+              <bucket>&quot;ARK-INC-00069&quot;</bucket>
+              <bucket>&quot;ARK-INC-00068&quot;</bucket>
+              <bucket>&quot;ARK-INC-00067&quot;</bucket>
+              <bucket>&quot;ARK-INC-00066&quot;</bucket>
+              <bucket>&quot;ARK-INC-00065&quot;</bucket>
+              <bucket>&quot;ARK-INC-00064&quot;</bucket>
+              <bucket>&quot;ARK-INC-00063&quot;</bucket>
+              <bucket>&quot;ARK-INC-00062&quot;</bucket>
+              <bucket>&quot;ARK-INC-00061&quot;</bucket>
+              <bucket>&quot;ARK-INC-00060&quot;</bucket>
+              <bucket>&quot;ARK-INC-00059&quot;</bucket>
+              <bucket>&quot;ARK-INC-00058&quot;</bucket>
+              <bucket>&quot;ARK-INC-00057&quot;</bucket>
+              <bucket>&quot;ARK-INC-00056&quot;</bucket>
+              <bucket>&quot;ARK-INC-00055&quot;</bucket>
+              <bucket>&quot;ARK-INC-00054&quot;</bucket>
+              <bucket>&quot;ARK-INC-00053&quot;</bucket>
+              <bucket>&quot;ARK-INC-00052&quot;</bucket>
+              <bucket>&quot;ARK-INC-00051&quot;</bucket>
+              <bucket>&quot;ARK-INC-00050&quot;</bucket>
+              <bucket>&quot;ARK-INC-00049&quot;</bucket>
+              <bucket>&quot;ARK-INC-00048&quot;</bucket>
+              <bucket>&quot;ARK-INC-00047&quot;</bucket>
+              <bucket>&quot;ARK-INC-00046&quot;</bucket>
+              <bucket>&quot;ARK-INC-00045&quot;</bucket>
+              <bucket>&quot;ARK-INC-00044&quot;</bucket>
+              <bucket>&quot;ARK-INC-00043&quot;</bucket>
+              <bucket>&quot;ARK-INC-00042&quot;</bucket>
+              <bucket>&quot;ARK-INC-00041&quot;</bucket>
+              <bucket>&quot;ARK-INC-00040&quot;</bucket>
+              <bucket>&quot;ARK-INC-00039&quot;</bucket>
+              <bucket>&quot;ARK-INC-00038&quot;</bucket>
+              <bucket>&quot;ARK-INC-00037&quot;</bucket>
+              <bucket>&quot;ARK-INC-00036&quot;</bucket>
+              <bucket>&quot;ARK-INC-00035&quot;</bucket>
+              <bucket>&quot;ARK-INC-00034&quot;</bucket>
+              <bucket>&quot;ARK-INC-00033&quot;</bucket>
+              <bucket>&quot;ARK-INC-00032&quot;</bucket>
+              <bucket>&quot;ARK-INC-00031&quot;</bucket>
+              <bucket>&quot;ARK-INC-00030&quot;</bucket>
+              <bucket>&quot;ARK-INC-00029&quot;</bucket>
+              <bucket>&quot;ARK-INC-00028&quot;</bucket>
+              <bucket>&quot;ARK-INC-00027&quot;</bucket>
+              <bucket>&quot;ARK-INC-00026&quot;</bucket>
+              <bucket>&quot;ARK-INC-00025&quot;</bucket>
+              <bucket>&quot;ARK-INC-00024&quot;</bucket>
+              <bucket>&quot;ARK-INC-00023&quot;</bucket>
+              <bucket>&quot;ARK-INC-00022&quot;</bucket>
+              <bucket>&quot;ARK-INC-00021&quot;</bucket>
+              <bucket>&quot;ARK-INC-00020&quot;</bucket>
+              <bucket>&quot;ARK-INC-00019&quot;</bucket>
+              <bucket>&quot;ARK-INC-00018&quot;</bucket>
+              <bucket>&quot;ARK-INC-00017&quot;</bucket>
+              <bucket>&quot;ARK-INC-00016&quot;</bucket>
+              <bucket>&quot;ARK-INC-00015&quot;</bucket>
+              <bucket>&quot;ARK-INC-00014&quot;</bucket>
+              <bucket>&quot;ARK-INC-00013&quot;</bucket>
+              <bucket>&quot;ARK-INC-00012&quot;</bucket>
+              <bucket>&quot;ARK-INC-00011&quot;</bucket>
+            </dictionary>
+          </manual-sort>
           <slices>
-            <column>[federated.arkonincidents].[none:Calculation_110:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_111:nk]</column>
-            <column>[federated.arkonincidents].[none:Calculation_112:nk]</column>
+            <column>[federated.arkonincidents].[none:priority:nk]</column>
+            <column>[federated.arkonincidents].[none:source_module:nk]</column>
+            <column>[federated.arkonincidents].[none:status:nk]</column>
           </slices>
           <aggregation value='true' />
         </view>
@@ -2351,13 +2368,27 @@
             <mark class='Text' />
             <encodings>
               <text column='[federated.arkonincidents].[usr:Calculation_108:nk]' />
+              <text column='[federated.arkonincidents].[none:summary:nk]' />
             </encodings>
+            <customized-label>
+              <formatted-text>
+                <run bold='true' fontcolor='#16161A' fontname='Tableau Book' fontsize='11'><![CDATA[<[federated.arkonincidents].[usr:Calculation_108:nk]>]]></run>
+                <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>    </run>
+                <run fontcolor='#16161A' fontname='Tableau Book' fontsize='11'><![CDATA[<[federated.arkonincidents].[none:summary:nk]>]]></run>
+              </formatted-text>
+            </customized-label>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='false' />
+              </style-rule>
+            </style>
           </pane>
         </panes>
-        <rows>([federated.arkonincidents].[none:incident_id:nk] / ([federated.arkonincidents].[none:priority:nk] / ([federated.arkonincidents].[none:status:nk] / ([federated.arkonincidents].[none:source_module:nk] / ([federated.arkonincidents].[none:assigned_to:nk] / [federated.arkonincidents].[none:summary:nk])))))</rows>
+        <rows>([federated.arkonincidents].[none:incident_id:nk] / ([federated.arkonincidents].[none:priority:nk] / ([federated.arkonincidents].[none:status:nk] / ([federated.arkonincidents].[none:source_module:nk] / ([federated.arkonincidents].[none:assigned_to:nk] / [federated.arkonincidents].[none:created_local:nk])))))</rows>
         <cols />
       </table>
-      <simple-id uuid='{152BE950-4460-5F00-9FED-4D394724B3E5}' />
+      <simple-id uuid='{47D32D09-081C-5133-9FAB-69D1404537A2}' />
     </worksheet>
   </worksheets>
   <dashboards>
@@ -2367,44 +2398,7 @@
       <datasources>
         <datasource caption='Arkon incidents' name='federated.arkonincidents' />
         <datasource caption='Arkon lifecycle transitions' name='federated.arkontransitions' />
-        <datasource name='Parameters' />
       </datasources>
-      <datasource-dependencies datasource='Parameters'>
-        <column caption='Priority' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-          <calculation class='tableau' formula='&quot;All&quot;' />
-          <members>
-            <member value='&quot;All&quot;' />
-            <member value='&quot;P1&quot;' />
-            <member value='&quot;P2&quot;' />
-            <member value='&quot;P3&quot;' />
-          </members>
-        </column>
-        <column caption='Model' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-          <calculation class='tableau' formula='&quot;All&quot;' />
-          <members>
-            <member value='&quot;All&quot;' />
-            <member value='&quot;casting_cv&quot;' />
-            <member value='&quot;cmapss_rul&quot;' />
-            <member value='&quot;gc10_detect&quot;' />
-            <member value='&quot;mvtec_anomaly&quot;' />
-            <member value='&quot;neu_surface&quot;' />
-            <member value='&quot;nhtsa_nlp&quot;' />
-            <member value='&quot;scania_aps&quot;' />
-          </members>
-        </column>
-        <column caption='Status' datatype='string' name='[Parameter 3]' param-domain-type='list' role='measure' type='nominal' value='&quot;All&quot;'>
-          <calculation class='tableau' formula='&quot;All&quot;' />
-          <members>
-            <member value='&quot;All&quot;' />
-            <member value='&quot;acknowledged&quot;' />
-            <member value='&quot;closed&quot;' />
-            <member value='&quot;false_positive&quot;' />
-            <member value='&quot;in_containment&quot;' />
-            <member value='&quot;new&quot;' />
-            <member value='&quot;resolved&quot;' />
-          </members>
-        </column>
-      </datasource-dependencies>
       <zones>
         <zone h='100000' id='1' param='vert' type-v2='layout-flow' w='100000' x='0' y='0'>
           <zone fixed-size='84' h='9333' id='12' is-fixed='true' param='horz' type-v2='layout-flow' w='100000' x='0' y='0'>
@@ -2442,52 +2436,9 @@
               <format attr='margin' value='4' />
             </zone-style>
           </zone>
-          <zone fixed-size='44' h='4889' id='15' is-fixed='true' param='horz' type-v2='layout-flow' w='100000' x='0' y='9333'>
-            <zone forceUpdate='true' h='4889' id='16' type-v2='text' w='49742' x='0' y='9333'>
-              <formatted-text>
-                <run> </run>
-              </formatted-text>
-              <zone-style>
-                <format attr='border-color' value='#000000' />
-                <format attr='border-style' value='none' />
-                <format attr='border-width' value='0' />
-                <format attr='margin' value='4' />
-              </zone-style>
-            </zone>
-            <zone fixed-size='240' h='4889' id='17' is-fixed='true' mode='dropdown' param='[Parameters].[Parameter 1]' type-v2='paramctrl' w='15464' x='49742' y='9333'>
-              <zone-style>
-                <format attr='border-color' value='#000000' />
-                <format attr='border-style' value='none' />
-                <format attr='border-width' value='0' />
-                <format attr='margin' value='4' />
-              </zone-style>
-            </zone>
-            <zone fixed-size='300' h='4889' id='18' is-fixed='true' mode='dropdown' param='[Parameters].[Parameter 2]' type-v2='paramctrl' w='19330' x='65206' y='9333'>
-              <zone-style>
-                <format attr='border-color' value='#000000' />
-                <format attr='border-style' value='none' />
-                <format attr='border-width' value='0' />
-                <format attr='margin' value='4' />
-              </zone-style>
-            </zone>
-            <zone fixed-size='240' h='4889' id='19' is-fixed='true' mode='dropdown' param='[Parameters].[Parameter 3]' type-v2='paramctrl' w='15464' x='84536' y='9333'>
-              <zone-style>
-                <format attr='border-color' value='#000000' />
-                <format attr='border-style' value='none' />
-                <format attr='border-width' value='0' />
-                <format attr='margin' value='4' />
-              </zone-style>
-            </zone>
-            <zone-style>
-              <format attr='border-color' value='#000000' />
-              <format attr='border-style' value='none' />
-              <format attr='border-width' value='0' />
-              <format attr='margin' value='4' />
-            </zone-style>
-          </zone>
-          <zone fixed-size='150' h='16667' id='20' is-fixed='true' layout-strategy-id='distribute-evenly' param='horz' type-v2='layout-flow' w='100000' x='0' y='14222'>
-            <zone h='16667' id='21' param='horz' type-v2='layout-flow' w='25000' x='0' y='14222'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='31' is-fixed='true' type-v2='text' w='387' x='0' y='14222'>
+          <zone fixed-size='150' h='16667' id='20' is-fixed='true' layout-strategy-id='distribute-evenly' param='horz' type-v2='layout-flow' w='100000' x='0' y='9333'>
+            <zone h='16667' id='21' param='horz' type-v2='layout-flow' w='25000' x='0' y='9333'>
+              <zone fixed-size='6' forceUpdate='true' h='16667' id='31' is-fixed='true' type-v2='text' w='387' x='0' y='9333'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2500,7 +2451,7 @@
                   <format attr='background-color' value='#C0392B' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='41' name='KPI Overdue' show-title='false' w='24613' x='387' y='14222'>
+              <zone h='16667' id='41' name='KPI Overdue' show-title='false' w='24613' x='387' y='9333'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2518,8 +2469,8 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone h='16667' id='22' param='horz' type-v2='layout-flow' w='25000' x='25000' y='14222'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='32' is-fixed='true' type-v2='text' w='387' x='25000' y='14222'>
+            <zone h='16667' id='22' param='horz' type-v2='layout-flow' w='25000' x='25000' y='9333'>
+              <zone fixed-size='6' forceUpdate='true' h='16667' id='32' is-fixed='true' type-v2='text' w='387' x='25000' y='9333'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2532,7 +2483,7 @@
                   <format attr='background-color' value='#D8D8D2' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='42' name='KPI Open' show-title='false' w='24613' x='25387' y='14222'>
+              <zone h='16667' id='42' name='KPI Open' show-title='false' w='24613' x='25387' y='9333'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2550,8 +2501,8 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone h='16667' id='23' param='horz' type-v2='layout-flow' w='25000' x='50000' y='14222'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='33' is-fixed='true' type-v2='text' w='387' x='50000' y='14222'>
+            <zone h='16667' id='23' param='horz' type-v2='layout-flow' w='25000' x='50000' y='9333'>
+              <zone fixed-size='6' forceUpdate='true' h='16667' id='33' is-fixed='true' type-v2='text' w='387' x='50000' y='9333'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2564,7 +2515,7 @@
                   <format attr='background-color' value='#D8D8D2' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='43' name='KPI Time to acknowledge' show-title='false' w='24613' x='50387' y='14222'>
+              <zone h='16667' id='43' name='KPI Time to acknowledge' show-title='false' w='24613' x='50387' y='9333'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2582,8 +2533,8 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone h='16667' id='24' param='horz' type-v2='layout-flow' w='25000' x='75000' y='14222'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='34' is-fixed='true' type-v2='text' w='387' x='75000' y='14222'>
+            <zone h='16667' id='24' param='horz' type-v2='layout-flow' w='25000' x='75000' y='9333'>
+              <zone fixed-size='6' forceUpdate='true' h='16667' id='34' is-fixed='true' type-v2='text' w='387' x='75000' y='9333'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2596,7 +2547,7 @@
                   <format attr='background-color' value='#D8D8D2' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='44' name='KPI Time to close' show-title='false' w='24613' x='75387' y='14222'>
+              <zone h='16667' id='44' name='KPI Time to close' show-title='false' w='24613' x='75387' y='9333'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2621,8 +2572,8 @@
               <format attr='margin' value='4' />
             </zone-style>
           </zone>
-          <zone h='36667' id='50' param='horz' type-v2='layout-flow' w='100000' x='0' y='30889'>
-            <zone h='36667' id='51' name='Open incidents by age' w='62000' x='0' y='30889'>
+          <zone h='41556' id='50' param='horz' type-v2='layout-flow' w='100000' x='0' y='26000'>
+            <zone h='41556' id='51' name='Open incidents by age' w='62000' x='0' y='26000'>
               <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -2633,7 +2584,7 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone fixed-size='600' h='36667' id='52' is-fixed='true' name='Time to acknowledge' w='38000' x='62000' y='30889'>
+            <zone fixed-size='600' h='41556' id='52' is-fixed='true' name='Time to acknowledge' w='38000' x='62000' y='26000'>
               <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -2651,34 +2602,15 @@
               <format attr='margin' value='4' />
             </zone-style>
           </zone>
-          <zone fixed-size='236' h='26222' id='60' is-fixed='true' param='horz' type-v2='layout-flow' w='100000' x='0' y='67556'>
-            <zone h='26222' id='61' name='Who acted, and when' w='62000' x='0' y='67556'>
-              <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
-              <zone-style>
-                <format attr='border-color' value='#000000' />
-                <format attr='border-style' value='none' />
-                <format attr='border-width' value='0' />
-                <format attr='margin' value='8' />
-                <format attr='padding' value='10' />
-                <format attr='background-color' value='#FFFFFF' />
-              </zone-style>
-            </zone>
-            <zone fixed-size='600' h='26222' id='62' is-fixed='true' name='Incidents by model' w='38000' x='62000' y='67556'>
-              <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
-              <zone-style>
-                <format attr='border-color' value='#000000' />
-                <format attr='border-style' value='none' />
-                <format attr='border-width' value='0' />
-                <format attr='margin' value='8' />
-                <format attr='padding' value='10' />
-                <format attr='background-color' value='#FFFFFF' />
-              </zone-style>
-            </zone>
+          <zone fixed-size='236' h='26222' id='61' is-fixed='true' name='Who acted, and when' w='100000' x='0' y='67556'>
+            <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
             <zone-style>
               <format attr='border-color' value='#000000' />
               <format attr='border-style' value='none' />
               <format attr='border-width' value='0' />
-              <format attr='margin' value='4' />
+              <format attr='margin' value='8' />
+              <format attr='padding' value='10' />
+              <format attr='background-color' value='#FFFFFF' />
             </zone-style>
           </zone>
           <zone fixed-size='56' forceUpdate='true' h='6222' id='70' is-fixed='true' type-v2='text' w='100000' x='0' y='93778'>
@@ -2798,6 +2730,385 @@
       </devicelayouts>
       <simple-id uuid='{3F133379-1C18-54A6-8143-397517F2DAD3}' />
     </dashboard>
+    <dashboard name='Arkon Explore View'>
+      <style />
+      <size maxheight='900' maxwidth='1600' minheight='900' minwidth='1600' />
+      <datasources>
+        <datasource caption='Arkon incidents' name='federated.arkonincidents' />
+      </datasources>
+      <zones>
+        <zone h='100000' id='201' param='vert' type-v2='layout-flow' w='100000' x='0' y='0'>
+          <zone fixed-size='84' h='9333' id='212' is-fixed='true' param='horz' type-v2='layout-flow' w='100000' x='0' y='0'>
+            <zone forceUpdate='true' h='9333' id='213' type-v2='text' w='72165' x='0' y='0'>
+              <formatted-text>
+                <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='22'>Arkon Quality Steering Cell</run>
+                <run fontcolor='#55555E' fontname='Tableau Book' fontsize='22'>    Explore view</run>
+                <run>Æ&#10;</run>
+                <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>Every panel on this page follows the three filters. Click a bar to narrow the other chart and the list to it, and click it again to release.</run>
+              </formatted-text>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='4' />
+              </zone-style>
+            </zone>
+            <zone fixed-size='432' forceUpdate='true' h='9333' id='214' is-fixed='true' type-v2='text' w='27835' x='72165' y='0'>
+              <formatted-text>
+                <run fontalignment='2' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>as of 06 Sep 2026 13:57</run>
+                <run>Æ&#10;</run>
+                <run fontalignment='2' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>155 incidents, 350 transitions, plant clock</run>
+              </formatted-text>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='4' />
+              </zone-style>
+            </zone>
+            <zone-style>
+              <format attr='border-color' value='#000000' />
+              <format attr='border-style' value='none' />
+              <format attr='border-width' value='0' />
+              <format attr='margin' value='4' />
+            </zone-style>
+          </zone>
+          <zone fixed-size='56' h='6222' id='215' is-fixed='true' param='horz' type-v2='layout-flow' w='100000' x='0' y='9333'>
+            <zone fixed-size='160' forceUpdate='true' h='6222' id='216' is-fixed='true' type-v2='text' w='10309' x='0' y='9333'>
+              <formatted-text>
+                <run fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>FILTERS</run>
+                <run>Æ&#10;</run>
+                <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>every panel follows them</run>
+              </formatted-text>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='4' />
+              </zone-style>
+            </zone>
+            <zone fixed-size='300' h='6222' id='217' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:priority:nk]' type-v2='filter' values='database' w='19330' x='10309' y='9333'>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='4' />
+              </zone-style>
+            </zone>
+            <zone fixed-size='300' h='6222' id='218' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:source_module:nk]' type-v2='filter' values='database' w='19330' x='29639' y='9333'>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='4' />
+              </zone-style>
+            </zone>
+            <zone fixed-size='300' h='6222' id='219' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:status:nk]' type-v2='filter' values='database' w='19330' x='48969' y='9333'>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='4' />
+              </zone-style>
+            </zone>
+            <zone forceUpdate='true' h='6222' id='229' type-v2='text' w='31701' x='68299' y='9333'>
+              <formatted-text>
+                <run> </run>
+              </formatted-text>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='4' />
+              </zone-style>
+            </zone>
+            <zone-style>
+              <format attr='border-color' value='#000000' />
+              <format attr='border-style' value='none' />
+              <format attr='border-width' value='0' />
+              <format attr='margin' value='4' />
+            </zone-style>
+          </zone>
+          <zone fixed-size='150' h='16667' id='220' is-fixed='true' layout-strategy-id='distribute-evenly' param='horz' type-v2='layout-flow' w='100000' x='0' y='15556'>
+            <zone h='16667' id='221' param='horz' type-v2='layout-flow' w='25000' x='0' y='15556'>
+              <zone fixed-size='6' forceUpdate='true' h='16667' id='231' is-fixed='true' type-v2='text' w='387' x='0' y='15556'>
+                <formatted-text>
+                  <run> </run>
+                </formatted-text>
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='0' />
+                  <format attr='padding' value='0' />
+                  <format attr='background-color' value='#C0392B' />
+                </zone-style>
+              </zone>
+              <zone h='16667' id='241' name='Explore KPI Overdue' show-title='false' w='24613' x='387' y='15556'>
+                <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='0' />
+                  <format attr='padding' value='10' />
+                </zone-style>
+              </zone>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='8' />
+                <format attr='background-color' value='#FFFFFF' />
+              </zone-style>
+            </zone>
+            <zone h='16667' id='222' param='horz' type-v2='layout-flow' w='25000' x='25000' y='15556'>
+              <zone fixed-size='6' forceUpdate='true' h='16667' id='232' is-fixed='true' type-v2='text' w='387' x='25000' y='15556'>
+                <formatted-text>
+                  <run> </run>
+                </formatted-text>
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='0' />
+                  <format attr='padding' value='0' />
+                  <format attr='background-color' value='#D8D8D2' />
+                </zone-style>
+              </zone>
+              <zone h='16667' id='242' name='Explore KPI Open' show-title='false' w='24613' x='25387' y='15556'>
+                <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='0' />
+                  <format attr='padding' value='10' />
+                </zone-style>
+              </zone>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='8' />
+                <format attr='background-color' value='#FFFFFF' />
+              </zone-style>
+            </zone>
+            <zone h='16667' id='223' param='horz' type-v2='layout-flow' w='25000' x='50000' y='15556'>
+              <zone fixed-size='6' forceUpdate='true' h='16667' id='233' is-fixed='true' type-v2='text' w='387' x='50000' y='15556'>
+                <formatted-text>
+                  <run> </run>
+                </formatted-text>
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='0' />
+                  <format attr='padding' value='0' />
+                  <format attr='background-color' value='#D8D8D2' />
+                </zone-style>
+              </zone>
+              <zone h='16667' id='243' name='Explore KPI Time to acknowledge' show-title='false' w='24613' x='50387' y='15556'>
+                <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='0' />
+                  <format attr='padding' value='10' />
+                </zone-style>
+              </zone>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='8' />
+                <format attr='background-color' value='#FFFFFF' />
+              </zone-style>
+            </zone>
+            <zone h='16667' id='224' param='horz' type-v2='layout-flow' w='25000' x='75000' y='15556'>
+              <zone fixed-size='6' forceUpdate='true' h='16667' id='234' is-fixed='true' type-v2='text' w='387' x='75000' y='15556'>
+                <formatted-text>
+                  <run> </run>
+                </formatted-text>
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='0' />
+                  <format attr='padding' value='0' />
+                  <format attr='background-color' value='#D8D8D2' />
+                </zone-style>
+              </zone>
+              <zone h='16667' id='244' name='Explore KPI Time to close' show-title='false' w='24613' x='75387' y='15556'>
+                <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='0' />
+                  <format attr='padding' value='10' />
+                </zone-style>
+              </zone>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='8' />
+                <format attr='background-color' value='#FFFFFF' />
+              </zone-style>
+            </zone>
+            <zone-style>
+              <format attr='border-color' value='#000000' />
+              <format attr='border-style' value='none' />
+              <format attr='border-width' value='0' />
+              <format attr='margin' value='4' />
+            </zone-style>
+          </zone>
+          <zone h='40222' id='250' param='horz' type-v2='layout-flow' w='100000' x='0' y='32222'>
+            <zone h='40222' id='251' name='Explore open incidents by age' w='62000' x='0' y='32222'>
+              <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='8' />
+                <format attr='padding' value='10' />
+                <format attr='background-color' value='#FFFFFF' />
+              </zone-style>
+            </zone>
+            <zone fixed-size='600' h='40222' id='252' is-fixed='true' name='Incidents by model' w='38000' x='62000' y='32222'>
+              <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='8' />
+                <format attr='padding' value='10' />
+                <format attr='background-color' value='#FFFFFF' />
+              </zone-style>
+            </zone>
+            <zone-style>
+              <format attr='border-color' value='#000000' />
+              <format attr='border-style' value='none' />
+              <format attr='border-width' value='0' />
+              <format attr='margin' value='4' />
+            </zone-style>
+          </zone>
+          <zone fixed-size='200' h='22222' id='261' is-fixed='true' name='Incidents behind the filters' w='100000' x='0' y='72444'>
+            <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
+            <zone-style>
+              <format attr='border-color' value='#000000' />
+              <format attr='border-style' value='none' />
+              <format attr='border-width' value='0' />
+              <format attr='margin' value='8' />
+              <format attr='padding' value='10' />
+              <format attr='background-color' value='#FFFFFF' />
+            </zone-style>
+          </zone>
+          <zone fixed-size='48' forceUpdate='true' h='5333' id='270' is-fixed='true' type-v2='text' w='100000' x='0' y='94667'>
+            <formatted-text>
+              <run bold='true' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>Same store, same extract. </run>
+              <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>155 incidents as of 06 Sep 2026 13:57, refreshed together with the Executive view. With no filter set, the cards and the aging profile are the Executive view&apos;s own numbers. The operational context and the crew&apos;s response times are simulated; every timestamp is real. github.com/sergey-kasatov/arkon-manufacturing-ai</run>
+            </formatted-text>
+            <zone-style>
+              <format attr='border-color' value='#000000' />
+              <format attr='border-style' value='none' />
+              <format attr='border-width' value='0' />
+              <format attr='margin' value='4' />
+            </zone-style>
+          </zone>
+          <zone-style>
+            <format attr='border-color' value='#000000' />
+            <format attr='border-style' value='none' />
+            <format attr='border-width' value='0' />
+            <format attr='margin' value='8' />
+            <format attr='background-color' value='#F2F2EF' />
+          </zone-style>
+        </zone>
+      </zones>
+      <devicelayouts>
+        <devicelayout name='Phone'>
+          <size maxheight='800' minheight='800' sizing-mode='vscroll' />
+          <zones>
+            <zone h='100000' id='300' type-v2='layout-basic' w='100000' x='0' y='0'>
+              <zone h='100000' id='301' param='vert' type-v2='layout-flow' w='100000' x='0' y='0'>
+                <zone fixed-size='70' forceUpdate='true' h='7778' id='213' is-fixed='true' type-v2='text' w='100000' x='0' y='0'>
+                  <formatted-text>
+                    <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='22'>Arkon Quality Steering Cell</run>
+                    <run fontcolor='#55555E' fontname='Tableau Book' fontsize='22'>    Explore view</run>
+                    <run>Æ&#10;</run>
+                    <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>Every panel on this page follows the three filters. Click a bar to narrow the other chart and the list to it, and click it again to release.</run>
+                  </formatted-text>
+                  <zone-style>
+                    <format attr='border-color' value='#000000' />
+                    <format attr='border-style' value='none' />
+                    <format attr='border-width' value='0' />
+                    <format attr='margin' value='4' />
+                    <format attr='padding' value='0' />
+                  </zone-style>
+                </zone>
+                <zone fixed-size='60' h='6667' id='217' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:priority:nk]' type-v2='filter' values='database' w='100000' x='0' y='7778'>
+                  <zone-style>
+                    <format attr='border-color' value='#000000' />
+                    <format attr='border-style' value='none' />
+                    <format attr='border-width' value='0' />
+                    <format attr='margin' value='4' />
+                  </zone-style>
+                </zone>
+                <zone fixed-size='110' h='12222' id='241' is-fixed='true' name='Explore KPI Overdue' show-title='false' w='100000' x='0' y='14444'>
+                  <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
+                  <zone-style>
+                    <format attr='border-color' value='#000000' />
+                    <format attr='border-style' value='none' />
+                    <format attr='border-width' value='0' />
+                    <format attr='margin' value='4' />
+                    <format attr='padding' value='0' />
+                    <format attr='background-color' value='#FFFFFF' />
+                  </zone-style>
+                </zone>
+                <zone fixed-size='300' h='33333' id='251' is-fixed='true' name='Explore open incidents by age' w='100000' x='0' y='26667'>
+                  <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
+                  <zone-style>
+                    <format attr='border-color' value='#000000' />
+                    <format attr='border-style' value='none' />
+                    <format attr='border-width' value='0' />
+                    <format attr='margin' value='4' />
+                    <format attr='padding' value='0' />
+                    <format attr='background-color' value='#FFFFFF' />
+                  </zone-style>
+                </zone>
+                <zone fixed-size='260' h='40000' id='252' is-fixed='true' name='Incidents by model' w='100000' x='0' y='60000'>
+                  <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
+                  <zone-style>
+                    <format attr='border-color' value='#000000' />
+                    <format attr='border-style' value='none' />
+                    <format attr='border-width' value='0' />
+                    <format attr='margin' value='4' />
+                    <format attr='padding' value='0' />
+                    <format attr='background-color' value='#FFFFFF' />
+                  </zone-style>
+                </zone>
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='8' />
+                  <format attr='background-color' value='#F2F2EF' />
+                </zone-style>
+              </zone>
+              <zone-style>
+                <format attr='border-color' value='#000000' />
+                <format attr='border-style' value='none' />
+                <format attr='border-width' value='0' />
+                <format attr='margin' value='8' />
+              </zone-style>
+            </zone>
+          </zones>
+        </devicelayout>
+      </devicelayouts>
+      <simple-id uuid='{EBC8D201-FF6A-5CB4-B881-B39E20B50850}' />
+    </dashboard>
   </dashboards>
   <windows>
     <window class='dashboard' maximized='true' name='Arkon Executive View'>
@@ -2823,12 +3134,36 @@
         <viewpoint name='Who acted, and when'>
           <zoom type='entire-view' />
         </viewpoint>
-        <viewpoint name='Incidents by model'>
-          <zoom type='entire-view' />
-        </viewpoint>
       </viewpoints>
       <active id='-1' />
       <simple-id uuid='{B3991869-C509-5BCC-9539-36EFD14B6B6C}' />
+    </window>
+    <window class='dashboard' name='Arkon Explore View'>
+      <viewpoints>
+        <viewpoint name='Explore KPI Overdue'>
+          <zoom type='entire-view' />
+        </viewpoint>
+        <viewpoint name='Explore KPI Open'>
+          <zoom type='entire-view' />
+        </viewpoint>
+        <viewpoint name='Explore KPI Time to acknowledge'>
+          <zoom type='entire-view' />
+        </viewpoint>
+        <viewpoint name='Explore KPI Time to close'>
+          <zoom type='entire-view' />
+        </viewpoint>
+        <viewpoint name='Explore open incidents by age'>
+          <zoom type='entire-view' />
+        </viewpoint>
+        <viewpoint name='Incidents by model'>
+          <zoom type='entire-view' />
+        </viewpoint>
+        <viewpoint name='Incidents behind the filters'>
+          <zoom type='fit-width' />
+        </viewpoint>
+      </viewpoints>
+      <active id='-1' />
+      <simple-id uuid='{C3206C78-0A75-58E3-A21F-8B70E5A0BA56}' />
     </window>
     <window class='worksheet' name='KPI Overdue'>
       <cards>
@@ -3012,6 +3347,136 @@
       </viewpoint>
       <simple-id uuid='{A1206EF8-354D-5E15-8AA6-933A79023896}' />
     </window>
+    <window class='worksheet' name='Explore KPI Overdue'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='31'>
+            <card type='title' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+      </viewpoint>
+      <simple-id uuid='{B13E4ADE-B0CA-537A-A987-0D92B8D8D45A}' />
+    </window>
+    <window class='worksheet' name='Explore KPI Open'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='31'>
+            <card type='title' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+      </viewpoint>
+      <simple-id uuid='{A9BD5C36-1BB8-5148-9F3E-37E591A35CFC}' />
+    </window>
+    <window class='worksheet' name='Explore KPI Time to acknowledge'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='31'>
+            <card type='title' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+      </viewpoint>
+      <simple-id uuid='{4205FD59-575D-59DB-A787-28576AC3C122}' />
+    </window>
+    <window class='worksheet' name='Explore KPI Time to close'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='31'>
+            <card type='title' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+      </viewpoint>
+      <simple-id uuid='{A534AE2A-E99D-5A9F-89E5-088C9C136D35}' />
+    </window>
+    <window class='worksheet' name='Explore open incidents by age'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='31'>
+            <card type='title' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+      </viewpoint>
+      <simple-id uuid='{A5E49EED-032F-5D24-86DE-12F37F692022}' />
+    </window>
     <window class='worksheet' name='Incidents by model'>
       <cards>
         <edge name='left'>
@@ -3038,7 +3503,7 @@
       </viewpoint>
       <simple-id uuid='{A11652A5-6399-57AA-9108-1A253ACCD068}' />
     </window>
-    <window class='worksheet' name='Incidents behind this bar'>
+    <window class='worksheet' name='Incidents behind the filters'>
       <cards>
         <edge name='left'>
           <strip size='160'>
@@ -3060,9 +3525,9 @@
         </edge>
       </cards>
       <viewpoint>
-        <zoom type='entire-view' />
+        <zoom type='fit-width' />
       </viewpoint>
-      <simple-id uuid='{A99825DC-FDAA-501E-AB1F-8FB70E8CFA96}' />
+      <simple-id uuid='{919DAE54-FF56-58BA-BCBC-44B0D11401F0}' />
     </window>
   </windows>
 </workbook>

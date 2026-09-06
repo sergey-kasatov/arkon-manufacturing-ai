@@ -408,10 +408,15 @@ in `tableau/Dashboard_Design.md` against sources that are cited there, and v2 im
 KPI cards with context, a Z-layout at 1300 x 900, red reserved for a response window that has
 run out, parameter filters, cross-filter actions, a drill-down sheet and a phone layout.
 Publishing is Sergey's sign-in and has not been done
-- [ ] **Executive view v3** - a deeper rework of the same dashboard to a board-room bar, and
-the same design carried into an Executive page in the cockpit so there is a surface that is
-live without a publish step. Tableau Public cannot auto-refresh; the honest form of "live"
-there is regenerate, rebuild and republish
+- [x] **Executive view v3** - built 2026-09-06 to `tableau/Dashboard_Design_v3.md`: four BANs
+on one baseline, a generated status sentence, an aging profile as the dominant view, bullet bars
+as ratios to each incident's own window, and the same design carried into an Executive page in
+the cockpit (`/executive`) so there is a surface that is live without a publish step. The same
+afternoon the workbook was split into two dashboards, an Executive view with no controls at all
+and an Explore view with real filter cards, the model chart and the incident list, every Explore
+panel its own worksheet so a filter picked there cannot move the Executive numbers
+(`tableau/README.md`). Tableau Public cannot auto-refresh; the honest form of "live" there is
+regenerate, rebuild and republish
 - [x] **The live plant, the demo engine - a mini-project of its own** (`live_plant/`, built
 2026-09-05, `live_plant/README.md`). One real-model incident every ten minutes or so, drawn from
 the seven modules' own published batches and re-timed, round-robin over the modules so seven
