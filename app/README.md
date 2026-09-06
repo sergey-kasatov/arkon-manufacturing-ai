@@ -92,16 +92,32 @@ lives only on the NAS.
 Redeploying after a change means shipping the context again; there is no git
 checkout on the NAS.
 
+The same image carries the live plant, `live_plant/plant.py`, as the `live-plant`
+service behind the `live` compose profile (`docker compose -f app/docker-compose.yml
+--env-file .env --profile live up -d live-plant`, from the same directory). It is a
+separate service on purpose: the cockpit reads and the plant writes, and a plain
+`up -d` of the cockpit must never start something that sends Telegram cards. Its
+ledger lives at `/volume1/docker/arkon/live_plant/` beside the store. It is a
+mini-project of its own: `live_plant/README.md`.
+
 ## Known boundaries
 
 - **No authentication**, like the two services behind it. LAN and Tailscale only,
   and it must not be port-forwarded.
-- **It is read-only except through the assistant.** The lifecycle write path
-  exists (`POST /webhook/arkon-incident-transition`) and this app deliberately
-  does not call it: an acknowledge button here would be a second, unguarded way
-  to change an incident, and the gate in front of a write is the pattern this
-  project has committed to. The transition endpoint is driven by
-  `n8n/drive_incident.py` or by an operator.
+- **It writes one thing: lifecycle transitions, from the Steering Cell page.** Until
+  2026-09-05 this app was read-only by design (an acknowledge button was judged a
+  second, unguarded way to change an incident, the gate in front of a write being
+  the project's pattern), and the consequence was that a person who received a
+  card had no surface at all to acknowledge, contain, resolve or close it: only
+  `n8n/drive_incident.py` from a terminal. Sergey decided that day that the
+  operator's controls belong on the operational screen. "Move this incident"
+  under the incident detail offers only the moves charter 7.2 allows from the
+  current state, records the name typed in as the actor, and shows the endpoint's
+  answer as it came, including a 409 when someone moved the incident first. What
+  has not changed: the endpoint is the authority, the record is the transition
+  log, and there is no authentication, so this is a LAN and Tailscale control like
+  everything else here, not an audited one. The assistant's escalation stays
+  behind its approval gate and remains the only write an agent can perform.
 - **The assistant page polls.** A turn is a small state machine across Streamlit
   reruns, so a long answer redraws the page every two seconds. That is fine at
   demo scale and is not how a production chat would be built.
