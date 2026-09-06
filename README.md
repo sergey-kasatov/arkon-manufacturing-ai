@@ -655,7 +655,13 @@ MVP criterion of charter section 10, an operational interface (`langflow/README.
 link that opens that incident on the cockpit and a drafted note for the transition form, so the
 operator arrives with the form filled and signs it with their own name. It still cannot
 acknowledge, contain, resolve or close, and the reason is in the architecture section above: the
-timestamp has to measure the plant, not the agent
+timestamp has to measure the plant, not the agent. **It needs an OpenRouter credential to run at
+all** - eight nodes across the three flows hold one, and without it retrieval stops too, because a
+question is embedded at query time even though Qdrant holds the vectors. The key this deployment
+uses was issued by the course and ends with it in September 2026; replacing it is one credential
+and no node changes (`langflow/README.md`). Nothing else in the platform depends on it: the
+Steering Cell, the cockpit, the executive view, the live plant and the Tableau layer all keep
+running
 - [x] **NLP module - NHTSA consumer-complaint field quality.** TF-IDF over unigrams and
 bigrams with a one-vs-rest linear classifier over 24 component classes, built from scratch
 as a notebook trio on 2026-09-03 (`notebooks/04_nlp/01_nhtsa_complaints/`,

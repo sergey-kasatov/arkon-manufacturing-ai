@@ -280,6 +280,31 @@ assignee from the event's own `operational_context`. The escalation workflow,
 the router's five intents and the shift briefing were untouched. That was the
 claim, and it now has one measurement behind it instead of none.
 
+## What it needs to run at all
+
+**An OpenRouter credential, and it is not optional.** Eight nodes across the three
+flows hold one: the five LLM nodes and the embeddings on the assistant, the embeddings
+on the ingest flow, and the briefing sub-flow. Without a working key the assistant
+stops answering **and retrieval stops with it** - a question has to be embedded at
+query time even though Qdrant already holds the vectors, so a valid key is needed to
+search a store that is entirely on disk. The store cannot be rebuilt either.
+
+The key lives as the Langflow global variable `OPENROUTER_API_KEY`, set on the NAS and
+never in this repository.
+
+**The key this deployment runs on belongs to a course and ends with it.** It was issued
+by Masterschool and is disconnected when the course finishes, around 2026-09-14, which
+is a date rather than a risk. Replacing it is one credential swap and no node changes;
+any OpenRouter key covers both the chat models and the embeddings, which is why a
+provider-specific key would be a worse answer here - it would leave the embeddings
+without a provider and need a component change on six nodes.
+
+**What does NOT stop**, and it is most of the platform: the n8n Quality Steering Cell,
+the Streamlit cockpit, the executive view, the live plant and the Tableau layer. None
+of them touches OpenRouter. So an expired key takes one of the two operator surfaces
+dark and leaves the system running - which is why this paragraph exists rather than a
+silent failure at some later date.
+
 ## Which model it runs on, and how that was decided
 
 `google/gemini-2.5-flash` on the two reading specialists, `google/gemini-3.1-flash-lite`
