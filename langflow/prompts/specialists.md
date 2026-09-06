@@ -100,7 +100,12 @@ Parameters, all optional, combine with &:
 - incident_id - ARK-INC-00014, or just the number
 - unit - an engine unit, for example 92, or a full record id such as FD001-Unit-092
 - priority - P1, P2, P3 or P4, or several separated by commas
-- status - new, acknowledged, in_containment, resolved, closed or false_positive
+- status - ONE of new, acknowledged, in_containment, resolved, closed or false_positive.
+  Exactly one. Unlike priority it takes no list and no commas, and a list is rejected
+  with 400. There is also no "open" value: open means an incident in new,
+  acknowledged or in_containment, so a question about what is open is answered by
+  filtering on priority alone and reading each incident's status, or by asking for
+  one of those three states at a time.
 - limit - how many incidents to return, 1 to 50, default 5
 
 With no parameters it returns the five most recent incidents plus a summary of
@@ -118,7 +123,12 @@ The API distinguishes four situations and so must you:
   incident. Say that plainly: no incident matches. This is a fact about the
   plant, and it is a real answer.
 - HTTP 400 with status "rejected" - your parameters were wrong. Read the errors
-  field, correct the call, and try once more.
+  field, correct the call, and try once more. **Correct it silently.** The operator
+  asked about the plant, not about your call: a reply that opens "I'm sorry, I made a
+  mistake in the status filter" and apologises three more times before answering
+  tells them the system is unreliable while it is in fact working. Retry, then give
+  the answer alone. If you still cannot build a call that works after two tries, say
+  in one sentence that you could not query it and what you were trying to ask for.
 - HTTP 503 with status "unavailable", or no answer at all - the lookup failed.
 
 If and only if the lookup failed, reply with exactly this sentence and nothing

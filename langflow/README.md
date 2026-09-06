@@ -280,6 +280,58 @@ assignee from the event's own `operational_context`. The escalation workflow,
 the router's five intents and the shift briefing were untouched. That was the
 claim, and it now has one measurement behind it instead of none.
 
+## Which model it runs on, and how that was decided
+
+`google/gemini-2.5-flash` on the two reading specialists, `google/gemini-3.1-flash-lite`
+on the router and the two escalation nodes, embeddings on
+`google/gemini-embedding-001`. All through OpenRouter.
+
+**The split is deliberate.** The router picks one of six branches from a short prompt,
+which is the one job on this canvas the cheapest tier is genuinely sized for. The two
+reading specialists are the nodes whose mistakes end up in an operator's permanent
+record, so they get the better model.
+
+**It was decided by measurement, and `langflow/build/compare_models.py` is the
+measurement.** Five questions with mechanical checks: an open incident must come back
+with the operator link and a note that invents no source, a closed one must come back
+with no link, a procedure question must name the cockpit page and both acknowledgement
+windows, a filter the API does not take must be handled without narrating the retries,
+and a question outside the ten documents must produce the exact refusal sentence and
+nothing after it. Check one is the NHTSA telemetry invention of 2026-09-05 kept as a
+regression test.
+
+**Result over three clean repeats:** `gemini-2.5-flash` scored 11, 11 and 11 of 11;
+`gemini-3.1-flash-lite` scored 10, 10 and 8. On the battery as it now stands, with the
+retry case added, the deployed pair scores 14 of 14. The price difference is
+0.30 against 0.25 dollars per million input tokens, which is nothing at human-paced
+usage: the assistant is asked questions by people, not by the plant.
+
+**Three defects in that comparison are worth more than its result**, because each one
+produced a confident wrong answer first.
+
+1. **A checker that rewarded silence.** Two candidate models were blocked by OpenRouter
+   and returned nothing at all, and the battery scored both at 4 of 11 - four of the
+   checks are negative (invents no source, withholds the link, claims no button, adds
+   nothing) and an empty string passes every one. The only hint was that two unrelated
+   models had produced identical scores. An answer that did not arrive is now a hard
+   failure of every check in its case, with the reason printed.
+2. **A checker that accused a correct answer.** "Gives the window" demanded "60" or
+   "one hour"; the model wrote "1 hour" and was marked wrong. A rule that matches one
+   wording looks rigorous and is not.
+3. **A session id that left out the model**, so two models shared Langflow's chat
+   memory and the second one answered from the first one's turn. That run returned
+   four BYTE-IDENTICAL answers from two different models, which is impossible, and it
+   is the only reason the result was questioned at all. Two models scoring the same is
+   a result; two models producing the same characters is a bug.
+
+**The real constraint is not the model, it is the OpenRouter workspace guardrail.**
+`gemini-3.6-flash`, `gemini-2.5-pro`, `gpt-5-mini` and `claude-sonnet-5` were all
+refused with "0 endpoints out of N requested are available matching your guardrail
+restrictions and data policy", so the choice above is the best of what the account
+currently permits rather than the best available. Whoever widens that setting should
+re-run the battery; the script takes model ids as arguments and restores the previous
+model unless `--keep` is passed.
+
 ## Known gaps
 
 - **The document store holds 10 documents and is not coverage.** Charter, SOP,
