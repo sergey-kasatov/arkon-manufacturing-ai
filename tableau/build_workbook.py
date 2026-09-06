@@ -153,13 +153,20 @@ RIGHT_COLUMN = 600
 # DASH_H: bands() normalises whatever it is handed, so a budget that does not add
 # up rescales every box silently instead of failing. build() asserts it, and so
 # does the test suite.
-EXECUTIVE_BANDS = [84, 150, 374, 236, 56]  # header, cards, main row, feed, footer
+EXECUTIVE_BANDS = [84, 190, 334, 236, 56]  # header, cards, main row, feed, footer
 # Measured 2026-09-06: a fixed band costs its pixels PLUS its 4 px margin on each
 # side, and the one flexible band (the main row) gets what is left. The Explore
 # list gives up two rows so that seven model rows get about 24 px each instead of
-# the 15 that made their names overlap. The cards stay at 150: at 130 the number
-# no longer fit and Tableau printed a row of hashes in its place.
-EXPLORE_BANDS = [84, 56, 150, 362, 200, 48]  # header, filters, cards, main row, list, footer
+# the 15 that made their names overlap.
+#
+# The cards are 190, not the 150 the application needed. Measured the same evening
+# on the PUBLISHED view: Tableau Public's web renderer gives the three-line label
+# less room than the application does. At 150 it printed a row of hashes in the two
+# cards whose number is a numeric field and cut the context line of the other two to
+# "..", while the application had rendered all four at 150 and failed only at 130.
+# 190 leaves 170 px inside the zone padding, about a third more than the
+# application's own minimum; the main row and the Explore list pay for it.
+EXPLORE_BANDS = [84, 56, 190, 362, 160, 48]  # header, filters, cards, main row, list, footer
 
 BULLET_ROWS = 6
 
@@ -646,7 +653,7 @@ def kpi_runs(label, number_field, context_field, alert=False):
     left = {"fontalignment": "0"}
     soft = dict(left, fontcolor=COLOR_INK_SOFT, fontname=FONT_MEDIUM, fontsize="11")
     number = dict(left, bold="true", fontcolor=COLOR_ALERT if alert else COLOR_INK,
-                  fontname=FONT_BOLD, fontsize="38")
+                  fontname=FONT_BOLD, fontsize="36")
     context = dict(left, fontcolor=COLOR_INK_SOFT, fontname=FONT_BOOK, fontsize="13")
     left_newline = run_xml("Æ&#10;", left, raw=True)
     return [
@@ -1005,15 +1012,19 @@ def ys(px):
 
 
 def bands(heights_px, total=100000):
-    """Stack full-width boxes top to bottom; the last one absorbs rounding."""
-    out = []
+    """Stack full-width boxes top to bottom, each running from the rounded position
+    of its top edge to the rounded position of its bottom edge, the last one to
+    `total`. Rounding every HEIGHT separately, as this did until 2026-09-06, is not
+    a partition: a rounded top plus a rounded height is not always the next rounded
+    top, and the 84/190/334/236/56 budget opened a one-unit gap between the main row
+    and the feed that the test suite caught."""
+    edges = []
     y_px = 0
-    for index, height in enumerate(heights_px):
-        y = ys(y_px)
-        h = total - y if index == len(heights_px) - 1 else ys(height)
-        out.append(Box(0, y, 100000, h))
+    for height in heights_px:
+        edges.append(ys(y_px))
         y_px += height
-    return out
+    edges.append(total)
+    return [Box(0, top, 100000, bottom - top) for top, bottom in zip(edges, edges[1:])]
 
 
 def split(box, weights):
@@ -1887,23 +1898,25 @@ def build(skip_extracts=False, phone=True, actions=True):
         # Phone, Executive: title, the overdue card alone, the aging profile, the other
         # three cards. The feed and the bullet chart are desktop-only. One card per
         # row: a phone is too narrow for two three-line cards side by side (the label
-        # of the narrower one came out as asterisks).
-        p_title, p_overdue, p_aging, p_open, p_ack, p_close = bands([70, 110, 300, 90, 90, 90])
+        # of the narrower one came out as asterisks). Every card is 170 px tall: the
+        # web renderer needs about 170 px for the three-line label (see the note on
+        # EXECUTIVE_BANDS), and the phone zones carry no padding of their own.
+        p_title, p_overdue, p_aging, p_open, p_ack, p_close = bands([70, 170, 300, 170, 170, 170])
         phone_zones = [
             text_zone(13, p_title, heading, fixed_px=70, padding=0),
-            sheet_zone(41, p_overdue, S_KPI_OVERDUE, kpi=True, fixed_px=110, color=COLOR_CARD, padding=0),
+            sheet_zone(41, p_overdue, S_KPI_OVERDUE, kpi=True, fixed_px=170, color=COLOR_CARD, padding=0),
             sheet_zone(51, p_aging, S_AGING, fixed_px=300, color=COLOR_CARD, padding=0),
-            sheet_zone(42, p_open, S_KPI_OPEN, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
-            sheet_zone(43, p_ack, S_KPI_ACK, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
-            sheet_zone(44, p_close, S_KPI_CLOSE, kpi=True, fixed_px=90, color=COLOR_CARD, padding=0),
+            sheet_zone(42, p_open, S_KPI_OPEN, kpi=True, fixed_px=170, color=COLOR_CARD, padding=0),
+            sheet_zone(43, p_ack, S_KPI_ACK, kpi=True, fixed_px=170, color=COLOR_CARD, padding=0),
+            sheet_zone(44, p_close, S_KPI_CLOSE, kpi=True, fixed_px=170, color=COLOR_CARD, padding=0),
         ]
         # Phone, Explore: title, the priority card, the overdue card, both bar charts.
         # The list is desktop-only; a seven-column table has no phone form.
-        q_title, q_filter, q_overdue, q_aging, q_models = bands([70, 60, 110, 300, 260])
+        q_title, q_filter, q_overdue, q_aging, q_models = bands([70, 60, 170, 300, 260])
         x_phone_zones = [
             text_zone(213, q_title, x_heading, fixed_px=70, padding=0),
             filter_zone(217, q_filter, priority, S_X_AGING, fixed_px=60),
-            sheet_zone(241, q_overdue, S_X_KPI_OVERDUE, kpi=True, fixed_px=110, color=COLOR_CARD, padding=0),
+            sheet_zone(241, q_overdue, S_X_KPI_OVERDUE, kpi=True, fixed_px=170, color=COLOR_CARD, padding=0),
             sheet_zone(251, q_aging, S_X_AGING, fixed_px=300, color=COLOR_CARD, padding=0),
             sheet_zone(252, q_models, S_MODULES, fixed_px=260, color=COLOR_CARD, padding=0),
         ]

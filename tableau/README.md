@@ -343,6 +343,18 @@ Tableau view for the executive.
 
 **Published 2026-09-06.** The workbook is live at https://public.tableau.com/views/ArkonQualitySteeringCell/ArkonExecutiveView (the Executive view; the Explore view is the second tab, also reachable as https://public.tableau.com/views/ArkonQualitySteeringCell/ArkonExploreView). Title "Arkon Quality Steering Cell", a 218-character description with the hashtags as tags, the repository as the external link. Refreshing the published copy is the loop of "Running it live" plus one Save to Tableau Public from the application.
 
+**Corrected the same evening: the published view printed hashes in two of the four
+KPI cards.** Tableau Public's web renderer gives the three-line card label less room
+than the application does. At the 150 px card band the application rendered all four
+cards (and failed only at 130); the web put a row of hashes where the OVERDUE and OPEN
+numbers were (both numeric fields) and cut the context line of the two string cards to
+"..", on both dashboards and in the phone layout. Measured on the live URL with a
+headless Chrome capture at 1640 px, not assumed. The generator now gives the cards
+190 px (170 inside the padding) and the phone cards 170, with the figure at 36 pt;
+the main row and the Explore list pay for it. There is no way to verify the fix but
+on the published view, so the check after the next Save to Tableau Public is to open
+the public URL and read the four cards.
+
 **Sergey's decision is to publish to Tableau Public.** So the shape is settled:
 the workbook lives at a public URL that this repository and `kasatov.de` can link,
 and the extracts are committed here so the published view and the repository can

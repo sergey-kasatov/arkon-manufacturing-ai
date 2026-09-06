@@ -122,8 +122,8 @@ list):
 | Band | px | Holds |
 |---|---|---|
 | Header | 84 | Title, the generated status sentence, the as-of stamp |
-| KPI row | 150 | Four BANs |
-| Main | 374 | Aging profile (62 percent) and bullet bars (38 percent) |
+| KPI row | 190 | Four BANs (150 until 2026-09-06 evening; the published view needed more, section 15) |
+| Main | 334 | Aging profile (62 percent) and bullet bars (38 percent) |
 | Strip | 236 | Activity feed, full width |
 | Footer | 56 | What this store is |
 
@@ -348,14 +348,15 @@ match with a system stack. Five sizes and no more:
 |---|---|---|---|
 | Dashboard title | 22 pt | Medium | ink |
 | Status sentence | 13 pt | Regular | ink |
-| BAN | 38 pt | Bold | ink, or breach on card 1 |
+| BAN | 36 pt | Bold | ink, or breach on card 1 (38 until 2026-09-06 evening, section 15) |
 | Card label | 10 pt | Bold, letterspaced, uppercase | context |
 | Card context, captions, axis | 11 pt | Regular | context |
 | Chart title | 13 pt | Medium | ink |
 | Bar value label | 12 pt | Bold | ink |
 
 Sergey asked for 36 to 40 pt figures on one baseline and 11 to 12 pt bold bar labels;
-38 and 12 sit in both ranges. Gridlines, zero lines, row banding and worksheet borders
+36 and 12 sit in both ranges (the figure was 38 until the published view showed that
+the web renderer needs more room than the application, section 15). Gridlines, zero lines, row banding and worksheet borders
 stay off, as in v2. Axis titles are dropped wherever the chart title already names the
 unit.
 
@@ -483,19 +484,33 @@ than a feature. Both views stay 1600 x 900, the shape of a shared window.
 four BANs, the status sentence, the aging profile, the bullet bars, and the activity
 feed across the whole strip. The model chart left it: ranked last in the hierarchy,
 least decision-relevant for an executive, and with seven rows the one panel that
-could not be made legible in a strip. There is no filter band. Bands: 84, 150, 374,
-236, 56.
+could not be made legible in a strip. There is no filter band. Bands: 84, 190, 334,
+236, 56 (the cards were 150 and the main row 374 until the evening of 2026-09-06; the
+paragraph on the published view below records why they moved).
 
 **The Explore view**, top to bottom: the title with one line of instruction instead of
 the status sentence (a sentence about the whole store would contradict a filtered
 page one click later); a filter band with a label and three cards, left-aligned like
 everything else; the same four BANs; the aging profile beside the model chart, in
 one row with the same 62/38 split; the incident list across the whole width; a
-footer that says it is the same store and the same extract. Bands: 84, 56, 150,
-362, 200, 48. The cards stay at 150 because at 130 the number no longer fits and
-Tableau prints a row of hashes in its place. The list gives up two visible rows so
-that the seven model rows get about 24 px each, which is where their names stop
-overlapping; it scrolls, and after a click on a bar it is short anyway.
+footer that says it is the same store and the same extract. Bands: 84, 56, 190,
+362, 160, 48. The list gives up rows so that the seven model rows get about 24 px
+each, which is where their names stop overlapping; it scrolls, and after a click on
+a bar it is short anyway.
+
+**The published view needed taller cards than the application, measured 2026-09-06
+evening.** In the application the four cards rendered at a 150 px band and failed at
+130, where Tableau printed a row of hashes in place of the number. On Tableau Public,
+read from the live URL with a headless Chrome capture at 1640 px, the same 150 px
+band printed hashes in the OVERDUE and OPEN cards (the two whose number is a numeric
+field) and cut the context line of the two string cards to "..", on both dashboards
+and in the phone layout: the web renderer gives the three-line label less room than
+the application does. So the cards are 190 (170 px inside the 10 px zone padding,
+about a third more than the application's own minimum), the phone cards 170 with no
+padding, and the figure is 36 pt rather than 38, still inside the 36 to 40 asked for.
+The main row (334) and the Explore list (160) pay for it. The fix can only be
+verified on the published view, so the check after the next Save to Tableau Public
+is to open the public URL and read the four cards.
 
 **Every Explore sheet is its own worksheet.** A filter is worksheet state, not
 dashboard state, so one card sheet placed on both dashboards would let a Priority

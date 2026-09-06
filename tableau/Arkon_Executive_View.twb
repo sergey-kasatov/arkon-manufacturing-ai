@@ -1241,7 +1241,7 @@
               <formatted-text>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>OVERDUE</run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run bold='true' fontalignment='0' fontcolor='#C0392B' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_120:qk]>]]></run>
+                <run bold='true' fontalignment='0' fontcolor='#C0392B' fontname='Tableau Bold' fontsize='36'><![CDATA[<[federated.arkonincidents].[usr:Calculation_120:qk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_121:nk]>]]></run>
               </formatted-text>
@@ -1288,7 +1288,7 @@
               <formatted-text>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>OPEN</run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_106:qk]>]]></run>
+                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='36'><![CDATA[<[federated.arkonincidents].[usr:Calculation_106:qk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_124:nk]>]]></run>
               </formatted-text>
@@ -1335,7 +1335,7 @@
               <formatted-text>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>TIME TO ACKNOWLEDGE</run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_126:nk]>]]></run>
+                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='36'><![CDATA[<[federated.arkonincidents].[usr:Calculation_126:nk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_127:nk]>]]></run>
               </formatted-text>
@@ -1382,7 +1382,7 @@
               <formatted-text>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>TIME TO CLOSE</run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_129:nk]>]]></run>
+                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='36'><![CDATA[<[federated.arkonincidents].[usr:Calculation_129:nk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_133:nk]>]]></run>
               </formatted-text>
@@ -1738,7 +1738,7 @@
               <formatted-text>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>OVERDUE</run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run bold='true' fontalignment='0' fontcolor='#C0392B' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_120:qk]>]]></run>
+                <run bold='true' fontalignment='0' fontcolor='#C0392B' fontname='Tableau Bold' fontsize='36'><![CDATA[<[federated.arkonincidents].[usr:Calculation_120:qk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_121:nk]>]]></run>
               </formatted-text>
@@ -1805,7 +1805,7 @@
               <formatted-text>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>OPEN</run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_106:qk]>]]></run>
+                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='36'><![CDATA[<[federated.arkonincidents].[usr:Calculation_106:qk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_124:nk]>]]></run>
               </formatted-text>
@@ -1872,7 +1872,7 @@
               <formatted-text>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>TIME TO ACKNOWLEDGE</run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_126:nk]>]]></run>
+                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='36'><![CDATA[<[federated.arkonincidents].[usr:Calculation_126:nk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_127:nk]>]]></run>
               </formatted-text>
@@ -1939,7 +1939,7 @@
               <formatted-text>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>TIME TO CLOSE</run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_129:nk]>]]></run>
+                <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='36'><![CDATA[<[federated.arkonincidents].[usr:Calculation_129:nk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_133:nk]>]]></run>
               </formatted-text>
@@ -2450,9 +2450,9 @@
               <format attr='margin' value='4' />
             </zone-style>
           </zone>
-          <zone fixed-size='150' h='16667' id='20' is-fixed='true' layout-strategy-id='distribute-evenly' param='horz' type-v2='layout-flow' w='100000' x='0' y='9333'>
-            <zone h='16667' id='21' param='horz' type-v2='layout-flow' w='25000' x='0' y='9333'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='31' is-fixed='true' type-v2='text' w='387' x='0' y='9333'>
+          <zone fixed-size='150' h='21111' id='20' is-fixed='true' layout-strategy-id='distribute-evenly' param='horz' type-v2='layout-flow' w='100000' x='0' y='9333'>
+            <zone h='21111' id='21' param='horz' type-v2='layout-flow' w='25000' x='0' y='9333'>
+              <zone fixed-size='6' forceUpdate='true' h='21111' id='31' is-fixed='true' type-v2='text' w='387' x='0' y='9333'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2465,7 +2465,7 @@
                   <format attr='background-color' value='#C0392B' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='41' name='KPI Overdue' show-title='false' w='24613' x='387' y='9333'>
+              <zone h='21111' id='41' name='KPI Overdue' show-title='false' w='24613' x='387' y='9333'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2483,8 +2483,8 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone h='16667' id='22' param='horz' type-v2='layout-flow' w='25000' x='25000' y='9333'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='32' is-fixed='true' type-v2='text' w='387' x='25000' y='9333'>
+            <zone h='21111' id='22' param='horz' type-v2='layout-flow' w='25000' x='25000' y='9333'>
+              <zone fixed-size='6' forceUpdate='true' h='21111' id='32' is-fixed='true' type-v2='text' w='387' x='25000' y='9333'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2497,7 +2497,7 @@
                   <format attr='background-color' value='#D8D8D2' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='42' name='KPI Open' show-title='false' w='24613' x='25387' y='9333'>
+              <zone h='21111' id='42' name='KPI Open' show-title='false' w='24613' x='25387' y='9333'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2515,8 +2515,8 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone h='16667' id='23' param='horz' type-v2='layout-flow' w='25000' x='50000' y='9333'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='33' is-fixed='true' type-v2='text' w='387' x='50000' y='9333'>
+            <zone h='21111' id='23' param='horz' type-v2='layout-flow' w='25000' x='50000' y='9333'>
+              <zone fixed-size='6' forceUpdate='true' h='21111' id='33' is-fixed='true' type-v2='text' w='387' x='50000' y='9333'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2529,7 +2529,7 @@
                   <format attr='background-color' value='#D8D8D2' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='43' name='KPI Time to acknowledge' show-title='false' w='24613' x='50387' y='9333'>
+              <zone h='21111' id='43' name='KPI Time to acknowledge' show-title='false' w='24613' x='50387' y='9333'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2547,8 +2547,8 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone h='16667' id='24' param='horz' type-v2='layout-flow' w='25000' x='75000' y='9333'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='34' is-fixed='true' type-v2='text' w='387' x='75000' y='9333'>
+            <zone h='21111' id='24' param='horz' type-v2='layout-flow' w='25000' x='75000' y='9333'>
+              <zone fixed-size='6' forceUpdate='true' h='21111' id='34' is-fixed='true' type-v2='text' w='387' x='75000' y='9333'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2561,7 +2561,7 @@
                   <format attr='background-color' value='#D8D8D2' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='44' name='KPI Time to close' show-title='false' w='24613' x='75387' y='9333'>
+              <zone h='21111' id='44' name='KPI Time to close' show-title='false' w='24613' x='75387' y='9333'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2586,8 +2586,8 @@
               <format attr='margin' value='4' />
             </zone-style>
           </zone>
-          <zone h='41556' id='50' param='horz' type-v2='layout-flow' w='100000' x='0' y='26000'>
-            <zone h='41556' id='51' name='Open incidents by age' w='62000' x='0' y='26000'>
+          <zone h='37112' id='50' param='horz' type-v2='layout-flow' w='100000' x='0' y='30444'>
+            <zone h='37112' id='51' name='Open incidents by age' w='62000' x='0' y='30444'>
               <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -2598,7 +2598,7 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone fixed-size='600' h='41556' id='52' is-fixed='true' name='Time to acknowledge' w='38000' x='62000' y='26000'>
+            <zone fixed-size='600' h='37112' id='52' is-fixed='true' name='Time to acknowledge' w='38000' x='62000' y='30444'>
               <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -2669,7 +2669,7 @@
                     <format attr='padding' value='0' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='110' h='12222' id='41' is-fixed='true' name='KPI Overdue' show-title='false' w='100000' x='0' y='7778'>
+                <zone fixed-size='170' h='18889' id='41' is-fixed='true' name='KPI Overdue' show-title='false' w='100000' x='0' y='7778'>
                   <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -2680,7 +2680,7 @@
                     <format attr='background-color' value='#FFFFFF' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='300' h='33333' id='51' is-fixed='true' name='Open incidents by age' w='100000' x='0' y='20000'>
+                <zone fixed-size='300' h='33333' id='51' is-fixed='true' name='Open incidents by age' w='100000' x='0' y='26667'>
                   <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -2691,7 +2691,7 @@
                     <format attr='background-color' value='#FFFFFF' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='90' h='10000' id='42' is-fixed='true' name='KPI Open' show-title='false' w='100000' x='0' y='53333'>
+                <zone fixed-size='170' h='18889' id='42' is-fixed='true' name='KPI Open' show-title='false' w='100000' x='0' y='60000'>
                   <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -2702,7 +2702,7 @@
                     <format attr='background-color' value='#FFFFFF' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='90' h='10000' id='43' is-fixed='true' name='KPI Time to acknowledge' show-title='false' w='100000' x='0' y='63333'>
+                <zone fixed-size='170' h='18889' id='43' is-fixed='true' name='KPI Time to acknowledge' show-title='false' w='100000' x='0' y='78889'>
                   <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -2713,7 +2713,7 @@
                     <format attr='background-color' value='#FFFFFF' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='90' h='26667' id='44' is-fixed='true' name='KPI Time to close' show-title='false' w='100000' x='0' y='73333'>
+                <zone fixed-size='170' h='2222' id='44' is-fixed='true' name='KPI Time to close' show-title='false' w='100000' x='0' y='97778'>
                   <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -2787,8 +2787,8 @@
               <format attr='margin' value='4' />
             </zone-style>
           </zone>
-          <zone fixed-size='56' h='6222' id='215' is-fixed='true' param='horz' type-v2='layout-flow' w='100000' x='0' y='9333'>
-            <zone fixed-size='160' forceUpdate='true' h='6222' id='216' is-fixed='true' type-v2='text' w='10309' x='0' y='9333'>
+          <zone fixed-size='56' h='6223' id='215' is-fixed='true' param='horz' type-v2='layout-flow' w='100000' x='0' y='9333'>
+            <zone fixed-size='160' forceUpdate='true' h='6223' id='216' is-fixed='true' type-v2='text' w='10309' x='0' y='9333'>
               <formatted-text>
                 <run fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>FILTERS</run>
                 <run>Æ&#10;</run>
@@ -2801,7 +2801,7 @@
                 <format attr='margin' value='4' />
               </zone-style>
             </zone>
-            <zone fixed-size='300' h='6222' id='217' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:priority:nk]' type-v2='filter' values='database' w='19330' x='10309' y='9333'>
+            <zone fixed-size='300' h='6223' id='217' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:priority:nk]' type-v2='filter' values='database' w='19330' x='10309' y='9333'>
               <zone-style>
                 <format attr='border-color' value='#000000' />
                 <format attr='border-style' value='none' />
@@ -2809,7 +2809,7 @@
                 <format attr='margin' value='4' />
               </zone-style>
             </zone>
-            <zone fixed-size='300' h='6222' id='218' is-fixed='true' mode='dropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:source_module:nk]' type-v2='filter' values='database' w='19330' x='29639' y='9333'>
+            <zone fixed-size='300' h='6223' id='218' is-fixed='true' mode='dropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:source_module:nk]' type-v2='filter' values='database' w='19330' x='29639' y='9333'>
               <zone-style>
                 <format attr='border-color' value='#000000' />
                 <format attr='border-style' value='none' />
@@ -2817,7 +2817,7 @@
                 <format attr='margin' value='4' />
               </zone-style>
             </zone>
-            <zone fixed-size='300' h='6222' id='219' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:status:nk]' type-v2='filter' values='database' w='19330' x='48969' y='9333'>
+            <zone fixed-size='300' h='6223' id='219' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:status:nk]' type-v2='filter' values='database' w='19330' x='48969' y='9333'>
               <zone-style>
                 <format attr='border-color' value='#000000' />
                 <format attr='border-style' value='none' />
@@ -2825,7 +2825,7 @@
                 <format attr='margin' value='4' />
               </zone-style>
             </zone>
-            <zone forceUpdate='true' h='6222' id='229' type-v2='text' w='31701' x='68299' y='9333'>
+            <zone forceUpdate='true' h='6223' id='229' type-v2='text' w='31701' x='68299' y='9333'>
               <formatted-text>
                 <run> </run>
               </formatted-text>
@@ -2843,9 +2843,9 @@
               <format attr='margin' value='4' />
             </zone-style>
           </zone>
-          <zone fixed-size='150' h='16667' id='220' is-fixed='true' layout-strategy-id='distribute-evenly' param='horz' type-v2='layout-flow' w='100000' x='0' y='15556'>
-            <zone h='16667' id='221' param='horz' type-v2='layout-flow' w='25000' x='0' y='15556'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='231' is-fixed='true' type-v2='text' w='387' x='0' y='15556'>
+          <zone fixed-size='150' h='21111' id='220' is-fixed='true' layout-strategy-id='distribute-evenly' param='horz' type-v2='layout-flow' w='100000' x='0' y='15556'>
+            <zone h='21111' id='221' param='horz' type-v2='layout-flow' w='25000' x='0' y='15556'>
+              <zone fixed-size='6' forceUpdate='true' h='21111' id='231' is-fixed='true' type-v2='text' w='387' x='0' y='15556'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2858,7 +2858,7 @@
                   <format attr='background-color' value='#C0392B' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='241' name='Explore KPI Overdue' show-title='false' w='24613' x='387' y='15556'>
+              <zone h='21111' id='241' name='Explore KPI Overdue' show-title='false' w='24613' x='387' y='15556'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2876,8 +2876,8 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone h='16667' id='222' param='horz' type-v2='layout-flow' w='25000' x='25000' y='15556'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='232' is-fixed='true' type-v2='text' w='387' x='25000' y='15556'>
+            <zone h='21111' id='222' param='horz' type-v2='layout-flow' w='25000' x='25000' y='15556'>
+              <zone fixed-size='6' forceUpdate='true' h='21111' id='232' is-fixed='true' type-v2='text' w='387' x='25000' y='15556'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2890,7 +2890,7 @@
                   <format attr='background-color' value='#D8D8D2' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='242' name='Explore KPI Open' show-title='false' w='24613' x='25387' y='15556'>
+              <zone h='21111' id='242' name='Explore KPI Open' show-title='false' w='24613' x='25387' y='15556'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2908,8 +2908,8 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone h='16667' id='223' param='horz' type-v2='layout-flow' w='25000' x='50000' y='15556'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='233' is-fixed='true' type-v2='text' w='387' x='50000' y='15556'>
+            <zone h='21111' id='223' param='horz' type-v2='layout-flow' w='25000' x='50000' y='15556'>
+              <zone fixed-size='6' forceUpdate='true' h='21111' id='233' is-fixed='true' type-v2='text' w='387' x='50000' y='15556'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2922,7 +2922,7 @@
                   <format attr='background-color' value='#D8D8D2' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='243' name='Explore KPI Time to acknowledge' show-title='false' w='24613' x='50387' y='15556'>
+              <zone h='21111' id='243' name='Explore KPI Time to acknowledge' show-title='false' w='24613' x='50387' y='15556'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2940,8 +2940,8 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone h='16667' id='224' param='horz' type-v2='layout-flow' w='25000' x='75000' y='15556'>
-              <zone fixed-size='6' forceUpdate='true' h='16667' id='234' is-fixed='true' type-v2='text' w='387' x='75000' y='15556'>
+            <zone h='21111' id='224' param='horz' type-v2='layout-flow' w='25000' x='75000' y='15556'>
+              <zone fixed-size='6' forceUpdate='true' h='21111' id='234' is-fixed='true' type-v2='text' w='387' x='75000' y='15556'>
                 <formatted-text>
                   <run> </run>
                 </formatted-text>
@@ -2954,7 +2954,7 @@
                   <format attr='background-color' value='#D8D8D2' />
                 </zone-style>
               </zone>
-              <zone h='16667' id='244' name='Explore KPI Time to close' show-title='false' w='24613' x='75387' y='15556'>
+              <zone h='21111' id='244' name='Explore KPI Time to close' show-title='false' w='24613' x='75387' y='15556'>
                 <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -2979,8 +2979,8 @@
               <format attr='margin' value='4' />
             </zone-style>
           </zone>
-          <zone h='40222' id='250' param='horz' type-v2='layout-flow' w='100000' x='0' y='32222'>
-            <zone h='40222' id='251' name='Explore open incidents by age' w='62000' x='0' y='32222'>
+          <zone h='40222' id='250' param='horz' type-v2='layout-flow' w='100000' x='0' y='36667'>
+            <zone h='40222' id='251' name='Explore open incidents by age' w='62000' x='0' y='36667'>
               <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -2991,7 +2991,7 @@
                 <format attr='background-color' value='#FFFFFF' />
               </zone-style>
             </zone>
-            <zone fixed-size='600' h='40222' id='252' is-fixed='true' name='Incidents by model' w='38000' x='62000' y='32222'>
+            <zone fixed-size='600' h='40222' id='252' is-fixed='true' name='Incidents by model' w='38000' x='62000' y='36667'>
               <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -3009,7 +3009,7 @@
               <format attr='margin' value='4' />
             </zone-style>
           </zone>
-          <zone fixed-size='200' h='22222' id='261' is-fixed='true' name='Incidents behind the filters' w='100000' x='0' y='72444'>
+          <zone fixed-size='200' h='17778' id='261' is-fixed='true' name='Incidents behind the filters' w='100000' x='0' y='76889'>
             <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
             <zone-style>
               <format attr='border-color' value='#000000' />
@@ -3062,7 +3062,7 @@
                     <format attr='padding' value='0' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='60' h='6667' id='217' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:priority:nk]' type-v2='filter' values='database' w='100000' x='0' y='7778'>
+                <zone fixed-size='60' h='6666' id='217' is-fixed='true' mode='checkdropdown' name='Explore open incidents by age' param='[federated.arkonincidents].[none:priority:nk]' type-v2='filter' values='database' w='100000' x='0' y='7778'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
                     <format attr='border-style' value='none' />
@@ -3070,7 +3070,7 @@
                     <format attr='margin' value='4' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='110' h='12222' id='241' is-fixed='true' name='Explore KPI Overdue' show-title='false' w='100000' x='0' y='14444'>
+                <zone fixed-size='170' h='18889' id='241' is-fixed='true' name='Explore KPI Overdue' show-title='false' w='100000' x='0' y='14444'>
                   <layout-cache cell-count-h='1' cell-count-w='1' type-h='cell' type-w='cell' />
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -3081,7 +3081,7 @@
                     <format attr='background-color' value='#FFFFFF' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='300' h='33333' id='251' is-fixed='true' name='Explore open incidents by age' w='100000' x='0' y='26667'>
+                <zone fixed-size='300' h='33334' id='251' is-fixed='true' name='Explore open incidents by age' w='100000' x='0' y='33333'>
                   <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -3092,7 +3092,7 @@
                     <format attr='background-color' value='#FFFFFF' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='260' h='40000' id='252' is-fixed='true' name='Incidents by model' w='100000' x='0' y='60000'>
+                <zone fixed-size='260' h='33333' id='252' is-fixed='true' name='Incidents by model' w='100000' x='0' y='66667'>
                   <layout-cache minheight='100' minwidth='100' type-h='scalable' type-w='scalable' />
                   <zone-style>
                     <format attr='border-color' value='#000000' />
