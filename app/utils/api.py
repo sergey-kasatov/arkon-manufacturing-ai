@@ -167,6 +167,59 @@ def resume_turn(job_id, request_id, decision):
     )
 
 
+def sessions(flow=None, limit=25):
+    """Past conversations, newest first, with enough of each to recognise it.
+
+    Resuming a conversation by id is only half of what an operator needs: they have
+    to be able to SEE what they had. Langflow has no endpoint that lists sessions,
+    but `/api/v1/monitor/messages` returns every message for a flow, so the list is
+    a grouping of that rather than a request.
+
+    Sessions started by a script are filtered out by name. They outnumber the human
+    ones on this deployment by roughly ten to one - a model comparison alone makes
+    ten - and a list where a person cannot find their own conversation is not a list.
+    """
+    query = "/api/v1/monitor/messages"
+    if flow:
+        query += "?flow_id=" + urllib.parse.quote(flow)
+    try:
+        rows = _langflow(query) or []
+    except AssistantError:
+        return []
+
+    grouped = {}
+    for row in rows:
+        session_id = row.get("session_id")
+        text = (row.get("text") or "").strip()
+        if not session_id or not text:
+            continue
+        entry = grouped.setdefault(session_id, {"id": session_id, "turns": 0,
+                                                "last": "", "preview": ""})
+        entry["turns"] += 1
+        stamp = str(row.get("timestamp") or "")
+        if stamp > entry["last"]:
+            entry["last"] = stamp
+        if not entry["preview"] and (row.get("sender") or "").lower() == "user":
+            # The cockpit prepends "[operator: Name, Role]" to what it sends, so the
+            # stored first line of a user message is that tag rather than the
+            # question. Showing it made every recent conversation preview read
+            # "[operator: P. Lindt, QC Engineer]", which is the one thing that tells
+            # a person nothing about which conversation it was.
+            lines = [line for line in text.splitlines()
+                     if line.strip() and not line.strip().startswith("[operator:")]
+            entry["preview"] = (lines[0] if lines else text.splitlines()[0])[:60]
+
+    # The scripted sessions this repository's own tools create. Named rather than
+    # pattern-matched on purpose: a filter that guessed would eventually hide a real
+    # conversation, and being wrong in that direction is the expensive one.
+    SCRIPTED = ("modelcheck-", "handover-check-", "route-fix-", "role-fix-", "greet-test-",
+                "ident-", "diag-", "restore-check", "cockpit-check-", "cockpit-smoke-",
+                "p1-retest-", "final-smoke-", "demo-rehearsal-")
+    human = [s for s in grouped.values() if not s["id"].startswith(SCRIPTED)]
+    human.sort(key=lambda s: s["last"], reverse=True)
+    return human[:limit]
+
+
 def history(session_id):
     """Every turn Langflow has stored under this session, oldest first.
 

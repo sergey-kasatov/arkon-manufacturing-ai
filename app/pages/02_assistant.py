@@ -72,6 +72,40 @@ with st.sidebar:
         state.session_id = "cockpit-" + uuid.uuid4().hex[:12]
         st.query_params["session"] = state.session_id
         st.rerun()
+
+    # Past conversations. Carrying the session id in the URL made a conversation
+    # resumable by anyone who had kept the id, which is half of what is needed: an
+    # operator has to be able to SEE what they had before they can go back to it.
+    # Langflow has no endpoint that lists sessions, so this is a grouping of its
+    # message table.
+    st.subheader("Past conversations")
+    try:
+        past = [s for s in api.sessions(flow=api.flow_id()) if s["id"] != state.session_id]
+    except api.AssistantError:
+        past = []
+    if not past:
+        st.caption("None yet, apart from this one.")
+    else:
+        labels = {
+            "%s  %s  (%d)" % (
+                (s["last"] or "")[5:16].replace("T", " ") or "unknown",
+                (s["preview"] or "no question recorded")[:34],
+                s["turns"],
+            ): s["id"]
+            for s in past
+        }
+        picked = st.selectbox("Reopen", ["choose one"] + list(labels), index=0)
+        if picked != "choose one":
+            state.session_id = labels[picked]
+            for key in ("messages", "job", "pending", "polls"):
+                state.pop(key, None)
+            st.query_params["session"] = state.session_id
+            st.rerun()
+        st.caption(
+            "Date, the first thing asked, and the number of messages. Scripted sessions "
+            "this repository's own tools create are filtered out by name."
+        )
+
     st.caption("Flow `%s` on %s" % (config.ASSISTANT_FLOW, config.LANGFLOW_URL))
 
 if not config.LANGFLOW_API_KEY:
