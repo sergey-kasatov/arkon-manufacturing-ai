@@ -40,6 +40,9 @@ plotly>=5.18
 streamlit>=1.32
 streamlit-option-menu>=0.3
 
+# ── Tableau ──────────────────────────────────────────────────────────────────
+tableauhyperapi>=0.0.26479    # .hyper extracts for tableau/build_workbook.py; Tableau Public accepts extracts only
+
 # ── LLM / RAG ────────────────────────────────────────────────────────────────
 langchain>=0.1
 langchain-community>=0.0.20

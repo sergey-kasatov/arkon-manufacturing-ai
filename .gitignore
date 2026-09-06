@@ -54,3 +54,20 @@ Thumbs.db
 # Langflow component templates, fetched from the running instance by
 # langflow/build/fetch_specs.py. Generated, and large.
 langflow/build/spec_*.json
+
+# Tableau extracts. Binary, rebuilt in seconds by tableau/build_workbook.py from
+# the committed CSVs, and referenced by absolute path from the workbook, so a
+# committed copy would neither diff nor open from another clone. The Hyper
+# daemon's log stays out too; the generator points it at the temp directory.
+tableau/extracts/*.hyper
+hyperd.log
+# The packaged .twbx is the same workbook zipped with those extracts: a binary
+# that regenerates with them. The .twb beside it is the tracked source.
+tableau/*.twbx
+# Tableau's own recovery copies, written beside an open workbook and left behind when
+# the process dies instead of closing.
+tableau/~*.twbr
+
+# The live plant's ledger: what live_plant/plant.py sent, what intake answered and
+# what the crew moved. Runtime state of one machine, like the n8n counters.
+live_plant/state/
