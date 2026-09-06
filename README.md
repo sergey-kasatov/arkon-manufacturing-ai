@@ -539,7 +539,7 @@ flowchart TD
   ES --> O4["Escalation Answer"]
   GATE -->|Reject| DEC["Escalation Declined"] --> O5["Declined Answer"]
 
-  R -->|Out of scope| O6["Out of Scope Answer"]
+  R -->|Out of scope| O6["What I can help with"]
   R -->|Unclear request| O7["Unclear Answer"]
 ```
 

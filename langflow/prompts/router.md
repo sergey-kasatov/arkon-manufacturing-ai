@@ -131,7 +131,7 @@ wrong incident.
 ### BLOCK: scope_out_message
 
 ```text
-That is outside what I cover, so here is what I can do instead.
+I do not have an answer for that one, but here is what I can help with.
 
 I answer three kinds of question, from the Arkon documents and from the live
 incident store, and I add nothing to either:

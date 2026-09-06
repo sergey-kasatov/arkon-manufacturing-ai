@@ -126,7 +126,7 @@ incident_out = lfbuild.clone_node(output_seed, "ChatOutput-inc01", (-450, 180),
 escalation_out = lfbuild.clone_node(output_seed, "ChatOutput-esc01", (-450, 460),
                                     display_name="Escalation Answer")
 scope_out = lfbuild.clone_node(output_seed, "ChatOutput-oos01", (-850, 720),
-                               display_name="Out of Scope Answer")
+                               display_name="What I can help with")
 
 chat_input["position"] = {"x": -1600, "y": 180}
 
