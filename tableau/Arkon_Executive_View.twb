@@ -1792,9 +1792,6 @@
           <style-rule element='zeroline'>
             <format attr='line-visibility' value='off' />
           </style-rule>
-          <style-rule element='axis'>
-            <format attr='display' class='0' field='[federated.arkonincidents].[usr:Calculation_101:qk]' scope='cols' value='false' />
-          </style-rule>
         </style>
         <panes>
           <pane selection-relaxation-option='selection-relaxation-allow'>
@@ -1816,16 +1813,8 @@
               </formatted-text>
             </customized-tooltip>
             <style>
-              <style-rule element='datalabel'>
-                <format attr='color-mode' value='auto' />
-                <format attr='color' value='#FFFFFF' />
-                <format attr='font-family' value='Tableau Book' />
-                <format attr='font-size' value='14' />
-              </style-rule>
               <style-rule element='mark'>
                 <format attr='size' value='1.7' />
-                <format attr='mark-labels-show' value='true' />
-                <format attr='mark-labels-cull' value='false' />
               </style-rule>
             </style>
           </pane>
@@ -2016,7 +2005,7 @@
               <style-rule element='datalabel'>
                 <format attr='color-mode' value='auto' />
                 <format attr='font-family' value='Tableau Book' />
-                <format attr='font-size' value='14' />
+                <format attr='font-size' value='10' />
               </style-rule>
               <style-rule element='mark'>
                 <format attr='size' value='1.7' />
@@ -2230,9 +2219,6 @@
           <style-rule element='zeroline'>
             <format attr='line-visibility' value='off' />
           </style-rule>
-          <style-rule element='axis'>
-            <format attr='display' class='0' field='[federated.arkonincidents].[usr:Calculation_101:qk]' scope='cols' value='false' />
-          </style-rule>
         </style>
         <panes>
           <pane selection-relaxation-option='selection-relaxation-allow'>
@@ -2254,16 +2240,9 @@
               </formatted-text>
             </customized-tooltip>
             <style>
-              <style-rule element='datalabel'>
-                <format attr='color-mode' value='auto' />
-                <format attr='font-family' value='Tableau Book' />
-                <format attr='font-size' value='10' />
-              </style-rule>
               <style-rule element='mark'>
                 <format attr='mark-color' value='#15304F' />
                 <format attr='size' value='1.7' />
-                <format attr='mark-labels-show' value='true' />
-                <format attr='mark-labels-cull' value='false' />
               </style-rule>
             </style>
           </pane>
