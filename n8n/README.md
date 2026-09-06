@@ -1033,7 +1033,7 @@ lack.
 
 **22:00, execution 7810, `success`, three cards.** `ARK-NTF-00004` to `00006` for
 `ARK-INC-00020`, `00019` and `00026`, message ids 87, 88 and 89, each record carrying Telegram's
-`message_id` and `date` (`candidates_overdue` fell from 14 to 11, the dedup reading the first run's records back; `sent_at` is now Telegram's `date`). Delivery is attested by Telegram's own reply in both executions, one `message_id` per card; no person had read the cards off the group when this was written, and the run log says so rather than claiming it.
+`message_id` and `date` (`candidates_overdue` fell from 14 to 11, the dedup reading the first run's records back; `sent_at` is now Telegram's `date`). Delivery is attested twice: by Telegram's own reply in both executions, one `message_id` per card, and by Sergey reading all six cards off the group at 22:07 on 2026-09-06 (his message and screenshot: `ARK-NTF-00002` to `00006` at 21:45 and 22:00, with the live plant's intake card for `ARK-INC-00213` at 21:52 between the two runs, which is where message id 86 went).
 
 ### Known boundaries
 
