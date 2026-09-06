@@ -79,9 +79,14 @@ AGE_BANDS = [
 
 CSS = """
 <style>
+  /* Streamlit pads its own block container by several rem top and bottom. On a
+     tool that is right; on a board meant to be read in one glance it measured as
+     240 px of empty screen at 1920x950, so it goes. */
+  .stMain .block-container { padding-top: 1.2rem; padding-bottom: 0.6rem; }
+  header[data-testid="stHeader"] { height: 0; min-height: 0; }
   .arkon-board {
     background: %(canvas)s;
-    padding: 26px 28px 22px 28px;
+    padding: 16px 20px 12px 20px;
     border-radius: 6px;
     font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     color: %(ink)s;
@@ -89,11 +94,11 @@ CSS = """
   .arkon-board * { box-sizing: border-box; }
   .ark-title { font-size: 22px; font-weight: 600; letter-spacing: -0.2px; margin: 0; }
   .ark-eyebrow { float: right; font-size: 11px; color: %(context)s; padding-top: 8px; }
-  .ark-status { font-size: 13px; color: %(ink)s; margin: 10px 0 0 0; max-width: 1100px; }
-  .ark-cards { display: flex; gap: 16px; margin: 20px 0 0 0; }
+  .ark-status { font-size: 13px; color: %(ink)s; margin: 6px 0 0 0; max-width: 1200px; }
+  .ark-cards { display: flex; gap: 12px; margin: 12px 0 0 0; }
   .ark-card {
     flex: 1 1 0; background: %(card)s; border-left: 6px solid %(rule)s;
-    padding: 14px 16px 13px 14px; text-align: left;
+    padding: 9px 14px 8px 12px; text-align: left;
   }
   .ark-card.breach { border-left-color: %(breach)s; }
   .ark-label {
@@ -102,15 +107,15 @@ CSS = """
   }
   /* One font size for all four numbers, so they share a baseline whatever their
      digit count, and left-aligned so the row has a vertical line in it. */
-  .ark-ban { font-size: 38px; font-weight: 700; line-height: 1.12; margin: 4px 0 2px 0; }
+  .ark-ban { font-size: 34px; font-weight: 700; line-height: 1.08; margin: 2px 0 1px 0; }
   .ark-ban.breach { color: %(breach)s; }
   .ark-ctx { font-size: 11px; color: %(context)s; margin: 0; }
-  .ark-panels { display: flex; gap: 16px; margin-top: 20px; align-items: stretch; }
-  .ark-panel { background: %(card)s; padding: 14px 16px 12px 16px; }
-  .ark-panel h3 { font-size: 13px; font-weight: 600; margin: 0 0 2px 0; color: %(ink)s; }
-  .ark-panel p.sub { font-size: 11px; color: %(context)s; margin: 0 0 12px 0; }
+  .ark-panels { display: flex; gap: 12px; margin-top: 12px; align-items: stretch; }
+  .ark-panel { background: %(card)s; padding: 10px 14px 8px 14px; }
+  .ark-panel h3 { font-size: 12.5px; font-weight: 600; margin: 0 0 1px 0; color: %(ink)s; }
+  .ark-panel p.sub { font-size: 10.5px; color: %(context)s; margin: 0 0 7px 0; line-height: 1.35; }
   table.ark-rows { width: 100%%; border-collapse: collapse; }
-  table.ark-rows td { padding: 3px 0; vertical-align: middle; border: 0; }
+  table.ark-rows td { padding: 1px 0; vertical-align: middle; border: 0; }
   td.ark-rowlabel {
     font-size: 11px; color: %(context)s; white-space: nowrap;
     padding-right: 10px; width: 1%%;
@@ -119,21 +124,46 @@ CSS = """
     font-size: 12px; font-weight: 700; color: %(ink)s; text-align: right;
     padding-left: 10px; width: 1%%; white-space: nowrap; font-variant-numeric: tabular-nums;
   }
-  .ark-track { position: relative; height: 15px; width: 100%%; }
-  .ark-seg { height: 15px; display: inline-block; vertical-align: top; }
+  .ark-track { position: relative; height: 13px; width: 100%%; }
+  .ark-seg { height: 13px; display: inline-block; vertical-align: top; }
   /* Few's comparative measure: a perpendicular tick, never a second bar. */
-  .ark-tick { position: absolute; top: -2px; height: 19px; width: 2px; background: %(ink)s; }
-  .ark-feed td { font-size: 11px; color: %(ink)s; padding: 3px 0; }
+  .ark-tick { position: absolute; top: -2px; height: 17px; width: 2px; background: %(ink)s; }
+  .ark-feed td { font-size: 11px; color: %(ink)s; padding: 1px 0; }
   .ark-feed td.t { color: %(context)s; white-space: nowrap; padding-right: 12px; }
   .ark-feed td.a { font-weight: 600; white-space: nowrap; padding-right: 12px; }
   .ark-feed td.m { color: %(context)s; }
-  .ark-legend { font-size: 11px; color: %(context)s; margin-top: 10px; }
+  .ark-legend { font-size: 11px; color: %(context)s; margin-top: 6px; }
   .ark-swatch {
     display: inline-block; width: 9px; height: 9px; margin: 0 5px 0 12px;
   }
   .ark-foot {
-    font-size: 11px; color: %(context)s; margin-top: 18px;
-    border-top: 1px solid %(rule)s; padding-top: 10px;
+    font-size: 10.5px; color: %(context)s; margin-top: 10px; line-height: 1.4;
+    border-top: 1px solid %(rule)s; padding-top: 7px;
+  }
+
+  /* Narrow screens. "One screen, no scrolling" and "works on a phone" are not the
+     same requirement and cannot both be met: seven charts and four KPIs do not fit
+     812 px of phone at a legible size, so below they are traded away rather than
+     shrunk. Three columns squeezed side by side would be wrong under either policy.
+
+     Under 1100 px the columns stack and the page scrolls, which is the honest
+     behaviour for a laptop in portrait or a tablet. Under 640 px the board keeps
+     what answers the question in five seconds - the sentence, the four numbers and
+     where the backlog is - and drops the rest, which is the same reduction the
+     Tableau phone layout makes (Dashboard_Design_v3.md section 11). */
+  @media (max-width: 1100px) {
+    .ark-panels { flex-direction: column; }
+    .ark-panel { flex: 1 1 auto !important; }
+    .ark-cards { flex-wrap: wrap; }
+    .ark-card { flex: 1 1 40%%; }
+  }
+  @media (max-width: 640px) {
+    .arkon-board { padding: 12px 12px 10px 12px; }
+    .ark-eyebrow { float: none; display: block; padding-top: 0; margin-bottom: 4px; }
+    .ark-cards { flex-direction: column; gap: 8px; }
+    .ark-ban { font-size: 30px; }
+    .ark-narrow-drop { display: none; }
+    td.ark-rowlabel { font-size: 10px; }
   }
 </style>
 """ % {"canvas": CANVAS, "card": CARD, "ink": INK, "context": CONTEXT,
@@ -345,7 +375,7 @@ def board():
     ]
     acked.sort(key=lambda i: i["lifecycle"]["minutes_to_acknowledge"], reverse=True)
     bullet_rows = []
-    for i in acked[:12]:
+    for i in acked[:6]:
         minutes = i["lifecycle"]["minutes_to_acknowledge"]
         window = i["acknowledge_due_minutes"]
         late = minutes > window
@@ -384,7 +414,7 @@ def board():
             return None
         return int((now - moment).total_seconds() // 3600)
 
-    HOURS = 8
+    HOURS = 6
     raised_by_hour = {h: 0 for h in range(HOURS)}
     cleared_by_hour = {h: 0 for h in range(HOURS)}
     for i in incidents:
@@ -415,7 +445,7 @@ def board():
             feed.append((step["recorded_at"], step, i))
     feed.sort(key=lambda row: row[0], reverse=True)
     feed_html = ['<table class="ark-rows ark-feed">']
-    for recorded_at, step, incident in feed[:8]:
+    for recorded_at, step, incident in feed[:5]:
         stamp = recorded_at[11:16] if len(recorded_at) > 16 else recorded_at
         feed_html.append(
             '<tr><td class="t">%s</td><td class="a">%s</td>'
@@ -461,7 +491,7 @@ def board():
         'out; the rest are shaded by priority.</p>'
         '    %(aging)s'
         '    <p class="ark-legend">%(legend)s</p>'
-        '    <h3 style="margin-top:18px">Raised against cleared, by hour</h3>'
+        '    <h3 style="margin-top:11px">Raised against cleared, by hour</h3>'
         '    <p class="sub">Event times, so nothing here is rewritten by a later '
         'state change. Cleared means closed or dismissed as a false positive.</p>'
         '    %(flow)s'
@@ -469,32 +499,25 @@ def board():
         '</span>raised<span class="ark-swatch" style="background:%(p3)s"></span>cleared'
         '</p>'
         '  </div>'
-        '  <div class="ark-panel" style="flex:1 1 0">'
+        '  <div class="ark-panel ark-narrow-drop" style="flex:1 1 0">'
         '    <h3>Time to acknowledge, against the window allowed</h3>'
         '    <p class="sub">The bar is how the acknowledgement compared with that '
         'incident&#39;s own window, 15 min for P1 and 60 for P2, so the tick is always '
         'the window itself. Bars are cut off at four times it and marked; the number '
         'is the real figure in minutes. P3 has no window and no row.</p>'
         '    %(bullets)s'
-        '    <h3 style="margin-top:18px">Open incidents by model</h3>'
+        '    <h3 style="margin-top:11px">Open incidents by model</h3>'
         '    <p class="sub">Which of the seven modules the open work came from.</p>'
         '    %(modules)s'
         '  </div>'
-        '</div>'
-        '<div class="ark-panels">'
-        '  <div class="ark-panel" style="flex:1 1 0">'
+        '  <div class="ark-panel ark-narrow-drop" style="flex:1 1 0">'
         '    <h3>Who acted, and when</h3>'
-        '    <p class="sub">The last eight lifecycle transitions, from the append-only '
+        '    <p class="sub">The last five lifecycle transitions, from the append-only '
         'transition log. Times are UTC.</p>'
         '    %(feed)s'
         '  </div>'
         '</div>'
-        '<p class="ark-foot">Every figure is computed by the n8n incident status API and read '
-        'from it; this page folds nothing of its own, which is why it cannot disagree with the '
-        'cockpit, the assistant or the Tableau workbook. Model evidence is real and the '
-        'operational context around it - shift, assignee, escalation contact - is simulated and '
-        'labelled so. There is no notification log yet, so &quot;who acted&quot; is the '
-        'transition log and not a record of who was told.%(truncation)s</p>'
+        '<p class="ark-foot">Every figure comes from the n8n status API; this page folds nothing of its own, so it cannot disagree with the cockpit, the assistant or the workbook. Model evidence is real, the operational context around it is simulated and labelled so, and &quot;who acted&quot; is the transition log rather than a record of who was told.%(truncation)s</p>'
         '</div>'
     ) % {
         "as_of": as_of.replace("T", " ")[:16] if as_of else "an unknown time",
