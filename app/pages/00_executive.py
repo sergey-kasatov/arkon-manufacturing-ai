@@ -26,6 +26,7 @@ change the numbers under the sentence at the top.
 """
 
 import datetime
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
@@ -38,6 +39,28 @@ st.set_page_config(
 )
 
 REFRESH_SECONDS = 60
+
+# The plant's clock. Every timestamp the status API returns is UTC, and this page used
+# to print it as it came: a board on a wall in Cologne read 08:44 while the room read
+# 10:44, which is the kind of wrongness nobody reports and everybody quietly distrusts.
+# The zone is named rather than taken from the container's TZ, so the board does not
+# change meaning if that environment variable is ever unset. The image already carries
+# tzdata, so this adds no dependency.
+PLANT_TZ = ZoneInfo("Europe/Berlin")
+
+
+def local(stamp, fmt="%d %b %H:%M"):
+    """Render an API timestamp on the plant clock, or hand it back untouched."""
+    if not stamp:
+        return ""
+    try:
+        moment = datetime.datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+    except ValueError:
+        return str(stamp)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=datetime.timezone.utc)
+    return moment.astimezone(PLANT_TZ).strftime(fmt)
+
 
 # The bullet chart's fixed axis, in multiples of an incident's own window. Four
 # puts the window tick at a quarter of the track, which is where it can be seen.
@@ -151,6 +174,34 @@ CSS = """
      what answers the question in five seconds - the sentence, the four numbers and
      where the backlog is - and drops the rest, which is the same reduction the
      Tableau phone layout makes (Dashboard_Design_v3.md section 11). */
+  /* Short screens, by height rather than width: a 1440x780 laptop was 85 px over
+     while a 1920x950 desktop fitted with room to spare. Trimming content for
+     everyone to satisfy the smallest screen is the wrong trade, so the board
+     tightens itself instead and nothing is removed. */
+  @media (max-height: 820px) {
+    /* Streamlit's own container keeps a little padding even after the rule above;
+       on a 768 px laptop that is the last twenty pixels between fitting and not. */
+    .stMain .block-container { padding-top: 0.35rem; padding-bottom: 0.15rem; }
+    .arkon-board { padding: 4px 16px 4px 16px; }
+    .ark-title { font-size: 18px; }
+    .ark-eyebrow { padding-top: 5px; }
+    .ark-status { font-size: 11.5px; margin-top: 3px; }
+    .ark-cards { margin-top: 6px; gap: 10px; }
+    .ark-card { padding: 6px 12px 6px 10px; }
+    .ark-ban { font-size: 27px; margin: 1px 0 0 0; }
+    .ark-panels { margin-top: 6px; gap: 10px; }
+    .ark-panel { padding: 8px 12px 6px 12px; }
+    .ark-panel p.sub { margin-bottom: 2px; line-height: 1.28; }
+    .ark-panel h3 { font-size: 12px; }
+    /* The rows are where the height actually is: about thirty of them across the
+       three columns, so two pixels each is sixty pixels of screen. */
+    table.ark-rows td { padding: 0; }
+    .ark-track { height: 11px; }
+    .ark-seg { height: 11px; }
+    .ark-tick { height: 15px; }
+    .ark-legend { margin-top: 2px; }
+    .ark-foot { margin-top: 6px; padding-top: 4px; }
+  }
   @media (max-width: 1100px) {
     .ark-panels { flex-direction: column; }
     .ark-panel { flex: 1 1 auto !important; }
@@ -446,7 +497,7 @@ def board():
     feed.sort(key=lambda row: row[0], reverse=True)
     feed_html = ['<table class="ark-rows ark-feed">']
     for recorded_at, step, incident in feed[:5]:
-        stamp = recorded_at[11:16] if len(recorded_at) > 16 else recorded_at
+        stamp = local(recorded_at, "%H:%M") or recorded_at
         feed_html.append(
             '<tr><td class="t">%s</td><td class="a">%s</td>'
             '<td class="m">%s &nbsp;%s &rarr; %s</td></tr>'
@@ -513,14 +564,14 @@ def board():
         '  <div class="ark-panel ark-narrow-drop" style="flex:1 1 0">'
         '    <h3>Who acted, and when</h3>'
         '    <p class="sub">The last five lifecycle transitions, from the append-only '
-        'transition log. Times are UTC.</p>'
+        'transition log, on the plant clock.</p>'
         '    %(feed)s'
         '  </div>'
         '</div>'
         '<p class="ark-foot">Every figure comes from the n8n status API; this page folds nothing of its own, so it cannot disagree with the cockpit, the assistant or the workbook. Model evidence is real, the operational context around it is simulated and labelled so, and &quot;who acted&quot; is the transition log rather than a record of who was told.%(truncation)s</p>'
         '</div>'
     ) % {
-        "as_of": as_of.replace("T", " ")[:16] if as_of else "an unknown time",
+        "as_of": local(as_of) or "an unknown time",
         "refresh": REFRESH_SECONDS,
         "sentence": status_sentence(incidents),
         "cards": card_html,
