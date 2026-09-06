@@ -2257,7 +2257,7 @@
               <style-rule element='datalabel'>
                 <format attr='color-mode' value='auto' />
                 <format attr='font-family' value='Tableau Book' />
-                <format attr='font-size' value='14' />
+                <format attr='font-size' value='10' />
               </style-rule>
               <style-rule element='mark'>
                 <format attr='mark-color' value='#15304F' />

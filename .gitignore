@@ -61,9 +61,15 @@ langflow/build/spec_*.json
 # daemon's log stays out too; the generator points it at the temp directory.
 tableau/extracts/*.hyper
 hyperd.log
-# The packaged .twbx is the same workbook zipped with those extracts: a binary
-# that regenerates with them. The .twb beside it is the tracked source.
-tableau/*.twbx
+# The packaged .twbx IS tracked, deliberately, and it is the exception to the rule
+# above. It is 45 KB, it carries its own extracts, and it is the only file in this
+# repository that opens the dashboard: without it a reader needs Python, the Hyper API
+# and a run of the generator before seeing anything, which for a portfolio repository
+# means nobody sees it. It is also the format Tableau Public publishes.
+#
+# The cost is real and accepted: Hyper stamps its files, so the .twbx is not
+# byte-reproducible and every regeneration shows a diff even when nothing changed. The
+# .twb beside it IS reproducible and is what CI checks.
 # Tableau's own recovery copies, written beside an open workbook and left behind when
 # the process dies instead of closing.
 tableau/~*.twbr

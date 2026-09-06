@@ -96,7 +96,11 @@ directly, and `tableau/Arkon_Executive_View.twbx`, the same workbook packaged wi
 its extracts under `Data/Extracts/` (the file to hand to anyone without this
 repository). The `.twb` is deterministic - the same extracts give a byte-identical
 file, checked by building twice - so the generator can be verified against its own
-artifact. The `.twbx` is not, because Hyper stamps its files, and it is gitignored.
+artifact. The `.twbx` is not, because Hyper stamps its files, so it shows a diff on
+every regeneration - and it is tracked anyway, deliberately. It is 45 KB, it carries
+its own extracts, and it is **the file to open**: without it a reader needs Python,
+the Hyper API and a run of the generator before seeing anything. It is also the
+format Tableau Public publishes.
 Needs `tableauhyperapi`, in `requirements.txt`.
 
 **Tableau Public accepts extracts only.** It refuses to open a workbook whose data

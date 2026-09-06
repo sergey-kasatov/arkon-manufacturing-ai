@@ -1637,7 +1637,14 @@ def build(skip_extracts=False, phone=True, actions=True):
         rows=[module], cols=[count], mark="Bar",
         mark_color=COLOR_BAR, lods=[domain], bool_filters=inc_filters,
         shelf_sorts=[(module, count)],
-        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="14",
+        # 10, not the 14 the rest of the page uses, and this is a mitigation rather
+        # than a fix. Seven rows in a 236 px strip panel leave about 17 px each, and a
+        # 14 pt label is taller than that, so consecutive labels overlapped and read as
+        # if each sat on the wrong bar. The geometry does not work at any label size;
+        # this only stops the collision. The real answer is the split: this chart is
+        # last in the specification's own hierarchy and belongs on the Explore sheet,
+        # where it has the height for seven rows.
+        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="10",
         mark_size=MARK_SIZE,
         tooltip_runs=[
             field_run(module, bold), run_xml(" raised ", soft), field_run(count, bold),
