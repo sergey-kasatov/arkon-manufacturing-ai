@@ -7,15 +7,78 @@
 
 ## Overview
 
-Arkon Manufacturing AI simulates an Industry 4.0 platform that combines
-Predictive Maintenance, Fault Detection and Visual Quality Control across three
-factory departments of a fictional heavy manufacturer.
+Arkon Manufacturing AI is a working Industry 4.0 quality platform for a fictional
+heavy manufacturer: seven machine-learning modules watching four departments, and
+the whole chain that turns what they see into a person doing something about it.
 
-Seven models are trained and measured, an n8n steering cell turns their
-predictions into incidents and alerts a human, and a grounded Langflow assistant
-answers questions over the result. The Streamlit cockpit and the Tableau
-executive views are still planned; what is built and what is not is listed
-under [What's Built](#whats-built).
+**Seven models, on seven real public datasets.** Predictive maintenance on engines
+and truck fleets, visual inspection of castings, steel strip and components, defect
+localisation on steel sheet, and a text model over consumer complaints. Each is
+trained, measured on held-out data, and shipped with a model card that says what it
+cannot do.
+
+**One contract between them and everything downstream.** Every module publishes the
+same twelve-field risk event, so nothing after this point knows or cares which model
+spoke.
+
+**A Quality Steering Cell that runs, on n8n.** It validates the contract, suppresses
+a repeat of the same evidence inside 24 hours, writes the incident to an append-only
+store, assigns it by department, and puts a **Telegram card in front of a named person
+for a P1 or P2** - with a link that opens that incident on the operator's screen.
+
+**Two operator surfaces.** The **Streamlit cockpit** (`http://AK2101:8303`, nine
+pages) is the operational screen and the only thing that writes a lifecycle
+transition: a queue of what needs a person now, and a form offering only the moves
+the charter allows from the current state. The **Langflow assistant** answers why,
+grounded in ten documents and the live store, and hands the operator to the cockpit
+with a drafted note rather than acting for them.
+
+**A plant that keeps moving.** A live emitter raises a real re-timed incident every
+eight to twelve minutes across all seven modules, and a simulated crew works them, so
+the response-time numbers come from real timestamps rather than from a fixture.
+
+**An executive view on top**, as a generated Tableau workbook and, next, a live page
+in the cockpit.
+
+What is built, what is not, and what is deliberately not being built is listed under
+[What's Built](#whats-built). The runtime wiring, including which surface is allowed
+to write what, is under [Architecture](#architecture).
+
+---
+
+## What it looks like running
+
+Photographs of the deployment, not mockups. `py tools/make_ui_screenshots.py`
+regenerates them from the running cockpit, waiting for real content on each page
+rather than for a timer, so a page that fails to render produces an error and no
+picture. The numbers differ between runs because the plant keeps raising incidents.
+
+**The executive view.** One question in five seconds: is the Steering Cell keeping
+up, and where is it behind. The sentence under the title is generated from the store,
+red appears only where a response window has run out, and the hourly chart is the one
+view built from event times rather than current state - so nothing in it is rewritten
+by a later status change. Design and its sources: `tableau/Dashboard_Design_v3.md`.
+
+![The Arkon executive view](assets/ui/executive_view.png)
+
+**The Steering Cell, where an operator works.** The queue of what needs a person now,
+ordered overdue first, then the incident in full with the model's own evidence, then
+"Move this incident" offering only the moves the charter allows from its current
+state. This is the only surface in the platform that writes a lifecycle transition,
+and the link on a Telegram card opens it on the incident the card announced.
+
+![The Steering Cell page](assets/ui/steering_cell.png)
+
+**The assistant, which explains rather than acts.** Six routes over ten documents in
+Qdrant and the live incident API, with a human approval gate in front of its single
+write. Asked about a named open incident it answers, then hands over: the link that
+opens that incident on the page above, and a drafted note for the transition form.
+
+![The Arkon Quality Assistant](assets/ui/assistant.png)
+
+**The cockpit's entry page**, with the live pulse and one page per module.
+
+![The cockpit entry page](assets/ui/cockpit_home.png)
 
 ---
 
@@ -360,12 +423,43 @@ Arkon Manufacturing AI Platform
 └── 📊  BI Dashboard      Executive Level        Tableau           KPI Analytics
 ```
 
-### Runtime wiring, as deployed 2026-08-31
+### Runtime wiring, as deployed 2026-09-05
 
 The map above is the capability plan. This is what actually runs, and how the
-pieces reach each other. Two things enter the system from outside - a batch of
-risk events scored on the laptop, and an operator asking a question - and both
-land on the NAS, which owns every store.
+pieces reach each other. Three things put work into the system - a batch of risk
+events scored on the laptop, the live plant emitting one re-timed real event
+every ten minutes or so on the NAS itself, and an operator asking a question -
+and every one of them lands on the NAS, which owns every store.
+
+**The division of labour between the two operator surfaces is the thing to read
+off this diagram.** The cockpit is where an incident is moved: it is the only
+consumer that writes a transition, and it writes nothing else. The assistant
+never touches the store; it reads through the same status endpoint the screens
+read, answers from the ten documents in Qdrant, and holds exactly one write of
+its own, the escalation record, behind a human approval gate. So the cockpit
+answers what and who, the assistant answers why and what the rule says, and
+neither can contradict the other about a status because neither computes one.
+
+**The assistant hands the operator to the cockpit rather than acting for them,
+and that boundary was decided rather than inherited (2026-09-05).** The obvious
+next feature is to let the assistant acknowledge and close, and it is declined
+for a reason that is a measurement rather than a preference: an acknowledgement
+is the claim that a named person has seen an incident and taken it, and the
+response-time KPI this platform puts in red is measured from that timestamp. An
+agent that acknowledges turns a median response time into a measurement of the
+agent, and the number survives while its meaning does not, which is the failure
+mode this project keeps naming. The quality-management reading is the same one:
+a nonconformance disposition has a human owner, and an agent closing one is what
+an IATF audit writes up. There is a build cost as well, recorded in
+`langflow/README.md`: a canvas holding a Human Input node cannot be run through
+`/api/v1/run` at all, so a second gated write breaks every existing v1 caller.
+
+So the assistant does the half it is good at and stops there. It answers what the
+rule says and what the model can and cannot claim, then hands over **the link
+that opens that incident on the cockpit and a drafted note for the transition
+form**. The operator arrives with the form already filled and puts their own name
+on it. The agent prepares the decision; the person signs it, and the timestamp
+still measures the plant.
 
 ```mermaid
 flowchart TB
@@ -383,6 +477,7 @@ flowchart TB
     W2["(2) GET /webhook/arkon-incident-status<br/>200 ok, 200 no_match,<br/>400 rejected, 503 unavailable"]
     W3["(3) POST /webhook/arkon-escalation<br/>the assistant's only write"]
     W4["(4) POST /webhook/arkon-incident-transition<br/>the lifecycle<br/>200, 400, 404, 409, 503"]
+    LP["Live plant<br/>one re-timed real event<br/>every ~10 min, plus a crew"]
     QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 245 chunks")]
     INC[("incidents.jsonl")]
     TRN[("incident_transitions.jsonl")]
@@ -391,12 +486,15 @@ flowchart TB
 
     W1 -- alerts --> TG
     W1 -- "writes, once, at new" --> INC
+    LP -- "emits" --> W1
+    LP -- "the crew moves them" --> W4
     ASSIST -- retrieval --> QD
     ASSIST -- lookup --> W2
     ASSIST -- escalate --> W3
     W2 -- reads --> INC
     W2 -- "folds" --> TRN
     COCK -- lookup --> W2
+    COCK -- "acknowledge, contain,<br/>resolve, close" --> W4
     COCK -- chat --> ASSIST
     W3 -- appends --> ESC
     W3 -- "folds" --> TRN
@@ -404,10 +502,15 @@ flowchart TB
     W4 -- reads --> INC
   end
 
+  subgraph EXEC["Executive view, refreshed on demand"]
+    TAB["tableau/build_extracts.py<br/>then build_workbook.py"]
+  end
+
   EV -- "HTTP POST, one per event" --> W1
-  OP -- "asks" --> ASSIST
-  OP -- "watches" --> COCK
-  OP -- "acknowledges, closes" --> W4
+  TG -- "the card links to<br/>this one incident" --> COCK
+  OP -- "asks why, and what the rule says" --> ASSIST
+  OP -- "watches, and moves incidents" --> COCK
+  W2 -- "extract refresh" --> TAB
 ```
 
 The assistant reaches the incident store only through endpoint 2, so it cannot
@@ -544,7 +647,15 @@ four required keys. And **a sheet with no detection publishes nothing, which is 
 pass**: this dataset holds no sheet anyone certified clean, so the module has never seen
 sound steel and its silence is a failure to find
 - [x] **Read and write endpoints** - `GET /webhook/arkon-incident-status` over the incident store, and `POST /webhook/arkon-escalation`, the first audited write (`n8n/README.md`)
-- [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six routes, retrieval over a Qdrant store of eight Arkon documents, a live incident lookup, a human approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open MVP criterion of charter section 10, an operational interface (`langflow/README.md`)
+- [x] **Grounded assistant - the Arkon Quality Assistant on Langflow.** Nineteen nodes, six
+routes, retrieval over a Qdrant store of eight Arkon documents, a live incident lookup, a human
+approval gate in front of the one write, and a shift-briefing sub-flow. It closes the last open
+MVP criterion of charter section 10, an operational interface (`langflow/README.md`). **Since
+2026-09-05 it also hands the operator over**: an answer about a named incident ends with the
+link that opens that incident on the cockpit and a drafted note for the transition form, so the
+operator arrives with the form filled and signs it with their own name. It still cannot
+acknowledge, contain, resolve or close, and the reason is in the architecture section above: the
+timestamp has to measure the plant, not the agent
 - [x] **NLP module - NHTSA consumer-complaint field quality.** TF-IDF over unigrams and
 bigrams with a one-vs-rest linear classifier over 24 component classes, built from scratch
 as a notebook trio on 2026-09-03 (`notebooks/04_nlp/01_nhtsa_complaints/`,
@@ -573,9 +684,17 @@ as records: an illegal move answers 409 naming the current status and what is al
 it, which is a different answer from a malformed request. **One incident has now gone from
 model output to human-reviewed closure**, the Phase 4 criterion of charter section 9 and the
 last one in that document that could not be met at all
-- [ ] Alert-card callbacks - acknowledge and close buttons on the Telegram card, the
-escalation timer and the manager notification. All three need a Telegram Trigger node, and
-all three are buildable for the first time now that there is something behind the buttons
+- [~] Alert-card callbacks - charter 7.4, and it has split into a half that cannot be built
+here and a half that is built. **The buttons cannot exist on this deployment**: a Telegram
+Trigger needs a callback URL Telegram can reach, and n8n's `WEBHOOK_URL` on this NAS is the
+tailnet name, which resolves through MagicDNS only. Exposing one path through a Tailscale
+Funnel is possible and is an internet exposure, so it is a decision rather than a task. **The
+manager notification and its timer are built** as `n8n/overdue_escalation_v1.json`: a
+scheduled reader that takes the overdue decision from the status API rather than recomputing
+it, dedups from its own notification log rather than from workflow static data, and writes
+Telegram's own `message_id` on the record. Offline-checked, not deployed. What the card does
+carry instead, since 2026-09-05, is **a link that opens the cockpit's Steering Cell page on
+that one incident**, which is the same tap the buttons would have saved without the exposure
 - [ ] Queryable incident store - the charter 7.5 move to the n8n Data Table node, now paced
 by the Streamlit cockpit rather than by the lifecycle
 - [x] **Streamlit cockpit** - nine pages over the two live services and the repository's own
@@ -586,13 +705,57 @@ incident's state is the transition log folded onto its record and the n8n API pe
 so the cockpit and the assistant cannot disagree. It trains, loads and scores nothing, and the
 image carries no model weight. The one rule in it that is not presentation is that a failed
 lookup and an empty result render differently, because a dashboard that draws an empty table for
-both teaches its operator that an outage looks like a quiet plant
-- [~] **Tableau executive view** - the extract layer is built and verified (`tableau/README.md`): four tidy fact tables refreshed from the same status API the cockpit and the assistant read, so all three report one state. It sweeps one lifecycle state at a time, because every incident is in exactly one, and it reports itself incomplete rather than silently short if the API's 50-row cap is ever hit. **The workbook is not built**, and the reason recorded here on 2026-09-04 was wrong: Tableau Public does save locally, from version 2026.2.2, which the application itself says and which refutes the claim that building the view would be the same act as publishing it
+both teaches its operator that an outage looks like a quiet plant. **Since 2026-09-05 it also
+writes, and only this**: the Steering Cell page is operator-first, with a queue of what needs a
+person now, ordered overdue first, and a "Move this incident" form offering only the moves
+charter 7.2 allows from the current state. The app was read-only by design until then, and the
+consequence was that a person who received a card had no surface at all to acknowledge or close
+it. The endpoint stays the authority, the transition log stays the record, and the form records
+the name typed in as the actor - a LAN control, not an audited one
+- [x] **Tableau executive view** - the extract layer and the workbook, both generated
+(`tableau/README.md`). The extracts are four tidy fact tables refreshed from the same status
+API the cockpit and the assistant read, so all three report one state; the layer sweeps one
+lifecycle state at a time, because every incident is in exactly one, and it reports itself
+incomplete rather than silently short if the API's 50-row cap is ever hit. **The workbook is
+authored as XML by `tableau/build_workbook.py`** rather than drawn with a mouse, so it
+regenerates deterministically when the store moves, and it opens and renders in Tableau
+Public 2026.2. Two findings paid for that. **Tableau Public opens extracts only**, which is
+why the CSV connection had to become `.hyper` and why `tableauhyperapi` is a dependency. And
+**a categorical colour map is parsed and silently ignored unless the coloured field's
+`<column-instance>` is declared at datasource level** - found by letting the application
+assign the colour once, saving, and diffing, which is the only mouse step in the build. The
+first version was numerically right and visually a Tableau default; the redesign is specified
+in `tableau/Dashboard_Design.md` against sources that are cited there, and v2 implements it:
+KPI cards with context, a Z-layout at 1300 x 900, red reserved for a response window that has
+run out, parameter filters, cross-filter actions, a drill-down sheet and a phone layout.
+Publishing is Sergey's sign-in and has not been done
+- [ ] **Executive view v3** - a deeper rework of the same dashboard to a board-room bar, and
+the same design carried into an Executive page in the cockpit so there is a surface that is
+live without a publish step. Tableau Public cannot auto-refresh; the honest form of "live"
+there is regenerate, rebuild and republish
+- [x] **The live plant, the demo engine - a mini-project of its own** (`live_plant/`, built
+2026-09-05, `live_plant/README.md`). One real-model incident every ten minutes or so, drawn from
+the seven modules' own published batches and re-timed, round-robin over the modules so seven
+ticks cover every module and every department, priorities weighted by each module's published
+band mix, and a simulated crew that acknowledges, contains, resolves, closes and reopens the
+incidents it raised through the transition endpoint, so the response-time KPIs come from real
+timestamps. **Every P1 and P2 is a real Telegram card, so it is budgeted** (six an hour by
+default) and every event carries the `arkon-2026-9` id series and an `emitter` label. It keeps a
+ledger of who was told what and when, honours intake's 24-hour dedup from its own side, and its
+reset archives the store inside the n8n container rather than rewinding anything. Not an n8n
+workflow: a Python service beside the cockpit, behind a compose profile so nothing starts it by
+accident; 46 offline checks against a fake Steering Cell, and a first live run whose two cards
+were confirmed in the Telegram group. Running as a service on the NAS since 2026-09-05 18:01
+- [x] **The incident process, end to end, on one page** - `docs/Incident_Process.md`. The same
+chain for two readers, the plant floor and the boardroom: detect, publish, intake, alert,
+acknowledge inside the window or go overdue, work, close or dismiss, and one status API that
+every screen reads. Nine steps with the rule behind each and where it can be seen, then one
+live incident traced through all of them with its evidence
 
 ### One deployed piece that is not an Arkon feature
 
-Nine pieces are deployed: three Langflow flows, five n8n workflows and the
-Streamlit cockpit. Eight of them run the plant. The exception is the twelve-node
+Ten pieces are deployed: three Langflow flows, five n8n workflows, the Streamlit
+cockpit and the live plant. Nine of them run the plant. The exception is the twelve-node
 `n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
 rather than to serve an operator, and could be deleted without loss. It is kept
 because the claim it settles is documented in `n8n/README.md` and the evidence is
@@ -602,14 +765,18 @@ worth more than the twelve nodes cost.
 
 ## Planned Extensions
 
-| Module | Dataset | Task | Prerequisite |
-|--------|---------|------|-------------|
-| BI Dashboard | All modules | Executive KPI analytics | Tableau |
+The table that stood here is empty, and that is the news. CV object detection on
+GC10-DET was its third row until 2026-09-02, when it was built
+(`docs/Model_Card_GC10_Detection.md`). NLP on NHTSA complaints was the second
+until 2026-09-03 (`docs/Model_Card_NHTSA_Field_Quality.md`). The last row was the
+BI dashboard, the one that was never a model, and it was built on 2026-09-05
+(`tableau/README.md`).
 
-CV object detection on GC10-DET was the third row here until 2026-09-02, when it
-was built: `docs/Model_Card_GC10_Detection.md`. NLP on NHTSA complaints was the
-second until 2026-09-03: `docs/Model_Card_NHTSA_Field_Quality.md`. Tableau is
-what is left, and it is the one row that was never a model.
+What is left is not a module. It is depth on what exists: the executive view at a
+board-room standard and live in the cockpit, the manager-notification timer
+deployed rather than only built, and the charter 7.6 intake outcomes, of which
+three exist and one is written down, so a validation regression and a quiet plant
+still look the same from every screen.
 
 ---
 
@@ -622,15 +789,21 @@ Time Series statsmodels
 CV          PyTorch, torchvision, albumentations, OpenCV
 MLOps       MLflow (experiment tracking, model registry)
 Assistant   Langflow 1.11.5, Qdrant, OpenRouter (deployed)
-Automation  n8n (webhooks, incident store, Telegram)
-App         Streamlit (planned)
-BI          Tableau (planned)
+Automation  n8n (webhooks, incident store, lifecycle endpoint, Telegram alerts) (deployed)
+App         Streamlit cockpit, 9 pages, on the NAS at AK2101:8303 (deployed)
+Demo engine Python service, one re-timed real incident every 8 to 12 min (deployed)
+BI          Tableau Public 2026.2, workbook generated from XML by tableau/build_workbook.py
+Infra       Docker Compose on a Ugreen NAS, one network, Tailscale for remote access
 Utilities   pandas, numpy, matplotlib, seaborn, plotly
 ```
 
-The `langchain`, `chromadb` and `openai` pins in `requirements.txt` belong to the
-planned Streamlit app, not to the deployed assistant: that one runs on Langflow
-over Qdrant and reaches n8n over HTTP.
+Everything marked deployed runs on the NAS as a container and is reachable on the LAN
+and over Tailscale. There is no authentication in front of any of it, which is the
+first thing that would have to change outside a demo.
+
+The `langchain`, `chromadb` and `openai` pins in `requirements.txt` are from an earlier
+plan and belong to nothing that is deployed: the assistant runs on Langflow over
+Qdrant and reaches n8n over HTTP.
 
 ---
 
@@ -707,13 +880,17 @@ arkon-manufacturing-ai/
 ├── events/                     The shared event contract and the adapters
 ├── langflow/                   The assistant canvas, its prompts and build scripts
 ├── n8n/                        The five workflows, their generators and probes
+├── live_plant/                 The demo engine, a mini-project: real-model incidents on a clock plus the crew (live_plant/README.md)
+├── tableau/                    The executive view: the extract layer, the workbook generator and its design specification (tableau/README.md)
 ├── assets/                     Saved plots for README and Streamlit
 │   ├── timeseries/
 │   ├── ml/
 │   ├── cv/
-│   └── nlp/
+│   ├── nlp/
+│   └── ui/                     Screenshots of the running cockpit, regenerated not hand-taken
 ├── tools/
-│   └── make_result_plots.py    Regenerates the result figures from the metrics files
+│   ├── make_result_plots.py    Regenerates the result figures from the metrics files
+│   └── make_ui_screenshots.py  Regenerates assets/ui/ from the deployed cockpit
 ├── data/
 │   ├── 01_cmapss/              NASA CMAPSS txt files
 │   ├── 02_scania/              Scania APS csv files

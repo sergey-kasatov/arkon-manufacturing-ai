@@ -64,8 +64,38 @@ is not an authorisation to do something this assistant cannot do: an approved
 that the system had no write path for it. It has one now
 (`POST /webhook/arkon-incident-transition`), and the refusal stands on a
 different footing: the assistant has no connection to that endpoint, and the
-operator makes the transition. Wiring it in would be a second guarded write and
-a canvas change, and it has deliberately not been made.
+operator makes the transition.
+
+**On 2026-09-05 that refusal was put to Sergey as a decision rather than left as
+a gap, and it was kept.** The argument that decided it is a measurement one. An
+acknowledgement is the claim that a named person has seen an incident and taken
+it, and the response-time KPI this platform puts in red is computed from that
+timestamp; an assistant that acknowledges turns the plant's median response time
+into a measurement of the assistant, and the number goes on looking reasonable
+after it stops meaning anything. The quality-management reading agrees: a
+nonconformance disposition has a human owner. The build cost is the third
+reason and the smallest: a second gated write is a canvas change on a canvas
+that already cannot be run through the v1 API.
+
+**What was built instead is the handover.** Both reading specialists now end an
+answer about a named, still-open incident with the link that opens that incident
+on the cockpit's Steering Cell page, and the incident specialist adds a drafted
+note for the transition form. The operator arrives with the form filled and puts
+their own name on it: the agent prepares the decision, the person signs it.
+
+Two things about the drafted note are worth keeping, because the first attempt
+got one of them wrong. **The note must be built only from the incident record in
+front of the model** - its summary, evidence and recommended action - and the
+first deployed version was not constrained that way: asked about a NHTSA
+complaint-rate incident it drafted "cross-reference with vehicle report
+telemetry", and that module reads public complaint narratives and has no
+telemetry of any kind. A fabricated action pasted into the permanent record of a
+nonconformance, over an operator's own name, is worse than no handover at all,
+so the prompt now forbids naming any system, measurement, data source or action
+the record does not mention, and says that a shortened recommended action is a
+good note. **And a closed or false-positive incident gets no link**, because it
+has nowhere to move; verified by asking about `ARK-INC-00056`, which came back
+with the status and no link.
 
 **A canvas with a Human Input node cannot be run through `/api/v1/run` at all**,
 including on branches that never reach the gate. Use
@@ -345,3 +375,39 @@ claim, and it now has one measurement behind it instead of none.
   charter describes acknowledge and close buttons on the alert card that are not
   wired. Both paragraphs go stale the day the lifecycle write path lands, and
   nothing enforces that they are removed.
+
+  **That sentence came true on 2026-09-05 and nothing in this repository noticed.**
+  The cockpit's transition form was built at 19:15 that day, and the prompt went on
+  telling operators to "never present a button, screen or menu as something the
+  operator can use today" for the rest of the evening. A deployed assistant was
+  therefore denying the existence of a screen that had just been built for it. What
+  caught it was Sergey asking what the assistant is actually for, which made someone
+  read the prompt; no checker here reads a prompt against the deployment it
+  describes, and the gap that predicted the failure could not detect it either. The
+  paragraph is corrected and now names the page, and the general form is the one
+  this project keeps meeting: a claim about a neighbouring system is only as fresh
+  as the last time a person compared them.
+
+- **The cockpit throws away the key to the assistant's own history.** Langflow
+  persists every message in its `message` table keyed by `session_id`, and the
+  history is there: on 2026-09-05 that table held 23 messages under
+  `cockpit-b8a125e38ad9`, 32 under an older Playground session and 14 under the demo
+  rehearsal. But `app/pages/02_assistant.py` mints a fresh
+  `"cockpit-" + uuid4().hex[:12]` into `st.session_state` on every page load and
+  never reads the table back, so a browser reload starts an empty conversation over
+  a store that still has the last one. The history is not lost, the pointer to it
+  is. Two fixes, both small: carry the session id in the URL the way the Steering
+  Cell page carries `?incident=`, and read prior turns from
+  `/api/v1/monitor/messages?session_id=`.
+
+- **Nobody in the conversation has a name.** The assistant does not know which of
+  the nine people in the store it is talking to, and the consequence is not
+  cosmetic: the escalation it records, the one write it can perform, carries
+  `requested_by: arkon-quality-assistant` and `approved_by: operator via approval
+  gate`, so the platform's only audited action is anonymous. It also cannot say
+  "this one is yours" against "this one waits for the Quality Manager", although
+  charter 7.2 makes closure R. Ortiz's alone and the other four moves the
+  assignee's. The Steering Cell page already has the concept - an "Assigned to"
+  selector and a "Recorded as" field on the form - so the gap is that one app
+  holds an identity on one page and not on the other. Raised by Sergey on
+  2026-09-05.
