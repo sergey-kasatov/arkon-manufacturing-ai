@@ -136,6 +136,12 @@ BULLET_CAP = 4.0
 RIGHT_COLUMN = 600
 
 BULLET_ROWS = 6
+
+# Bar thickness as a fraction of the row. 0.62 was a data-ink instinct, correct for a
+# dense screen read at 60 cm and wrong for one read through a video codec: a 3 px bar
+# does not survive the compression, and a label placed against a row that is much taller
+# than its bar sits between rows rather than on one. Both are fixed by one number.
+MARK_SIZE = "0.88"
 FEED_ROWS = 6
 
 # Sheet names, used by zones, windows and actions alike
@@ -604,10 +610,10 @@ def formatted_text(runs, indent):
 
 def title_runs(title, subtitle=None):
     """Section 10: chart title 13 Medium on ink, its caption 11 Book on context."""
-    runs = [run_xml(title, {"fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "13"})]
+    runs = [run_xml(title, {"fontcolor": COLOR_INK, "fontname": FONT_MEDIUM, "fontsize": "15"})]
     if subtitle:
         runs.append(NEWLINE)
-        runs.append(run_xml(subtitle, {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "11"}))
+        runs.append(run_xml(subtitle, {"fontcolor": COLOR_INK_SOFT, "fontname": FONT_BOOK, "fontsize": "13"}))
     return runs
 
 
@@ -629,10 +635,10 @@ def kpi_runs(label, number_field, context_field, alert=False):
     baseline (section 3).
     """
     left = {"fontalignment": "0"}
-    soft = dict(left, fontcolor=COLOR_INK_SOFT, fontname=FONT_MEDIUM, fontsize="10")
+    soft = dict(left, fontcolor=COLOR_INK_SOFT, fontname=FONT_MEDIUM, fontsize="11")
     number = dict(left, bold="true", fontcolor=COLOR_ALERT if alert else COLOR_INK,
                   fontname=FONT_BOLD, fontsize="38")
-    context = dict(left, fontcolor=COLOR_INK_SOFT, fontname=FONT_BOOK, fontsize="11")
+    context = dict(left, fontcolor=COLOR_INK_SOFT, fontname=FONT_BOOK, fontsize="13")
     left_newline = run_xml("Æ&#10;", left, raw=True)
     return [
         run_xml(label.upper(), soft), left_newline,
@@ -658,7 +664,7 @@ def worksheet(name, ds, params=(), title=None, subtitle=None, rows=(), cols=(), 
               color=None, mark_color=None, texts=(), lods=(), label_runs=None,
               tooltip_runs=None, filters=(), bool_filters=(), manual_sorts=(),
               shelf_sorts=(), reference_lines=(), hide_axes=(), gridlines_off=False,
-              show_labels=False, label_font_size=None, mark_size=None):
+              show_labels=False, label_font_size=None, mark_size=None, label_color=None):
     """Emit one worksheet.
 
     `filters` are (Field, [members]) keep-only categorical filters; `bool_filters`
@@ -842,7 +848,12 @@ def worksheet(name, ds, params=(), title=None, subtitle=None, rows=(), cols=(), 
     pane_rules = []
     if label_font_size:
         pane_rules.append("              <style-rule element='datalabel'>")
+        # `auto` was not enough: it left dark ink on a navy segment, which is the one
+        # place on this dashboard where the label sits INSIDE the mark rather than past
+        # the end of it. Where a caller states a colour, state it.
         pane_rules.append("                <format attr='color-mode' value='auto' />")
+        if label_color:
+            pane_rules.append("                <format attr='color' value='%s' />" % label_color)
         pane_rules.append("                <format attr='font-family' value='%s' />" % FONT_BOOK)
         pane_rules.append("                <format attr='font-size' value='%s' />" % label_font_size)
         pane_rules.append("              </style-rule>")
@@ -1546,8 +1557,8 @@ def build(skip_extracts=False, phone=True, actions=True):
         filters=[(open_state, ["Open"])], bool_filters=inc_filters,
         manual_sorts=[(age_band, band_order),
                       (aging_segment, ["P4", "P3", "P2", "P1", "Overdue"])],
-        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="12",
-        mark_size="0.62",
+        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="14",
+        mark_size=MARK_SIZE, label_color="#FFFFFF",
         tooltip_runs=[
             field_run(count, bold), run_xml(" open ", soft), field_run(aging_segment, bold),
             run_xml(" incidents, open ", soft), field_run(age_band, bold), run_xml(".", soft),
@@ -1576,8 +1587,8 @@ def build(skip_extracts=False, phone=True, actions=True):
         shelf_sorts=[(ack_label, ack_ratio)],
         manual_sorts=[(ack_segment, ["P4", "P3", "P2", "P1", "Late"])],
         reference_lines=[{"axis": ack_ratio, "value": window_line}],
-        gridlines_off=True, show_labels=True, label_font_size="12",
-        mark_size="0.62",
+        gridlines_off=True, show_labels=True, label_font_size="14",
+        mark_size=MARK_SIZE,
         label_runs=[field_run(minutes_text, bold), run_xml("  ", soft),
                     field_run(overflow_text, soft)],
         tooltip_runs=[
@@ -1615,8 +1626,8 @@ def build(skip_extracts=False, phone=True, actions=True):
         rows=[module], cols=[count], mark="Bar",
         mark_color=COLOR_BAR, lods=[domain], bool_filters=inc_filters,
         shelf_sorts=[(module, count)],
-        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="12",
-        mark_size="0.62",
+        hide_axes=[count], gridlines_off=True, show_labels=True, label_font_size="14",
+        mark_size=MARK_SIZE,
         tooltip_runs=[
             field_run(module, bold), run_xml(" raised ", soft), field_run(count, bold),
             run_xml(" incidents in ", soft), field_run(domain, bold), run_xml(".", soft),

@@ -543,7 +543,7 @@
       <column-instance column='[Calculation_131]' derivation='None' name='[none:Calculation_131:nk]' pivot='key' type='nominal' />
       <column-instance column='[Calculation_142]' derivation='None' name='[none:Calculation_142:nk]' pivot='key' type='nominal' />
       <extract count='-1' enabled='true' units='records'>
-        <connection authentication='auth-none' author-locale='en_US' class='hyper' dbname='D:/-PROJECTS/--Portfolio/arkon-manufacturing-ai/tableau/extracts/incidents.hyper' default-settings='hyper' schema='Extract' tablename='Extract' update-time='09/06/2026 09:32:42 AM'>
+        <connection authentication='auth-none' author-locale='en_US' class='hyper' dbname='D:/-PROJECTS/--Portfolio/arkon-manufacturing-ai/tableau/extracts/incidents.hyper' default-settings='hyper' schema='Extract' tablename='Extract' update-time='09/06/2026 11:57:02 AM'>
           <relation name='Extract' table='[Extract].[Extract]' type='table' />
           <metadata-records>
             <metadata-record class='column'>
@@ -1094,10 +1094,10 @@
         <calculation class='tableau' formula='REPLACE([incident_id], &quot;ARK-INC-&quot;, &quot;&quot;)' />
       </column>
       <column caption='Recent' datatype='boolean' name='[Calculation_322]' role='dimension' type='nominal'>
-        <calculation class='tableau' formula='[recorded_at] &gt;= &quot;2026-09-06T09:22:12.085Z&quot;' />
+        <calculation class='tableau' formula='[recorded_at] &gt;= &quot;2026-09-06T11:40:26.458Z&quot;' />
       </column>
       <extract count='-1' enabled='true' units='records'>
-        <connection authentication='auth-none' author-locale='en_US' class='hyper' dbname='D:/-PROJECTS/--Portfolio/arkon-manufacturing-ai/tableau/extracts/transitions.hyper' default-settings='hyper' schema='Extract' tablename='Extract' update-time='09/06/2026 09:32:42 AM'>
+        <connection authentication='auth-none' author-locale='en_US' class='hyper' dbname='D:/-PROJECTS/--Portfolio/arkon-manufacturing-ai/tableau/extracts/transitions.hyper' default-settings='hyper' schema='Extract' tablename='Extract' update-time='09/06/2026 11:57:02 AM'>
           <relation name='Extract' table='[Extract].[Extract]' type='table' />
           <metadata-records>
             <metadata-record class='column'>
@@ -1347,11 +1347,11 @@
             </encodings>
             <customized-label>
               <formatted-text>
-                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='10'>OVERDUE</run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>OVERDUE</run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run bold='true' fontalignment='0' fontcolor='#C0392B' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_120:qk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'><![CDATA[<[federated.arkonincidents].[usr:Calculation_121:nk]>]]></run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_121:nk]>]]></run>
               </formatted-text>
             </customized-label>
             <style>
@@ -1451,11 +1451,11 @@
             </encodings>
             <customized-label>
               <formatted-text>
-                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='10'>OPEN</run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>OPEN</run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_106:qk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'><![CDATA[<[federated.arkonincidents].[usr:Calculation_124:nk]>]]></run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_124:nk]>]]></run>
               </formatted-text>
             </customized-label>
             <style>
@@ -1555,11 +1555,11 @@
             </encodings>
             <customized-label>
               <formatted-text>
-                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='10'>TIME TO ACKNOWLEDGE</run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>TIME TO ACKNOWLEDGE</run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_126:nk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'><![CDATA[<[federated.arkonincidents].[usr:Calculation_127:nk]>]]></run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_127:nk]>]]></run>
               </formatted-text>
             </customized-label>
             <style>
@@ -1659,11 +1659,11 @@
             </encodings>
             <customized-label>
               <formatted-text>
-                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='10'>TIME TO CLOSE</run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Medium' fontsize='11'>TIME TO CLOSE</run>
                 <run fontalignment='0'>Æ&#10;</run>
                 <run bold='true' fontalignment='0' fontcolor='#16161A' fontname='Tableau Bold' fontsize='38'><![CDATA[<[federated.arkonincidents].[usr:Calculation_129:nk]>]]></run>
                 <run fontalignment='0'>Æ&#10;</run>
-                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'><![CDATA[<[federated.arkonincidents].[usr:Calculation_133:nk]>]]></run>
+                <run fontalignment='0' fontcolor='#55555E' fontname='Tableau Book' fontsize='13'><![CDATA[<[federated.arkonincidents].[usr:Calculation_133:nk]>]]></run>
               </formatted-text>
             </customized-label>
             <style>
@@ -1683,9 +1683,9 @@
       <layout-options>
         <title>
           <formatted-text>
-            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='13'>Where the backlog is</run>
+            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>Where the backlog is</run>
             <run>Æ&#10;</run>
-            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>Open incidents by age, stacked by priority. Red is the part already past its response window.</run>
+            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>Open incidents by age, stacked by priority. Red is the part already past its response window.</run>
           </formatted-text>
         </title>
       </layout-options>
@@ -1818,11 +1818,12 @@
             <style>
               <style-rule element='datalabel'>
                 <format attr='color-mode' value='auto' />
+                <format attr='color' value='#FFFFFF' />
                 <format attr='font-family' value='Tableau Book' />
-                <format attr='font-size' value='12' />
+                <format attr='font-size' value='14' />
               </style-rule>
               <style-rule element='mark'>
-                <format attr='size' value='0.62' />
+                <format attr='size' value='0.88' />
                 <format attr='mark-labels-show' value='true' />
                 <format attr='mark-labels-cull' value='false' />
               </style-rule>
@@ -1838,9 +1839,9 @@
       <layout-options>
         <title>
           <formatted-text>
-            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='13'>How late is late</run>
+            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>How late is late</run>
             <run>Æ&#10;</run>
-            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>As a multiple of the window that incident was allowed.</run>
+            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>As a multiple of the window that incident was allowed.</run>
           </formatted-text>
         </title>
       </layout-options>
@@ -2015,10 +2016,10 @@
               <style-rule element='datalabel'>
                 <format attr='color-mode' value='auto' />
                 <format attr='font-family' value='Tableau Book' />
-                <format attr='font-size' value='12' />
+                <format attr='font-size' value='14' />
               </style-rule>
               <style-rule element='mark'>
-                <format attr='size' value='0.62' />
+                <format attr='size' value='0.88' />
                 <format attr='mark-labels-show' value='true' />
                 <format attr='mark-labels-cull' value='false' />
               </style-rule>
@@ -2034,9 +2035,9 @@
       <layout-options>
         <title>
           <formatted-text>
-            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='13'>Who acted, and when</run>
+            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>Who acted, and when</run>
             <run>Æ&#10;</run>
-            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>The 6 most recent transitions, newest first, on the plant clock. An audit trail, not a notification log.</run>
+            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>The 6 most recent transitions, newest first, on the plant clock. An audit trail, not a notification log.</run>
           </formatted-text>
         </title>
       </layout-options>
@@ -2109,8 +2110,8 @@
           </filter>
           <manual-sort column='[federated.arkontransitions].[none:recorded_local:nk]' direction='ASC'>
             <dictionary>
-              <bucket>&quot;06 Sep 11:31&quot;</bucket>
-              <bucket>&quot;06 Sep 11:22&quot;</bucket>
+              <bucket>&quot;06 Sep 13:51&quot;</bucket>
+              <bucket>&quot;06 Sep 13:40&quot;</bucket>
             </dictionary>
           </manual-sort>
           <slices>
@@ -2141,9 +2142,9 @@
       <layout-options>
         <title>
           <formatted-text>
-            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='13'>Which models raise the work</run>
+            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>Which models raise the work</run>
             <run>Æ&#10;</run>
-            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>All incidents, one event per inspected object.</run>
+            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>All incidents, one event per inspected object.</run>
           </formatted-text>
         </title>
       </layout-options>
@@ -2256,11 +2257,11 @@
               <style-rule element='datalabel'>
                 <format attr='color-mode' value='auto' />
                 <format attr='font-family' value='Tableau Book' />
-                <format attr='font-size' value='12' />
+                <format attr='font-size' value='14' />
               </style-rule>
               <style-rule element='mark'>
                 <format attr='mark-color' value='#1F3A63' />
-                <format attr='size' value='0.62' />
+                <format attr='size' value='0.88' />
                 <format attr='mark-labels-show' value='true' />
                 <format attr='mark-labels-cull' value='false' />
               </style-rule>
@@ -2276,9 +2277,9 @@
       <layout-options>
         <title>
           <formatted-text>
-            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='13'>Incidents behind this bar</run>
+            <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='15'>Incidents behind this bar</run>
             <run>Æ&#10;</run>
-            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>Filtered by the bar you came from. Age is hours since the incident was raised.</run>
+            <run fontcolor='#55555E' fontname='Tableau Book' fontsize='13'>Filtered by the bar you came from. Age is hours since the incident was raised.</run>
           </formatted-text>
         </title>
       </layout-options>
@@ -2433,7 +2434,7 @@
                 <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='22'>Arkon Quality Steering Cell</run>
                 <run fontcolor='#55555E' fontname='Tableau Book' fontsize='22'>    Executive view</run>
                 <run>Æ&#10;</run>
-                <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>20 of 47 open incidents have been open more than three days. The 5 raised in the last hour are being worked inside window.</run>
+                <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>20 of 50 open incidents have been open more than three days. The 5 raised in the last hour are being worked inside window.</run>
               </formatted-text>
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -2444,9 +2445,9 @@
             </zone>
             <zone fixed-size='432' forceUpdate='true' h='9333' id='14' is-fixed='true' type-v2='text' w='27835' x='72165' y='0'>
               <formatted-text>
-                <run fontalignment='2' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>as of 06 Sep 2026 11:32</run>
+                <run fontalignment='2' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>as of 06 Sep 2026 13:57</run>
                 <run>Æ&#10;</run>
-                <run fontalignment='2' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>141 incidents, 308 transitions, plant clock</run>
+                <run fontalignment='2' fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>155 incidents, 350 transitions, plant clock</run>
               </formatted-text>
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -2704,7 +2705,7 @@
           <zone fixed-size='56' forceUpdate='true' h='6222' id='70' is-fixed='true' type-v2='text' w='100000' x='0' y='93778'>
             <formatted-text>
               <run bold='true' fontcolor='#16161A' fontname='Tableau Medium' fontsize='11'>What this store is. </run>
-              <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>141 incidents raised by seven models on public datasets. Every timestamp is real. The operational context - people, lines, shifts - is simulated, and so are the response times: a demo crew inside the live plant acknowledges and closes on a schedule, so cards 3 and 4 measure that emitter, not a workforce. Source: the n8n incident status API. github.com/sergey-kasatov/arkon-manufacturing-ai</run>
+              <run fontcolor='#55555E' fontname='Tableau Book' fontsize='11'>155 incidents raised by seven models on public datasets. Every timestamp is real. The operational context - people, lines, shifts - is simulated, and so are the response times: a demo crew inside the live plant acknowledges and closes on a schedule, so cards 3 and 4 measure that emitter, not a workforce. Source: the n8n incident status API. github.com/sergey-kasatov/arkon-manufacturing-ai</run>
             </formatted-text>
             <zone-style>
               <format attr='border-color' value='#000000' />
@@ -2733,7 +2734,7 @@
                     <run fontcolor='#16161A' fontname='Tableau Medium' fontsize='22'>Arkon Quality Steering Cell</run>
                     <run fontcolor='#55555E' fontname='Tableau Book' fontsize='22'>    Executive view</run>
                     <run>Æ&#10;</run>
-                    <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>20 of 47 open incidents have been open more than three days. The 5 raised in the last hour are being worked inside window.</run>
+                    <run fontcolor='#16161A' fontname='Tableau Book' fontsize='13'>20 of 50 open incidents have been open more than three days. The 5 raised in the last hour are being worked inside window.</run>
                   </formatted-text>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
