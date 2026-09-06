@@ -63,12 +63,21 @@ incident was raised in and never rewrites it. `raised_as` is in the extract next
 to `status` for exactly that reason: a reader who opens the JSONL and sees `new`
 on a closed incident is looking at the record, not at a contradiction.
 
-**The extract says whether it is complete.** The status API caps `limit` at 50 and
+**The extract says whether it is complete.** The status API pages at 500 since 2026-09-06 (50 before that) and
 has no pagination, so the sweep asks one lifecycle state at a time - every
 incident is in exactly one, which makes the union both complete and free of
 duplicates - and `store_summary.extract_complete` is false, with a loud message
-and a non-zero exit, if any state ever returns fewer rows than it matched. Raising
-that ceiling is the move to a queryable store, charter 7.5, not a change here.
+and a non-zero exit, if any state ever returns fewer rows than it matched.
+
+That check earned itself on 2026-09-06: the live plant pushed closed incidents past
+fifty and the executive view began reporting its own bands short, which is what the
+flag is for. The API's page was raised to 500 the same day. **A sentence here used to
+say raising that ceiling meant moving to a queryable store; it did not, and that is
+worth being clear about.** The cap was never a load limit - the workflow parses both
+JSONL files whole on every request whatever the caller asks for - so it cost
+completeness and saved nothing, and raising it was one constant. What a queryable
+store would actually buy is not paging but reading less than the whole store per
+request, and that is still charter 7.5 and still not done.
 
 Verified 2026-09-04 against the live store: 29 incidents and 11 transitions, and
 the counts by status, priority, open and overdue each recomputed from

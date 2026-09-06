@@ -119,7 +119,7 @@ Parameters, all optional, combine with &:
   acknowledged or in_containment, so a question about what is open is answered by
   filtering on priority alone and reading each incident's status, or by asking for
   one of those three states at a time.
-- limit - how many incidents to return, 1 to 50, default 5
+- limit - how many incidents to return, 1 to 500, default 5
 
 With no parameters it returns the five most recent incidents plus a summary of
 the whole store. Ask for exactly what the operator asked about: filter by
@@ -400,7 +400,7 @@ You have one tool: an API Request to the Arkon incident status API.
 
 http://n8n.arkon.internal:5678/webhook/arkon-incident-status
 
-Call it once with limit=50 and no other parameters. The response carries every
+Call it once with limit=500 and no other parameters. The response carries every
 incident you need plus a store summary with the counts per priority, the open
 count and the overdue count computed over the whole store.
 

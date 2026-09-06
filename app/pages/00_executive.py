@@ -66,6 +66,10 @@ def local(stamp, fmt="%d %b %H:%M"):
 # puts the window tick at a quarter of the track, which is where it can be seen.
 BULLET_CAP = 4.0
 
+# One page per lifecycle state. The status API's own maximum is 500 since 2026-09-06;
+# asking for it means the sweep sees the whole store rather than the first slice of it.
+PAGE = 500
+
 # Section 9 of the specification. Named here rather than repeated inline, because a
 # colour that appears twice with two values is how a palette stops being one.
 CANVAS = "#F2F2EF"
@@ -224,15 +228,20 @@ CSS = """
 def sweep():
     """Every incident, one lifecycle state at a time.
 
-    The status API caps `limit` at 50 and has no pagination, so a single call
-    cannot see a store this size. Asking per state raises the ceiling to 50 per
-    state without needing pagination, because charter 7.2 puts every incident in
-    exactly one state. Same method as `tableau/build_extracts.py`; if the two ever
-    disagree, one of them changed this loop.
+    The status API has no pagination, so one call sees one page. Asking per
+    lifecycle state raises the ceiling without needing pagination, because charter 7.2
+    puts every incident in exactly one state. Same method as
+    `tableau/build_extracts.py`; if the two ever disagree, one of them changed this loop.
+
+    The status API's cap was raised from 50 to 500 on 2026-09-06, because 50 had
+    started to truncate this page: the live plant pushed closed incidents past it and the
+    footer began reporting its own bands short. Sweeping one state at a time is kept - it
+    is still what makes the sweep complete and free of duplicates - but the ceiling it
+    raises is now 500 per state rather than 50.
     """
     incidents, truncated, summary = [], [], None
     for state in ALL_STATES:
-        answer = api.incidents(status=state, limit=50)
+        answer = api.incidents(status=state, limit=PAGE)
         if not api.reachable(answer):
             return None, None, answer
         summary = summary or answer
@@ -524,8 +533,8 @@ def board():
 
     truncation = ""
     if truncated:
-        truncation = (" The store returned more incidents than the API's 50-row cap for %s, "
-                      "so those bands are short." % ", ".join(truncated))
+        truncation = (" The store returned more incidents than the API's %d-row page for %s, "
+                      "so those bands are short." % (PAGE, ", ".join(truncated)))
 
     board_html = (
         '<div class="arkon-board">'

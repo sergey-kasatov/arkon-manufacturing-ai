@@ -481,7 +481,7 @@ recent incidents plus the store summary.
 | `unit` | `92`, `092`, `FD001-Unit-092`, `ATTRTEST` | matched against the unit token of `event.evidence.record_id` |
 | `priority` | `P1`, `p1`, `P1,P2` | charter 7.1 levels |
 | `status` | charter 7.2 lifecycle value | new, acknowledged, in_containment, resolved, closed, false_positive |
-| `limit` | 1 to 50, default 5 | bounds the returned page, not `match_count` |
+| `limit` | 1 to 500, default 5 | bounds the returned page, not `match_count`. Raised from 50 on 2026-09-06, when the live plant pushed closed incidents past it and the dashboards began reporting their own bands short. It never was a load limit: this workflow reads both JSONL files whole on every request whatever the caller asks for, so a small cap saved nothing and cost completeness. |
 | `simulate_failure` | `true`, `1`, `yes` | test affordance, see below |
 
 Four answers, deliberately distinct, so the caller can tell them apart:

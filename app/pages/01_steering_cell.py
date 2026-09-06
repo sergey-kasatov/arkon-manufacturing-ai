@@ -49,7 +49,7 @@ RANK = {"P1": 0, "P2": 1, "P3": 2, "P4": 3}
 catalogue = {item["incident_id"]: item for item in answer["incidents"]}
 queue, unreadable = [], []
 for state in OPEN_STATES:
-    page_of_state = api.incidents(status=state, limit=50)
+    page_of_state = api.incidents(status=state, limit=500)
     if not api.reachable(page_of_state):
         unreadable.append(state)
         continue

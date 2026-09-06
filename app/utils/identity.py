@@ -42,7 +42,7 @@ def roster():
     added as the Quality Manager: charter 7.2 gives closure to that role alone, and
     they appear on every incident without ever being an assignee.
     """
-    answer = api.incidents(limit=50)
+    answer = api.incidents(limit=500)
     if not api.reachable(answer):
         return []
 
