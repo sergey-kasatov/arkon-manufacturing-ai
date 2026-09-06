@@ -1075,8 +1075,17 @@ def flow_zone(zone_id, box, direction, children, fixed_px=None, even=False, colo
     return out
 
 
-def param_zone(zone_id, box, parameter, fixed_px=None):
-    extra = {"mode": "dropdown", "param": parameter.ref, "type-v2": "paramctrl"}
+def param_zone(zone_id, box, parameter, fixed_px=None, mode="dropdown"):
+    """A parameter control zone.
+
+    `mode` is kept as an argument and is CURRENTLY DEAD, which is worth knowing before
+    anyone spends an afternoon on it. Measured 2026-09-06: setting this zone to
+    `radiolist` while its neighbours stayed `dropdown` produced three identical bare
+    text boxes on the dashboard. Tableau ignores the attribute here, so no value of it
+    turns these into a control with a visible list. A real filter card is the route to
+    a dropdown that opens.
+    """
+    extra = {"mode": mode, "param": parameter.ref, "type-v2": "paramctrl"}
     extra.update(fixed(fixed_px))
     return [zone_open(zone_id, box, extra)] + indent(zone_style(4)) + ["</zone>"]
 
