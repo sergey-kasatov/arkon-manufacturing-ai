@@ -351,7 +351,7 @@ into any field. The sequence is: `python tableau/build_workbook.py`, open
 `tableau/Arkon_Executive_View.twbx` in Tableau Public, File > Save to Tableau
 Public. On publishing: show the two dashboards as tabs and hide the fourteen sheets
 (every action targets a sheet placed on the Explore view, so nothing reachable is
-lost), name the viz "Arkon Quality Steering Cell, executive view", set the
+lost), name the viz "Arkon Quality Steering Cell" (two views live inside it now, and the title becomes the public URL), set the
 description to the footer sentence plus the repository link, and tag it
 (manufacturing, quality, incident management, n8n, Tableau Public).
 
