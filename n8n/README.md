@@ -1224,8 +1224,22 @@ P3 34; new 48, acknowledged 1, in containment 1), overdue 14 (all P2, five liste
 closed at 162.1, a P3 queue of 33 with ten listed, no page truncated. The card's
 header read `2026-09-06 23:13 (Europe/Berlin)`, the timezone pin verified on a real
 run. Read back from `execution_entity` and the log; the card itself was read by
-Sergey off the group at 23:13, which is the delivery reading. The first scheduled
-run is 07:05 on 2026-09-07.
+Sergey off the group at 23:13, which is the delivery reading.
+
+**First scheduled run 2026-09-07 07:05, execution 8333, `mode = trigger`, `success`, one
+card.** The Schedule Trigger fired at `05:05:00.032` UTC in `execution_entity`, which is
+07:05:00 Europe/Berlin to the second, so the timezone pin held on the tick itself and not
+only on the manual run; the whole run took 1.3 s. The record is `ARK-NTF-00018`,
+`telegram_message_id: 122`, `sent_at` Telegram's `2026-09-07T05:05:01Z`, `as_of` the API's
+`05:05:00.432Z`: open 55 (P1 0, P2 17, P3 38; new 49, acknowledged 4, in containment 2),
+overdue 14 (all P2, five listed), 182 acknowledged at a median of 64.9 minutes (71 within
+the window, 12 late), 201 closed at 183.4, a P3 queue of 35 with ten listed, no page
+truncated, no unreadable log line. The shared `ARK-NTF` sequence held across the two
+writers overnight: the timer took `00016` at 00:45 and `00017` at 02:30 for two live-plant
+P2s that sat unacknowledged past the hour, the digest took `00018`, and the timer's 47
+quarter-hour runs since its deployment are all `success` with no gap. Read back from
+`execution_entity` and the log over SSH at 09:16 on 2026-09-07; the card itself was not
+read off the group by an agent.
 
 ### Known boundaries
 
