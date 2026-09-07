@@ -20,8 +20,9 @@ also the honest division of labour. The notebooks are where a number is made and
 the model cards are where it is defended; this app shows it and points at both.
 
 It also does not compute an incident's status. That is a fold of the transition
-log onto the incident record and the n8n status API performs it, so the cockpit
-and the assistant cannot disagree about what an incident is doing.
+log onto the incident record, performed once on the platform (since 2026-09-07 by
+the store sync behind the n8n status API, charter 7.5) and served by that API, so
+the cockpit and the assistant cannot disagree about what an incident is doing.
 
 ## The pages
 

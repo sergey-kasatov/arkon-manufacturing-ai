@@ -131,7 +131,7 @@ flowchart TB
     W3["(3) POST /webhook/arkon-escalation<br/>the assistant's only write"]
     W4["(4) POST /webhook/arkon-incident-transition<br/>the lifecycle<br/>200, 400, 404, 409, 503"]
     LP["Live plant<br/>one re-timed real event<br/>every ~10 min, plus a crew"]
-    QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 247 chunks")]
+    QD[("Qdrant<br/>arkon-knowledge<br/>10 documents, 248 chunks")]
     INC[("incidents.jsonl")]
     TRN[("incident_transitions.jsonl")]
     ESC[("escalations.jsonl")]
@@ -358,7 +358,8 @@ timestamps and one was recorded, and all 29 incidents in the store read `new`. T
 are **appended to a second log rather than rewriting the incident line**, so the store stays
 append-only and cannot race the intake workflow, and the current status of an incident is
 the fold of that log onto its line - performed identically by the three workflows that
-report a status, from one source in `n8n/build/lifecycle.py`. The machine refuses as well
+fold a status (the transition endpoint, the escalation record and, since 2026-09-07, the store
+sync behind the status API), from one source in `n8n/build/lifecycle.py`. The machine refuses as well
 as records: an illegal move answers 409 naming the current status and what is allowed from
 it, which is a different answer from a malformed request. **One incident has now gone from
 model output to human-reviewed closure**, the Phase 4 criterion of charter section 9 and the
@@ -382,8 +383,12 @@ into the same notification log (`n8n/README.md`, "Daily digest"), so charter 7.4
 except for the buttons. What the card does
 carry instead, since 2026-09-05, is **a link that opens the cockpit's Steering Cell page on
 that one incident**, which is the same tap the buttons would have saved without the exposure
-- [ ] Queryable incident store - the charter 7.5 move to the n8n Data Table node, now paced
-by the Streamlit cockpit rather than by the lifecycle
+- [x] **Queryable incident store** - charter 7.5, **built 2026-09-07** on the n8n data tables the
+charter named: a store sync sub-workflow keeps three tables level with the two JSONL logs after
+every write, started by both write paths without waiting, and the status API answers from the rows
+on the same contract (0.16 to 0.19 s per full-state page against 0.31 to 0.42 s before, at 276
+incidents), while the logs stay the record of truth and the projection is rebuilt from them by one
+call (`n8n/README.md`, "Incident store")
 - [x] **Streamlit cockpit** - nine pages over the two live services and the repository's own
 tracked metrics, deployed on the NAS at `http://AK2101:8303` (`app/README.md`). The Steering Cell
 page is charter 7.5: counts by priority and lifecycle state, the response-time KPIs, and any
@@ -448,8 +453,8 @@ live incident traced through all of them with its evidence
 
 ### One deployed piece that is not an Arkon feature
 
-Twelve pieces are deployed: three Langflow flows, seven n8n workflows, the Streamlit
-cockpit and the live plant. Eleven of them run the plant. The exception is the twelve-node
+Thirteen pieces are deployed: three Langflow flows, eight n8n workflows, the Streamlit
+cockpit and the live plant. Twelve of them run the plant. The exception is the twelve-node
 `n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
 rather than to serve an operator, and could be deleted without loss. It is kept
 because the claim it settles is documented in `n8n/README.md` and the evidence is
@@ -823,10 +828,10 @@ What is left is not a module. It is depth on what exists:
   `/data/arkon/intake_outcomes.jsonl` with its reason, and an alerted incident's line
   carries Telegram's own message id; nothing reads that log back yet, so the screens
   still cannot show a rejection (`n8n/README.md`, "Intake outcomes").
-- **Charter 7.5, a queryable incident store.** The status API parses both JSONL files
-  whole on every request. That is right at demo scale and it has begun to show: the
-  page cap was raised from 50 to 500 on 2026-09-06 after it truncated a headline
-  number on the executive view by twelve.
+- **Charter 7.5, a queryable incident store: DONE 2026-09-07.** The status API reads
+  the store sync's data tables instead of parsing both JSONL files per request; what
+  the sync still does is read both files whole once per write, which is the boundary
+  named in `n8n/README.md`, "Incident store".
 - **An origin marker on lifecycle transitions.** The live plant's demo crew and a
   real operator both post to the same endpoint under a roster name, so the two are
   indistinguishable in the data. One field would separate them, and the response-time
@@ -904,7 +909,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-130 tests, under a second, and **offline by design**: no NAS, no Steering Cell, no
+143 tests, a few seconds, and **offline by design**: no NAS, no Steering Cell, no
 trained weights, no datasets. That is what makes them worth running on a laptop and in
 CI on every push, and it is also the constraint that decided what they cover. They test
 the two things a regression could break silently everywhere else:
@@ -925,6 +930,12 @@ the two things a regression could break silently everywhere else:
   states with no exits, `resolved` not counted as open, `false_positive` reachable from
   everywhere, and `resolved -> in_containment` as the only backwards edge - because a
   test that repeats the table back passes for any edit that changes both.
+- **The generators and the store schema** (`tests/test_generators.py`,
+  `tests/test_store_schema.py`). Every tracked n8n workflow is rebuilt by its generator
+  and compared byte for byte, because on 2026-09-06 the status API's page cap was raised
+  in the JSON alone and the generator kept saying 50 until it was run again the next day;
+  and the column names the store sync writes are the ones the status API reads back
+  (charter 7.5).
 
 The rest covers the executive view's generated content (`tests/test_dashboard.py`: age
 bands, the status sentence, the two thresholds the workbook ships baked in, the layout
@@ -940,8 +951,10 @@ the repository's typography rule.
 assistant and the live plant's transport all need the running NAS, so they are checked
 by `live_plant/check_plant.py` (48 assertions against a fake Steering Cell),
 `n8n/build/check_lifecycle_js.py`, `n8n/build/check_overdue_js.py`,
-`n8n/build/check_digest_js.py` and `n8n/build/check_intake_outcome_js.py`, which are
-run by hand. Model training is not tested at all; the model cards carry the held-out numbers
+`n8n/build/check_digest_js.py`, `n8n/build/check_intake_outcome_js.py`,
+`n8n/build/check_store_sync_js.py` and `n8n/build/check_status_js.py`, which are run
+by hand, and by `n8n/build/check_store.py` on the NAS, which re-folds the logs and
+compares them with the queryable store row by row. Model training is not tested at all; the model cards carry the held-out numbers
 and the notebooks reproduce them.
 
 ---
@@ -991,7 +1004,7 @@ arkon-manufacturing-ai/
 ├── docs/                       Charter, SOP and one model card per module
 ├── events/                     The shared event contract and the adapters
 ├── langflow/                   The assistant canvas, its prompts and build scripts
-├── n8n/                        The seven workflows, their generators and probes
+├── n8n/                        The eight workflows, their generators and probes, the NAS-side deploy and check scripts
 ├── live_plant/                 The demo engine, a mini-project: real-model incidents on a clock plus the crew (live_plant/README.md)
 ├── tableau/                    The executive view: the extract layer, the workbook generator and its design specification (tableau/README.md)
 ├── assets/                     Saved plots for README and Streamlit
@@ -1000,7 +1013,7 @@ arkon-manufacturing-ai/
 │   ├── cv/
 │   ├── nlp/
 │   └── ui/                     Screenshots of the running cockpit, regenerated not hand-taken
-├── tests/                      Offline test suite: the event contract, the charter 7.2 lifecycle, the executive view's generated content, the plant clock
+├── tests/                      Offline test suite: the event contract, the charter 7.2 lifecycle, every generator against its workflow, the store schema, the executive view's generated content, the plant clock
 ├── tools/
 │   ├── make_result_plots.py    Regenerates the result figures from the metrics files
 │   └── make_ui_screenshots.py  Regenerates assets/ui/ from the deployed cockpit

@@ -4,24 +4,28 @@ Operational layer of the Arkon platform: one workflow raises incidents and
 alerts, one moves them along their lifecycle, one answers questions about them,
 one records an approved escalation, and two run on timers: one tells the Quality
 Manager about a P1 or P2 that nobody acknowledged inside its window, one sends the
-daily digest. Process owner: `docs/Project_Charter.md` sections 7 and 8. All of
-them run on a self-hosted n8n instance, pinned to `n8nio/n8n:2.29.9`.
+daily digest; and since 2026-09-07 one keeps the queryable incident store level with
+the logs after every write. Process owner: `docs/Project_Charter.md` sections 7 and 8.
+All of them run on a self-hosted n8n instance, pinned to `n8nio/n8n:2.29.9`.
 
 | Workflow | Direction | Endpoint | Deployed |
 |---|---|---|---|
 | `quality_steering_cell_v1.json` | write | `POST /webhook/arkon-event` | 2026-08-30, alert body fixed 2026-09-02 |
 | `incident_transition_v1.json` | write | `POST /webhook/arkon-incident-transition` | 2026-09-03 |
-| `incident_status_api_v1.json` | read | `GET /webhook/arkon-incident-status` | 2026-08-30, folds transitions since 2026-09-03 |
+| `incident_status_api_v1.json` | read | `GET /webhook/arkon-incident-status` | 2026-08-30, folds transitions since 2026-09-03, answers from the queryable store since 2026-09-07 |
 | `escalation_record_v1.json` | write | `POST /webhook/arkon-escalation` | 2026-08-30, folds transitions since 2026-09-03 |
 | `comparison_slice_v1.json` | read | `POST /webhook/arkon-slice` | 2026-08-30 |
 | `overdue_escalation_v1.json` | scheduled | every 15 minutes, no endpoint | 2026-09-06, record fix the same evening |
 | `daily_digest_v1.json` | scheduled | daily at 07:05 Europe/Berlin, no endpoint | 2026-09-06 |
+| `store_sync_v1.json` | sync | `POST /webhook/arkon-store-sync`; also started by the two write paths after every append | 2026-09-07 |
 
-**Three of the six that run the plant share one piece of code.** The incident line is written once,
+**Three of the seven that run the plant share one piece of code.** The incident line is written once,
 at `new`, and never rewritten, so the current status of an incident is the fold of
 the transition log onto that line. That fold lives in `n8n/build/lifecycle.py` and
-is injected verbatim into the three workflows that report a status; a state
-machine copied into three generated JS bodies is a state machine that drifts.
+is injected verbatim into the three workflows that fold a status: the transition
+endpoint, the escalation record and, since 2026-09-07, the store sync, which folds
+on the status API's behalf (the API reads the sync's rows and folds nothing itself);
+a state machine copied into three generated JS bodies is a state machine that drifts.
 `n8n/build/check_lifecycle_js.py` asserts the injection is verbatim and then runs
 the fold under node.
 
@@ -528,6 +532,124 @@ so they are recorded with their real cause.
 - Operational context in the events (shift, assignee, escalation contact) is
   simulated and labelled `context_origin: simulated` per the charter.
 
+## Incident store (the queryable projection, charter 7.5)
+
+Eighth workflow, `store_sync_v1.json`, built and **deployed 2026-09-07**, workflow id
+`arkonStoreSync1`. It is the queryable incident store the charter's section 7.5 named
+from the start and the platform deviated from on 2026-08-30: three n8n data tables,
+kept level with the two JSONL logs by one sub-workflow that runs after every write.
+Not a second record of truth. The logs stay append-only and both write paths still
+write only them; the tables are a projection of the logs and are rebuilt from them
+by one call.
+
+| Table | One row per | What it carries |
+|---|---|---|
+| `arkon_incidents` | incident | the flat projection the status API serves, with the folded lifecycle (`status`, the three milestones, the three response times, `transition_count`, `is_terminal`), the evidence and the history as JSON text, the log line the row came from |
+| `arkon_transitions` | transition line | the record as the transition endpoint wrote it, plus its log line |
+| `arkon_store_summary` | the store (one row) | the counts per priority and state, open and overdue, the response-time medians, the transition totals, and the two line counters (`incidents_lines`, `transitions_lines`) the next sync resumes from |
+
+The schema is one file, `n8n/build/store_schema.py`, read by the sync's generator, by
+the status API's generator and by the checkers, for the reason `lifecycle.py` is one
+file.
+
+```text
+Execute Workflow Trigger (source, rebuild) | POST /webhook/arkon-store-sync
+  -> Create the three tables if missing
+  -> rebuild? wipe the three tables
+  -> Read /data/arkon/incidents.jsonl and incident_transitions.jsonl (whole)
+  -> Read the summary row
+  -> Fold every incident (lifecycle.py, verbatim), compute the summary,
+     pick the rows to write: new incident lines, incidents a new transition touched
+  -> Upsert incident rows | upsert transition rows | upsert the summary row
+  -> Append one line to /data/arkon/store_sync.jsonl
+```
+
+Four decisions, and the generator `n8n/build/build_store_sync_workflow.py` carries them
+in its header.
+
+- **A sync follows every write, not a clock.** The Steering Cell after `Append Incident
+  Record` and the transition endpoint after `Append Transition Record` start this
+  workflow through an Execute Sub-workflow node that does not wait and cannot fail its
+  caller (`n8n/build/add_store_sync.py` puts the same node in the tracked JSONs and, by
+  export-patch-import, in the live rows). The projection is current seconds after a
+  line is appended and no request path ever waits for a fold. The webhook is for a
+  person or a script; `n8n execute` cannot run it, see the boundaries.
+- **Every run folds everything and writes only what changed.** The summary is
+  recomputed from the full fold every time, so it cannot drift from the logs; the row
+  writes are limited by the two line counters in the summary row. Reading both files
+  whole per sync is the linear cost that remains, off the read path.
+- **A rebuild is the same run from empty tables.** `{"rebuild": true}` on the webhook
+  wipes the tables first; a plant reset (`live_plant/README.md`) is followed by one.
+- **Successful runs are not kept as executions.** A run carries both logs as text, and
+  the status API's stored executions had grown n8n's database to 3.6 GB in eight days.
+  n8n soft-deletes such a run on completion (the row shows `running` with `deletedAt`
+  set until the pruning's hourly hard delete; that is not a stuck execution) and the
+  sync line is the record: mode, source, the counters, the numbers, the rows written.
+  The status API got the same setting the same day. Failed runs are kept.
+
+### Deploying it
+
+```bash
+docker exec n8n touch /data/arkon/store_sync.jsonl
+docker exec n8n n8n import:workflow --input=/data/arkon/_deploy/store_sync_v1.json
+docker exec n8n n8n publish:workflow --id=arkonStoreSync1 && docker restart n8n
+curl -s -X POST -H 'Content-Type: application/json' -d '{"rebuild": true}' http://localhost:5678/webhook/arkon-store-sync
+python3 ~/arkon-tmp/check_store.py
+```
+
+No credentials, no static data, so a plain import. The first call creates the tables.
+The two callers are patched into their live rows with `n8n/build/deploy_live_patch.py`
+(the transition endpoint, whose row carries `nextTransitionId`) and
+`deploy_steering_cell.py` (the Steering Cell), both inside the quiet window after a
+plant tick, both run on the NAS.
+
+### The first sync, and what it measured
+
+**2026-09-07 09:59 plant time, `sync_mode: initial`, through the webhook:** 275 incident
+rows and 710 transition rows written from 275 and 710 log lines, `check_store.py`
+level on the first pass. The fold took 7 ms; the run took 64 s, almost all of it the
+985 upserts. The next call, with 4 new incident lines and 3 new transition lines,
+took 0.99 s. The status API on the rows: a full `status=new&limit=500` page in 0.16
+to 0.19 s against 0.31 to 0.42 s from the logs an hour earlier (276 incidents, 713
+transitions), 25 of 25 probe cases, and the same numbers in the summary as the fold
+gave before the move.
+
+### Checking it
+
+```bash
+py n8n/build/check_store_sync_js.py        # the fold-to-rows node under node, 54 cases
+py n8n/build/check_status_js.py            # the API's parser and answer node, fed the sync's own rows
+py n8n/build/check_lifecycle_js.py         # the fold is verbatim in its three carriers
+python3 ~/arkon-tmp/check_store.py         # on the NAS: the tables against the logs, row by row
+```
+
+`check_store.py` re-folds the logs in Python on purpose: a checker that reused the
+sync's JS would agree with every mistake in it.
+
+### Known boundaries
+
+- **The sync reads both logs whole**, because n8n's file node has no offset read. The
+  parse and the fold are the cost, 7 ms at 275 incidents, and they grow with the store;
+  the next step, if a plant ever needs it, is a sync that reads a tail, and the two line
+  counters in the summary row are already the bookmark it would start from.
+- **Two syncs can overlap** (an intake and a crew move in the same second) and n8n has
+  no per-workflow mutex. The row upserts are idempotent; the summary row is written by
+  whichever finishes last, so it can be one write behind for a moment, and the next
+  sync heals it. `check_store.py` is the ruler.
+- **A write whose sync did not happen is invisible until the next one.** The caller
+  never waits for the sync and never learns that it failed; the next write's sync
+  redoes everything from the counters, and `store.sync_lag_seconds` on the API says
+  how old the projection is.
+- **`n8n execute` cannot run it.** The command starts from an Execute Workflow Trigger,
+  which the sync has, but it does not load the data-table module (only `start` does),
+  so every data table node fails with "the module is disabled". Measured twice, with
+  and without `N8N_ENABLED_MODULES=data-table`. The webhook is the manual path.
+- **The tables live in n8n's own database**, under its 200 MB default cap for data
+  tables (`N8N_DATA_TABLES_MAX_SIZE_BYTES`). At 276 incidents they hold about a
+  megabyte.
+- **The transition endpoint and the escalation record still parse both logs** on every
+  call. The same move is open for them and was deliberately not made today.
+
 ## Incident status API (read path)
 
 Second workflow, `incident_status_api_v1.json`, built 2026-08-30. It answers
@@ -539,14 +661,18 @@ and the assistant that consumes it becomes the operational interface.
 **Status: deployed and verified 2026-08-30** on n8n 2.29.9, workflow id
 `arkonStatusApi1`. Twenty-four contract cases pass, plus the two the probe
 cannot cover by itself: an unreadable store answers 503, and the endpoint is
-reachable from the agent container by name.
+reachable from the agent container by name. **Since 2026-09-07 it answers from the
+queryable store** (the section above): the same id, the same contract, 25 probe
+cases, and the deployment steps below need the store synced once first.
 
 ```text
 GET /webhook/arkon-incident-status
-  -> Parse and validate the query        (400, one reason per bad parameter)
-  -> Simulated failure requested?        (503, test affordance)
-  -> Read /data/arkon/incidents.jsonl    (503 on an unreadable store)
-  -> Filter, rank, project               (200, status ok or no_match)
+  -> Parse and validate the query, pick the one table condition   (400, one reason per bad parameter)
+  -> Simulated failure requested?                                  (503, test affordance)
+  -> Read the summary row of arkon_store_summary                   (503 if the tables do not answer, 503 if never synced)
+  -> Read the new rows of arkon_incidents                          (the live overdue count)
+  -> Read the rows the condition names, newest first               (503 if the table does not answer)
+  -> Apply the exact filters, page, project                        (200, status ok or no_match)
 ```
 
 ### Query contract
@@ -560,7 +686,7 @@ recent incidents plus the store summary.
 | `unit` | `92`, `092`, `FD001-Unit-092`, `ATTRTEST` | matched against the unit token of `event.evidence.record_id` |
 | `priority` | `P1`, `p1`, `P1,P2` | charter 7.1 levels |
 | `status` | charter 7.2 lifecycle value | new, acknowledged, in_containment, resolved, closed, false_positive |
-| `limit` | 1 to 500, default 5 | bounds the returned page, not `match_count`. Raised from 50 on 2026-09-06, when the live plant pushed closed incidents past it and the dashboards began reporting their own bands short. It never was a load limit: this workflow reads both JSONL files whole on every request whatever the caller asks for, so a small cap saved nothing and cost completeness. |
+| `limit` | 1 to 500, default 5 | bounds the returned page, not `match_count`. Raised from 50 on 2026-09-06, when the live plant pushed closed incidents past it and the dashboards began reporting their own bands short. It never was a load limit: until 2026-09-07 this workflow read both JSONL files whole on every request whatever the caller asked for, so a small cap saved nothing and cost completeness; since then it reads the rows the query names. |
 | `simulate_failure` | `true`, `1`, `yes` | test affordance, see below |
 
 Four answers, deliberately distinct, so the caller can tell them apart:
@@ -588,6 +714,9 @@ The response also carries a store summary computed over all incidents, not just
 the returned page: counts per priority, open incidents, and `overdue_incidents`
 measured against the charter 7.1 acknowledgement windows (P1 fifteen minutes, P2
 one hour). That answers "is anything overdue" in a single call.
+Since 2026-09-07 the summary comes from the summary row the store sync keeps, with
+`overdue_incidents` still counted live from the `new` rows, and it names its own
+freshness: `store.synced_at`, `store.sync_mode` and `store.sync_lag_seconds`.
 
 ### The simulate_failure affordance
 
@@ -614,7 +743,10 @@ itself, "changes will not take effect if n8n is running", because the running
 process holds its active workflows in memory. `--activeState=fromJson` on the
 import is not an alternative; it refuses outside queue or multi-main mode.
 Importing through the UI and pressing Publish achieves the same without a
-restart, and is the route to use on a fresh instance.
+restart, and is the route to use on a fresh instance. Since 2026-09-07 the endpoint
+reads the data tables, so the store sync has to have run once before the API is
+published on a fresh instance; until then every call answers 503 `unavailable` with
+"has not been synced yet", which is the designed answer and not an outage.
 
 ### Testing it
 
@@ -660,9 +792,13 @@ private IP ranges by default and needs
 - Read-only, and it stays that way. Acknowledging or closing an incident is
   `POST /webhook/arkon-incident-transition`, escalating is
   `POST /webhook/arkon-escalation`.
-- **Two stores are now parsed on every call**, incidents and the transition log,
-  and the fold runs over both. Correct at demo scale and wrong at plant scale; the
-  fix is the same move to a queryable store, not a smarter parser.
+- **It answers from the store sync's projection, since 2026-09-07.** Nothing is
+  parsed per call any more; what a call reads is the summary row, the `new` rows and
+  the rows its one condition names. The price is freshness rather than cost: a write
+  is followed by a sync within seconds, and `store.sync_lag_seconds` says how long
+  ago the last one ran, but a sync that failed leaves the projection behind until
+  the next write or a manual `POST /webhook/arkon-store-sync`. The transition
+  endpoint and the escalation record still parse both logs on every call.
 - **A status it reports is a fold, not a field.** Reading `incidents.jsonl`
   directly gives `new` for every incident, for ever. `raised_as` is returned on
   every record so the two cannot be mistaken for a contradiction.
@@ -818,7 +954,8 @@ So the store keeps the incident as it was raised, `/data/arkon/incident_transiti
 keeps what happened to it, and **the current status is a fold**: the last
 transition recorded against the incident, or `new` if there is none. The fold also
 produces the milestone timestamps and the response times. It lives in
-`n8n/build/lifecycle.py` and runs in all three workflows that report a status.
+`n8n/build/lifecycle.py` and runs in the transition endpoint, the escalation record
+and, since 2026-09-07, the store sync (the status API reads the sync's rows).
 
 The cost is honest and worth naming: every consumer now reads two files instead of
 one, and a consumer that reads only the incident store sees `new` for ever. The
@@ -1002,9 +1139,10 @@ to `closed`.
   its caller sends, exactly as the escalation record does with `approved_by`. In
   production this endpoint would check a signed token.
 - **No authentication**, on the LAN and Tailscale only, same as the rest.
-- **The whole transition log is parsed on every call**, on all three endpoints.
-  Correct at demo scale and wrong at plant scale; the fix is the move to a
-  queryable store, not a smarter parser.
+- **The whole transition log is parsed on every call** of this endpoint and of the
+  escalation record; the status API stopped doing so on 2026-09-07, when the
+  queryable store arrived ("Incident store" above). Correct at demo scale; the
+  same move is open for the two write paths.
 - **The assistant cannot call it.** It is not on the Langflow canvas as a tool and
   that is deliberate for now: the canvas has been untouched since 2026-09-01 and
   the assistant's one action stays the guarded escalation. What did change is what

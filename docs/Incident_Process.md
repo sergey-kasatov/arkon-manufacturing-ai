@@ -28,7 +28,7 @@ flowchart TD
     A --> F[8. False positive<br>kept, feeds threshold tuning]
     W --> Z[8. Closed after the Quality Manager's review]
     W -. containment did not hold .-> W
-    Z --> S[9. One status API folds the history]
+    Z --> S[9. One status API serves the folded history]
     F --> S
     Q --> S
     S --> K1[Cockpit, live]
@@ -48,7 +48,7 @@ flowchart TD
 | 6. Overdue | If the window lapses with no acknowledgement the incident is overdue. The status API says so on every read, the cockpit and the executive view count it in red, and the Quality Manager is told rather than the window lapsing silently. | The Steering Cell, the escalation contact | Charter 7.1 and 7.4; SOP section 8 step 6 | `overdue` on the status API; the OVERDUE card on both dashboards; the manager card and its line in `/data/arkon/incident_notifications.jsonl`, since 2026-09-06 |
 | 7. Work | The assignee decides whether the condition is real, moves the incident into containment, then to resolved when the work is done. Every step is timestamped and carries a note, so the record reads as an account rather than a sequence of words. A containment that does not hold reopens. | The assignee | Charter 7.2; SOP section 8 steps 3 to 5 | The incident's history on the cockpit; the transition log |
 | 8. Close or dismiss | The Quality Manager reviews and closes. Or the assignee marks the incident a false positive, which is kept rather than deleted because it is the input to threshold tuning. Both are final. | The Quality Manager; the assignee | Charter 7.2; SOP section 5 | `closed` and `false_positive` counts on the status API and both dashboards |
-| 9. See | Nothing on any screen computes a status of its own. The incident line is written once and never rewritten; the current state is the transition log folded onto it, and one status API performs that fold for every consumer. The cockpit shows it live, the assistant answers it in words and can escalate only through a human approval gate, and the executive view reads it through an extract refresh. | The status API, the cockpit, the assistant, Tableau | Charter 7.5 | `http://AK2101:8303`, the Langflow Playground, `tableau/Arkon_Executive_View.twb` |
+| 9. See | Nothing on any screen computes a status of its own. The incident line is written once and never rewritten; the current state is the transition log folded onto it; the platform performs that fold once, in the store sync of charter 7.5 (since 2026-09-07; the status API did it itself before), and one status API serves it to every consumer. The cockpit shows it live, the assistant answers it in words and can escalate only through a human approval gate, and the executive view reads it through an extract refresh. | The status API, the cockpit, the assistant, Tableau | Charter 7.5 | `http://AK2101:8303`, the Langflow Playground, `tableau/Arkon_Executive_View.twb` |
 
 ## The two operator surfaces, and why there are two
 

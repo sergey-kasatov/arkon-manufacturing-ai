@@ -75,11 +75,14 @@ That check earned itself on 2026-09-06: the live plant pushed closed incidents p
 fifty and the executive view began reporting its own bands short, which is what the
 flag is for. The API's page was raised to 500 the same day. **A sentence here used to
 say raising that ceiling meant moving to a queryable store; it did not, and that is
-worth being clear about.** The cap was never a load limit - the workflow parses both
-JSONL files whole on every request whatever the caller asks for - so it cost
+worth being clear about.** The cap was never a load limit - until 2026-09-07 the workflow parsed
+both JSONL files whole on every request whatever the caller asked for - so it cost
 completeness and saved nothing, and raising it was one constant. What a queryable
 store would actually buy is not paging but reading less than the whole store per
-request, and that is still charter 7.5 and still not done.
+request, and that is charter 7.5, built 2026-09-07: the API now reads rows from the
+store sync's data tables (`n8n/README.md`, "Incident store"). The per-state sweep
+and the completeness check stay as they are, because the API still has no pagination
+and 500 rows per state is still the page.
 
 Verified 2026-09-04 against the live store: 29 incidents and 11 transitions, and
 the counts by status, priority, open and overdue each recomputed from

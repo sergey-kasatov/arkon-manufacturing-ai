@@ -193,6 +193,14 @@ container user, because the append node cannot create a file (`n8n/README.md`,
 trap 3). It stops at the first error and deletes nothing. Afterwards the counters
 keep counting, so the first incident of the new store is not `ARK-INC-00001`,
 which is honest: the store has never been a complete history of every id issued.
+
+**Since 2026-09-07 a reset is followed by one store rebuild.** The queryable projection
+of charter 7.5 keeps a row for every incident and transition it has seen, so after the
+logs are archived it has to be told to start again: `POST /webhook/arkon-store-sync`
+with `{"rebuild": true}` wipes the three data tables and refills them from the fresh
+logs, and `n8n/build/check_store.py` on the NAS confirms they are level
+(`n8n/README.md`, "Incident store"). Until that call the status API keeps answering
+from the archived incidents.
 The emitter keeps its 24-hour dedup memory across the reset, because intake keeps
 its own, and starts a new run id so `status` and the ledger separate before from
 after.

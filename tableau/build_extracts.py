@@ -65,14 +65,15 @@ def local(stamp, fmt="%d %b %H:%M"):
 # per-state sweep below both complete and free of duplicates.
 LIFECYCLE = ["new", "acknowledged", "in_containment", "resolved", "closed", "false_positive"]
 
-# The status API has no pagination; that moves with the queryable store of charter
-# 7.5. Asking per lifecycle state raises the ceiling without needing one, and the
-# script says so if it ever hits it.
+# The status API has no pagination, and the queryable store of charter 7.5 (built
+# 2026-09-07) did not add one: it reads rows instead of parsing the logs. Asking per
+# lifecycle state raises the ceiling without needing one, and the script says so if
+# it ever hits it.
 #
 # Its maximum was raised from 50 to 500 on 2026-09-06, because 50 had started to
 # truncate the dashboards: the live plant pushed closed incidents past it. The cap
-# never was a load limit - the workflow reads both JSONL files whole on every request
-# regardless - so it cost completeness and saved nothing.
+# never was a load limit - until 2026-09-07 the workflow read both JSONL files whole
+# on every request regardless - so it cost completeness and saved nothing.
 PAGE = 500
 
 
@@ -243,8 +244,8 @@ def main():
     if truncated:
         print("INCOMPLETE. The API returned fewer incidents than it matched for: "
               + "; ".join(truncated)
-              + "\nThe cap is 50 per lifecycle state with no pagination. Raising it is the move "
-                "to a queryable store, charter 7.5.")
+              + "\nThe cap is %d per lifecycle state with no pagination; the queryable store of "
+                "charter 7.5 reads rows but does not page. Raise PAGE or query in windows." % PAGE)
         return 1
     print("complete: every incident the store matched was returned.")
     return 0

@@ -384,7 +384,8 @@ model unless `--keep` is passed.
   the escalation timer and the daily digest: 246, the cards still 162, charter 47,
   SOP 12, contract 25, every untouched document back at its previous count. Once
   more after the charter 7.6 edit the same evening: 247, the charter 48, nothing
-  else moved.
+  else moved. And on 2026-09-07, after the charter 7.5 edit for the queryable
+  store: 248, the charter 49, the nine other documents at their previous counts.
 - **A rebuild is verified by the documents that did not change.** The NHTSA ingest
   of 2026-09-03 dropped the collection and rebuilt it from ten documents. The seven
   untouched documents came back at byte-identical chunk counts, and the growth is
