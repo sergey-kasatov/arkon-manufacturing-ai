@@ -126,7 +126,9 @@ Chat Input -> Status API URL -> Retry plan (3 rows) -> Loop: Status attempts
                     |                                                      |                                 `-- Done -> Overdue notes
                     `-- request ----------------------------------------> Briefing input <- payload, note, notes
                                                                                 |
-                                                                          Shift Briefing -> Chat Output
+                                                                          Briefing Note (the NOTE sentence only)
+                                                                                |
+                                                     payload ---------> Briefing assemble -> Chat Output
 ```
 
 The briefing is where the retry belongs: it is the unattended path, run at shift
@@ -139,6 +141,22 @@ the NOTE block only, which is defined as the sentence naming what the counts do
 not show and used to be written from the counts themselves. OPEN, OVERDUE and
 WATCH keep their fields; the OPEN numbers are now counted in code rather than by
 the model, after two runs of the same prompt read the store summary two ways.
+
+**Since the evening of 2026-09-07 the model writes only the NOTE sentence, and a
+component renders the other three blocks after it.** DEFECT-9 measured that the
+briefing agent re-orders the OVERDUE and WATCH lines a component had already
+sorted, intermittently and in both directions (four runs one way, three the
+other, no change between them), and that a worked example in the prompt does not
+move it. The model is the last thing between a correct list and the operator, and
+it rewords by nature, so the lines whose value is their exact content no longer
+pass through it: `components/arkon_briefing_assemble.py` renders OPEN, OVERDUE
+and WATCH from the resolved status body (oldest first by age, ties by id; fewest
+remaining minutes first for WATCH; "none" for a missing unit or assignee), takes
+the one sentence out of the agent's answer, and appends the closing line. The
+agent runs on `briefing_v3` (NOTE only); `briefing_v2` stays in the prompt file as
+the prose contract the component implements. `build/check_briefing_blocks.py`
+proves it: every run bracketed by two status API reads, the three blocks computed
+a second time from the API body and compared line by line and in order.
 
 **What it costs.** Every briefing issues three status calls, not one, and one
 model call per overdue incident on top of the briefing's own. Fourteen overdue

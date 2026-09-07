@@ -1,6 +1,6 @@
 {
   "name": "Arkon_Shift_Briefing",
-  "description": "Shift handover briefing for the Arkon Quality Steering Cell: open incidents by priority, what is overdue, what is close to its window. The status lookup runs as a bounded retry loop, and every overdue incident is read on its own. Called by the Arkon Quality Assistant through Run Flow, and runnable on its own endpoint at shift change.",
+  "description": "Shift handover briefing for the Arkon Quality Steering Cell: open incidents by priority, what is overdue, what is close to its window. The status lookup runs as a bounded retry loop, every overdue incident is read on its own, and the OPEN, OVERDUE and WATCH blocks are rendered in code after the model. Called by the Arkon Quality Assistant through Run Flow, and runnable on its own endpoint at shift change.",
   "endpoint_name": "arkon-shift-briefing",
   "data": {
     "nodes": [
@@ -953,7 +953,7 @@
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
-            "display_name": "Shift Briefing",
+            "display_name": "Briefing Note",
             "documentation": "https://docs.langflow.org/agents",
             "edited": false,
             "field_order": [
@@ -1555,7 +1555,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "# Role\n\nYou produce the Arkon shift handover briefing for the Quality Steering Cell. You\nare called at shift change, either by the Quality Assistant or on a schedule, and\nyour output is read by the operator taking over.\n\n# What you are given\n\nYou have no tools. Everything you need arrives in the message, in four labelled\nsections, and you may use nothing else.\n\nREQUEST - the operator's own words. Answer that request.\nLOOKUP - one line saying whether the incident status service answered, and on\nwhich attempt. The flow tries up to three times before it gives up.\nOPEN COUNT - the open total and the open count per priority, already counted\nfrom the incident list. Print these numbers on the OPEN line exactly as given;\ndo not recount them and do not replace them with the store's whole-store totals.\nSTATUS DATA - the status API body: every incident plus a store summary. It may be\nmissing.\nPER-INCIDENT READINGS - one sentence per overdue incident, each read on its own.\nThese are input for the NOTE block and for nothing else.\n\nIf STATUS DATA is missing or carries no store summary, say exactly this and\nnothing else:\n\nThe incident lookup failed, so I cannot tell you the current state. Please read the incident record directly.\n\n# The format, which does not vary\n\nProduce exactly these four blocks, in this order, with these headings:\n\nOPEN: one line with the total open count and the count per priority.\nOVERDUE: one line per incident that is overdue, each giving the incident id, the\npriority, the unit, its age in minutes and the assignee, in that order,\nseparated by a comma and a space. Where a record carries no unit, write \"none\"\nin that field, so every line has five fields and they stay countable. Sort the\nlines by age in minutes, the oldest first. Write \"none\" if there are none.\nWATCH: up to three incidents whose acknowledgement clock is still running and\nstill has time left, each on one line carrying exactly three fields, comma\nseparated: incident id, priority, remaining minutes. An incident qualifies only\nif all three of these hold: its status is \"new\", its overdue flag is false, and\nits acknowledge_due_minutes is a number rather than null. Remaining minutes is\nacknowledge_due_minutes minus age_minutes. Sort by remaining minutes ascending,\nso the incident with the FEWEST minutes left is the first line and the one with\nthe most is the last. An incident whose acknowledge_due_minutes is null has no window\nto be close to and is never a WATCH line however new it is, and an incident that\nhas already been acknowledged has met its window and is not one either. Write\n\"none\" when nothing qualifies. The remaining minutes decide the order and the\nincident id never does, so a qualifying incident with 12 minutes left is printed\nabove one with 40 even when its id is the higher of the two:\n\nWATCH: ARK-INC-00101, P1, 12\nARK-INC-00100, P2, 40\nNOTE: one sentence naming anything the incoming operator should know that the\ncounts do not show, or \"nothing further\".\n\nNOTE is ONE sentence, and the readings will tempt you to write five. Pick the\none thing that matters most to the person taking over (the oldest window, the\nlargest group of the same kind, the one unassigned record) and fold the rest\ninto a count, like \"and eight more NHTSA complaint reviews from the same batch\".\nTwo sentences is a failure of the block.\n\nThe OVERDUE lines carry those five fields and nothing else. Do not put a reading,\nan explanation or a recommendation on an OVERDUE line: the readings belong in\nNOTE, where one sentence draws the pattern out of them, and the block is read at\nspeed by someone who needs the five fields in a fixed place.\n\nDo not add a greeting, a summary paragraph or advice. Every assignee in this\nsystem comes from a simulated roster. End the briefing with the single line:\nOperational context is simulated."
+                "value": "# Role\n\nYou write the NOTE line of the Arkon shift handover briefing for the Quality\nSteering Cell. The briefing is assembled by a component after you: it renders\nthe OPEN, OVERDUE and WATCH blocks from the status data in code, and it takes\nexactly one thing from you, the NOTE sentence. You never write those three\nblocks, and you never repeat their numbers.\n\n# What you are given\n\nYou have no tools. Everything you need arrives in the message, in four labelled\nsections, and you may use nothing else.\n\nREQUEST - the operator's own words.\nLOOKUP - one line saying whether the incident status service answered, and on\nwhich attempt.\nOPEN COUNT - the open total and the open count per priority, already counted.\nSTATUS DATA - the status API body: every incident plus a store summary. It may be\nmissing.\nPER-INCIDENT READINGS - one sentence per overdue incident, each read on its own.\nThese are your main input.\n\n# What you write\n\nONE sentence, and nothing else: no heading, no \"NOTE:\" label, no greeting, no\nlist, no closing line, no advice. The sentence names the one thing the incoming\noperator should know that the counts do not show. Pick the one thing that\nmatters most to the person taking over (the oldest window, the largest group of\nthe same kind, the one unassigned record) and fold the rest into a count, like\n\"and eight more NHTSA complaint reviews from the same batch\". Prefer the\nconcrete number a reading gives over a word like \"high\". Two sentences is a\nfailure.\n\nIf nothing is worth saying, or if STATUS DATA is missing or carries no incident\nlist, write exactly:\nnothing further\n\nEvery assignee in this system comes from a simulated roster; do not say so\nyourself, the component appends that line."
               },
               "tools": {
                 "_input_type": "HandleInput",
@@ -1590,6 +1590,154 @@
         "id": "Agent-brf01",
         "position": {
           "x": 1450,
+          "y": 480
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ArkonBriefingAssemble-as01",
+          "node": {
+            "template": {
+              "_type": "Component",
+              "status_payload": {
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "override_skip": false,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "status_payload",
+                "value": "",
+                "display_name": "Status payload",
+                "advanced": false,
+                "api_editable": false,
+                "input_types": [
+                  "Message",
+                  "Data",
+                  "DataFrame"
+                ],
+                "dynamic": false,
+                "info": "The status API body the retry loop resolved, as text or Data.",
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "other",
+                "_input_type": "HandleInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "\"\"\"Render the OPEN, OVERDUE and WATCH blocks in code, and place the model's NOTE beside them.\n\nDEFECT-9 (found 2026-09-07): the briefing agent re-ordered the OVERDUE and WATCH lines\nit was handed, intermittently and in both directions, although `arkon_overdue_list.py`\nhad sorted the rows before the model saw them. Two hypotheses were refuted the same\nevening (not conversation context, not the main canvas re-rendering the sub-flow's\noutput), and a worked example in the prompt did not move WATCH. The model is the last\nthing between a correct list and the operator, and it rewords by nature.\n\nSo the three blocks whose value is their exact content are rendered here, AFTER the\nmodel, from the status body, and the model contributes exactly one thing: the NOTE\nsentence. The rules are the contract `briefing_v2` stated in prose, now as code:\n\n- OPEN: the open total and the count per priority, counted from the incident list\n  (open = new, acknowledged, in_containment: the statuses the store's own\n  `open_incidents` counter covers). The same count `arkon_briefing_input.py` hands\n  the model, so the number the model reads and the number the operator reads cannot\n  disagree.\n- OVERDUE: one line per incident the store itself marked overdue, five fields in a\n  fixed order, comma separated: id, priority, unit (\"none\" when the record carries\n  none), age in minutes, assignee (\"none\" when unassigned). Oldest first by age, and\n  a tie is broken by incident id, so two runs on the same store print the same block.\n  \"none\" when nothing is overdue.\n- WATCH: up to three incidents whose acknowledgement clock is still running and still\n  has time left. A candidate passes three tests every record can answer: status is\n  \"new\", the overdue flag is false, acknowledge_due_minutes is a number. Remaining\n  minutes = acknowledge_due_minutes - age_minutes; fewest remaining first, ties by id;\n  \"none\" when nothing qualifies. (The DEFECT-6 rule of the same day, unchanged.)\n- NOTE: the model's sentence, taken as one line. A \"NOTE:\" label it may add and the\n  closing line it may repeat are stripped; \"nothing further\" when it says nothing.\n\nWhen the payload carries no incident list (no attempt answered, or the status API\nreported itself unavailable), the briefing is the fixed lookup-failure sentence and\nnothing else, which is what the prompt used to ask the model to write.\n\"\"\"\n\nimport json\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import HandleInput\nfrom lfx.io import MessageInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\nFAILURE = (\"The incident lookup failed, so I cannot tell you the current state. \"\n           \"Please read the incident record directly.\")\nCLOSING = \"Operational context is simulated.\"\nNOTHING = \"nothing further\"\nOPEN_STATUSES = (\"new\", \"acknowledged\", \"in_containment\")\nWATCH_LIMIT = 3\n\n\ndef _num(value):\n    \"\"\"An integer prints as an integer; anything else prints as it is.\"\"\"\n    if isinstance(value, float) and value.is_integer():\n        return str(int(value))\n    return str(value)\n\n\ndef _field(value):\n    if value is None or (isinstance(value, str) and not value.strip()):\n        return \"none\"\n    return str(value).strip()\n\n\ndef render_open(incidents):\n    counts = {}\n    for item in incidents:\n        if isinstance(item, dict) and item.get(\"status\") in OPEN_STATUSES:\n            key = item.get(\"priority\") or \"unset\"\n            counts[key] = counts.get(key, 0) + 1\n    total = sum(counts.values())\n    per_priority = \", \".join(\"%s: %d\" % (key, counts[key]) for key in sorted(counts))\n    return \"%d open incidents (%s)\" % (total, per_priority or \"none by priority\")\n\n\ndef render_overdue(incidents):\n    rows = [item for item in incidents if isinstance(item, dict) and item.get(\"overdue\")]\n\n    def key(item):\n        age = item.get(\"age_minutes\")\n        return (-(age if isinstance(age, (int, float)) else 0), str(item.get(\"incident_id\") or \"\"))\n\n    rows.sort(key=key)\n    return [\n        \", \".join([\n            _field(item.get(\"incident_id\")),\n            _field(item.get(\"priority\")),\n            _field(item.get(\"unit\")),\n            _num(item.get(\"age_minutes\")) if isinstance(item.get(\"age_minutes\"), (int, float)) else \"none\",\n            _field(item.get(\"assigned_to\")),\n        ])\n        for item in rows\n    ]\n\n\ndef render_watch(incidents):\n    candidates = []\n    for item in incidents:\n        if not isinstance(item, dict):\n            continue\n        due, age = item.get(\"acknowledge_due_minutes\"), item.get(\"age_minutes\")\n        if item.get(\"status\") != \"new\" or item.get(\"overdue\"):\n            continue\n        if not isinstance(due, (int, float)) or not isinstance(age, (int, float)):\n            continue\n        candidates.append((due - age, str(item.get(\"incident_id\") or \"\"), _field(item.get(\"priority\"))))\n    candidates.sort(key=lambda row: (row[0], row[1]))\n    return [\"%s, %s, %s\" % (row[1], row[2], _num(row[0])) for row in candidates[:WATCH_LIMIT]]\n\n\ndef render_note(text):\n    lines = [\" \".join(line.split()) for line in (text or \"\").splitlines()]\n    lines = [line for line in lines if line and line != CLOSING]\n    if not lines:\n        return NOTHING\n    note = \" \".join(lines)\n    if note.upper().startswith(\"NOTE:\"):\n        note = note[5:].strip()\n    return note or NOTHING\n\n\ndef render_briefing(body, note_text):\n    \"\"\"The four blocks as one text, or the fixed failure sentence.\"\"\"\n    incidents = body.get(\"incidents\") if isinstance(body, dict) else None\n    if not isinstance(incidents, list):\n        return FAILURE\n    blocks = [\n        \"OPEN: \" + render_open(incidents),\n        \"OVERDUE: \" + \"\\n\".join(render_overdue(incidents) or [\"none\"]),\n        \"WATCH: \" + \"\\n\".join(render_watch(incidents) or [\"none\"]),\n        \"NOTE: \" + render_note(note_text),\n        CLOSING,\n    ]\n    return \"\\n\".join(blocks)\n\n\nclass ArkonBriefingAssemble(Component):\n    display_name = \"Briefing Assemble\"\n    description = \"Render OPEN, OVERDUE and WATCH from the status body in code; take only the NOTE sentence from the model.\"\n    icon = \"list-checks\"\n    name = \"ArkonBriefingAssemble\"\n\n    inputs = [\n        HandleInput(\n            name=\"status_payload\",\n            display_name=\"Status payload\",\n            info=\"The status API body the retry loop resolved, as text or Data.\",\n            input_types=[\"Message\", \"Data\", \"DataFrame\"],\n        ),\n        MessageInput(\n            name=\"note_text\",\n            display_name=\"Model NOTE\",\n            info=\"The briefing agent's answer; only its sentence is used.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Briefing\", name=\"briefing\", method=\"assemble\", types=[\"Message\"]),\n    ]\n\n    def _body(self):\n        value = self.status_payload\n        if isinstance(value, list):\n            value = value[0] if value else None\n        if isinstance(value, DataFrame):\n            rows = value.to_data_list()\n            value = rows[0] if rows else None\n        if isinstance(value, Message):\n            try:\n                return json.loads(value.text or \"\")\n            except (ValueError, TypeError):\n                return {}\n        if isinstance(value, Data):\n            return value.data if isinstance(value.data, dict) else {}\n        if isinstance(value, dict):\n            return value\n        return {}\n\n    def assemble(self) -> Message:\n        note = self.note_text.text if isinstance(self.note_text, Message) else str(self.note_text or \"\")\n        text = render_briefing(self._body(), note)\n        self.status = \"lookup failed\" if text == FAILURE else \"%d lines\" % len(text.splitlines())\n        return Message(text=text)\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "note_text": {
+                "trace_as_input": true,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "override_skip": false,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "note_text",
+                "value": "",
+                "display_name": "Model NOTE",
+                "advanced": false,
+                "api_editable": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The briefing agent's answer; only its sentence is used.",
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "str",
+                "_input_type": "MessageInput"
+              }
+            },
+            "description": "Render OPEN, OVERDUE and WATCH from the status body in code; take only the NOTE sentence from the model.",
+            "icon": "list-checks",
+            "base_classes": [
+              "Message"
+            ],
+            "display_name": "Briefing assemble",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "briefing",
+                "hidden": null,
+                "display_name": "Briefing",
+                "method": "assemble",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": null,
+                "allows_loop": false,
+                "loop_types": null,
+                "group_outputs": false,
+                "options": null,
+                "tool_mode": true
+              }
+            ],
+            "field_order": [
+              "status_payload",
+              "note_text"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {
+              "module": "custom_components.briefing_assemble",
+              "code_hash": "31c4c2ccfeb6",
+              "dependencies": {
+                "total_dependencies": 1,
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": "1.11.5"
+                  }
+                ]
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ArkonBriefingAssemble"
+        },
+        "dragging": false,
+        "id": "ArkonBriefingAssemble-as01",
+        "measured": {
+          "width": 320,
+          "height": 300
+        },
+        "position": {
+          "x": 1800,
           "y": 480
         },
         "selected": false,
@@ -1897,7 +2045,7 @@
         "dragging": false,
         "id": "ChatOutput-brf01",
         "position": {
-          "x": 1800,
+          "x": 2150,
           "y": 480
         },
         "selected": true,
@@ -4356,6 +4504,34 @@
             ]
           },
           "targetHandle": {
+            "fieldName": "note_text",
+            "id": "ArkonBriefingAssemble-as01",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-brf01{œdataTypeœ:œAgentœ,œidœ:œAgent-brf01œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ArkonBriefingAssemble-as01{œfieldNameœ:œnote_textœ,œidœ:œArkonBriefingAssemble-as01œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-brf01",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-brf01œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ArkonBriefingAssemble-as01",
+        "targetHandle": "{œfieldNameœ:œnote_textœ,œidœ:œArkonBriefingAssemble-as01œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ArkonBriefingAssemble",
+            "id": "ArkonBriefingAssemble-as01",
+            "name": "briefing",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-brf01",
             "inputTypes": [
@@ -4368,10 +4544,10 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-brf01{œdataTypeœ:œAgentœ,œidœ:œAgent-brf01œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-brf01{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-brf01œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ArkonBriefingAssemble-as01{œdataTypeœ:œArkonBriefingAssembleœ,œidœ:œArkonBriefingAssemble-as01œ,œnameœ:œbriefingœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-brf01{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-brf01œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-brf01",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-brf01œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "source": "ArkonBriefingAssemble-as01",
+        "sourceHandle": "{œdataTypeœ:œArkonBriefingAssembleœ,œidœ:œArkonBriefingAssemble-as01œ,œnameœ:œbriefingœ,œoutput_typesœ:[œMessageœ]}",
         "target": "ChatOutput-brf01",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-brf01œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}"
       },
@@ -4670,6 +4846,36 @@
         "sourceHandle": "{œdataTypeœ:œArkonStatusResolveœ,œidœ:œArkonStatusResolve-rv01œ,œnameœ:œpayloadœ,œoutput_typesœ:[œMessageœ]}",
         "target": "ArkonBriefingInput-in01",
         "targetHandle": "{œfieldNameœ:œstatus_payloadœ,œidœ:œArkonBriefingInput-in01œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ArkonStatusResolve",
+            "id": "ArkonStatusResolve-rv01",
+            "name": "payload",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "status_payload",
+            "id": "ArkonBriefingAssemble-as01",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-ArkonStatusResolve-rv01{œdataTypeœ:œArkonStatusResolveœ,œidœ:œArkonStatusResolve-rv01œ,œnameœ:œpayloadœ,œoutput_typesœ:[œMessageœ]}-ArkonBriefingAssemble-as01{œfieldNameœ:œstatus_payloadœ,œidœ:œArkonBriefingAssemble-as01œ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ArkonStatusResolve-rv01",
+        "sourceHandle": "{œdataTypeœ:œArkonStatusResolveœ,œidœ:œArkonStatusResolve-rv01œ,œnameœ:œpayloadœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ArkonBriefingAssemble-as01",
+        "targetHandle": "{œfieldNameœ:œstatus_payloadœ,œidœ:œArkonBriefingAssemble-as01œ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,

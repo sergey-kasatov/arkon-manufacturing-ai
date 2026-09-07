@@ -53,6 +53,7 @@ CUSTOM = {
     "statusresolve": COMPONENT_DIR / "arkon_status_resolve.py",
     "briefinginput": COMPONENT_DIR / "arkon_briefing_input.py",
     "retryplan": COMPONENT_DIR / "arkon_retry_plan.py",
+    "briefingassemble": COMPONENT_DIR / "arkon_briefing_assemble.py",
 }
 
 # A Run Flow node outside tool mode grows inputs and outputs named after the

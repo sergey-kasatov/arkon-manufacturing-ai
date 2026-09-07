@@ -27,8 +27,16 @@ briefing issues all three calls; it is named in `arkon_retry_plan.py` and defend
 there, and it does not extend to the escalation write, which is not retried at all.
 
 The four-block output contract is unchanged. The per-incident readings feed the
-NOTE block only; OPEN, OVERDUE and WATCH keep the fields they always had, so the
-DEFECT-3 fix and the open DEFECT-6 are both untouched.
+NOTE block only; OPEN, OVERDUE and WATCH keep the fields they always had.
+
+**Since 2026-09-07 evening the model writes only the NOTE sentence.** DEFECT-9
+measured that the briefing agent re-orders the OVERDUE and WATCH lines a component
+had already sorted, intermittently and in both directions, and that a worked
+example in the prompt does not move it. So `ArkonBriefingAssemble` sits AFTER the
+agent: it renders OPEN, OVERDUE and WATCH from the resolved status body in code,
+takes the one sentence out of the agent's answer, and appends the closing line.
+The agent's prompt is `briefing_v3` (NOTE only); `briefing_v2` stays in the prompt
+file as the record of the contract the component now implements.
 
     python langflow/build/build_briefing_v2_flow.py
     python langflow/build/build_briefing_v2_flow.py --deploy
@@ -71,7 +79,7 @@ def spec(slug):
 
 
 def main():
-    for name in ("briefing_v2", "incident_reading"):
+    for name in ("briefing_v3", "incident_reading"):
         if name not in prompts.load():
             raise SystemExit("prompt block %r is missing" % name)
 
@@ -125,9 +133,13 @@ def main():
     compose = N(spec("briefinginput"), "ArkonBriefingInput-in01", (1100, 480),
                 display_name="Briefing input", type_name="ArkonBriefingInput")
     briefing_agent = C(nodes["Agent-inc01"], "Agent-brf01", (1450, 480),
-                       values={"system_prompt": prompts.block("briefing_v2"), "max_iterations": 5},
-                       display_name="Shift Briefing")
-    chat_output = C(nodes["ChatOutput-inc01"], "ChatOutput-brf01", (1800, 480),
+                       values={"system_prompt": prompts.block("briefing_v3"), "max_iterations": 5},
+                       display_name="Briefing Note")
+    # The three exact blocks are rendered here, after the model, from the resolved
+    # status body; the model contributes the NOTE sentence and nothing else (DEFECT-9).
+    assemble = N(spec("briefingassemble"), "ArkonBriefingAssemble-as01", (1800, 480),
+                 display_name="Briefing assemble", type_name="ArkonBriefingAssemble")
+    chat_output = C(nodes["ChatOutput-inc01"], "ChatOutput-brf01", (2150, 480),
                     display_name="Briefing")
 
     keep_retry = "--no-retry" not in sys.argv
@@ -141,13 +153,14 @@ def main():
     probe = dead or not (keep_retry and keep_loop)
 
     E = lfbuild.edge
-    node_list = [chat_input, url, overdue, notes, compose, briefing_agent, chat_output]
+    node_list = [chat_input, url, overdue, notes, compose, briefing_agent, assemble, chat_output]
     edge_list = [
         E(chat_input, "message", url, "trigger"),
         E(url, "request", compose, "request"),
         E(notes, "notes", compose, "incident_notes"),
         E(compose, "briefing_input", briefing_agent, "input_value"),
-        E(briefing_agent, "response", chat_output, "input_value"),
+        E(briefing_agent, "response", assemble, "note_text"),
+        E(assemble, "briefing", chat_output, "input_value"),
     ]
 
     if keep_retry:
@@ -163,6 +176,7 @@ def main():
             E(retry_loop, "done", resolve, "attempts"),
             E(resolve, "payload", overdue, "payload"),
             E(resolve, "payload", compose, "status_payload"),
+            E(resolve, "payload", assemble, "status_payload"),
             E(resolve, "note", compose, "status_note"),
         ]
     else:
@@ -173,6 +187,7 @@ def main():
             E(api, "data", gate, "response"),
             E(gate, "payload", overdue, "payload"),
             E(gate, "payload", compose, "status_payload"),
+            E(gate, "payload", assemble, "status_payload"),
             E(gate, "verdict", compose, "status_note"),
         ]
 
@@ -194,7 +209,8 @@ def main():
         "description": (
             "Shift handover briefing for the Arkon Quality Steering Cell: open incidents by "
             "priority, what is overdue, what is close to its window. The status lookup runs as "
-            "a bounded retry loop, and every overdue incident is read on its own. Called by the "
+            "a bounded retry loop, every overdue incident is read on its own, and the OPEN, "
+            "OVERDUE and WATCH blocks are rendered in code after the model. Called by the "
             "Arkon Quality Assistant through Run Flow, and runnable on its own endpoint at "
             "shift change."
         ),
