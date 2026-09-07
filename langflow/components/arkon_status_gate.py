@@ -54,9 +54,12 @@ class ArkonStatusGate(Component):
     # loop aggregates the end vertex's first declared output whatever the feedback
     # edge is named; with verdict first, the retry loop collected three "ok"s and
     # no body at all (measured 2026-09-07).
+    # group_outputs=True renders BOTH outputs as handles. Without it the UI draws only the
+    # selected (first) output and, on its next save, deletes every edge that left the other one:
+    # the deployed sub-flow lost three such edges when it was opened on 2026-09-07 at 16:03.
     outputs = [
-        Output(display_name="Payload", name="payload", method="payload_output", types=["Message"]),
-        Output(display_name="Verdict", name="verdict", method="verdict_output", types=["Message"]),
+        Output(display_name="Payload", name="payload", method="payload_output", types=["Message"], group_outputs=True),
+        Output(display_name="Verdict", name="verdict", method="verdict_output", types=["Message"], group_outputs=True),
     ]
 
     def _body(self):

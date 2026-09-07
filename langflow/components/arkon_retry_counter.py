@@ -40,9 +40,12 @@ class ArkonRetryCounter(Component):
         ),
     ]
 
+    # group_outputs=True renders BOTH outputs as handles. Without it the UI draws only the
+    # selected (first) output and, on its next save, deletes every edge that left the other one:
+    # the deployed sub-flow lost three such edges when it was opened on 2026-09-07 at 16:03.
     outputs = [
-        Output(display_name="Attempt", name="attempt", method="attempt_output", types=["Message"]),
-        Output(display_name="Passthrough", name="passthrough", method="passthrough_output", types=["Message"]),
+        Output(display_name="Attempt", name="attempt", method="attempt_output", types=["Message"], group_outputs=True),
+        Output(display_name="Passthrough", name="passthrough", method="passthrough_output", types=["Message"], group_outputs=True),
     ]
 
     def _pre_run_setup(self):

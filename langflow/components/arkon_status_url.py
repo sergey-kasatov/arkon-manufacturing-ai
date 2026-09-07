@@ -42,9 +42,12 @@ class ArkonStatusUrl(Component):
         ),
     ]
 
+    # group_outputs=True renders BOTH outputs as handles. Without it the UI draws only the
+    # selected (first) output and, on its next save, deletes every edge that left the other one:
+    # the deployed sub-flow lost three such edges when it was opened on 2026-09-07 at 16:03.
     outputs = [
-        Output(display_name="URL", name="endpoint", method="endpoint_output", types=["Message"]),
-        Output(display_name="Request", name="request", method="request_output", types=["Message"]),
+        Output(display_name="URL", name="endpoint", method="endpoint_output", types=["Message"], group_outputs=True),
+        Output(display_name="Request", name="request", method="request_output", types=["Message"], group_outputs=True),
     ]
 
     def endpoint_output(self) -> Message:

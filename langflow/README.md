@@ -169,6 +169,19 @@ container log is the only place a structural failure is visible. The feedback
 edge's shape is in `lfbuild.loop_back_edge()`; its target handle is shaped like a
 source handle, copied from Langflow's own `Research Translation Loop` starter.
 
+**Every `Output` of a two-output component must declare `group_outputs=True`, or the
+UI deletes the second output's edges the next time the flow is saved from the
+canvas.** Without it the frontend renders one output handle with a dropdown
+(`selected_output`, set to the first output), and its edge cleaner removes any edge
+whose source handle is not rendered. Measured 2026-09-07: the deployed sub-flow was
+opened in the UI at 16:03 and came back with 19 of its 22 edges, the three missing
+ones being exactly the `request`, `passthrough` and `note` edges of `ArkonStatusUrl`,
+`ArkonRetryCounter` and `ArkonStatusResolve`, while every API-driven run that
+afternoon had used all 22. Loop and Human Input ship with `group_outputs` set, which
+is why their `done` and `Reject` edges survived the same save. Fixed the same day in
+the four two-output components, redeployed, and proven by a UI save on a copy with
+all 22 edges intact.
+
 Evidence and the four runs: `020 Projects/AI_Agents_2B_Meridian/build/sprint6_validation.md`
 in the vault (coursework stays out of this repository by decision).
 
@@ -189,6 +202,7 @@ in the vault (coursework stays out of this repository by decision).
 | `components/arkon_overdue_notes.py` | Pairs each reading with its incident id by position and renders them as NOTE-block input |
 | `components/arkon_briefing_input.py` | Assembles what the briefing agent reads; counts the OPEN line in code so the model does not |
 | `build/build_briefing_v2_flow.py` | Builds and deploys the sub-flow; `--dead-url` deploys the LS10 failure-path copy under a probe name |
+| `build/build_deck_canvases.py` | Generates the temporary `ZZ_Deck_*` canvases the Course 2B deck is screenshotted from: one frame per route, the whole canvas with a coloured note behind each route, the sub-flow; `--delete` removes them. The deployed canvases are never edited for a picture |
 
 ## How the flow JSON is generated
 
