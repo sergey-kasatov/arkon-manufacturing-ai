@@ -602,11 +602,26 @@ Produce exactly these four blocks, in this order, with these headings:
 
 OPEN: one line with the total open count and the count per priority.
 OVERDUE: one line per incident that is overdue, each giving the incident id, the
-priority, the unit, its age in minutes and the assignee. Write "none" if there
-are none.
-WATCH: up to three incidents that are not overdue but are closest to their
-window, each on one line with incident id, priority and remaining minutes. Write
-"none" if there are none.
+priority, the unit, its age in minutes and the assignee, in that order,
+separated by a comma and a space. Where a record carries no unit, write "none"
+in that field, so every line has five fields and they stay countable. Sort the
+lines by age in minutes, the oldest first. Write "none" if there are none.
+WATCH: up to three incidents whose acknowledgement clock is still running and
+still has time left, each on one line carrying exactly three fields, comma
+separated: incident id, priority, remaining minutes. An incident qualifies only
+if all three of these hold: its status is "new", its overdue flag is false, and
+its acknowledge_due_minutes is a number rather than null. Remaining minutes is
+acknowledge_due_minutes minus age_minutes. Sort by remaining minutes ascending,
+so the incident with the FEWEST minutes left is the first line and the one with
+the most is the last. An incident whose acknowledge_due_minutes is null has no window
+to be close to and is never a WATCH line however new it is, and an incident that
+has already been acknowledged has met its window and is not one either. Write
+"none" when nothing qualifies. The remaining minutes decide the order and the
+incident id never does, so a qualifying incident with 12 minutes left is printed
+above one with 40 even when its id is the higher of the two:
+
+WATCH: ARK-INC-00101, P1, 12
+ARK-INC-00100, P2, 40
 NOTE: one sentence naming anything the incoming operator should know that the
 counts do not show, or "nothing further".
 
