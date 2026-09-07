@@ -111,14 +111,84 @@ the way to the operator: incidents found, nothing matched, bad request, lookup
 failed. An empty result and a failed lookup are different facts, and an assistant
 that conflates them will invent a status for one of them.
 
+## The shift briefing sub-flow
+
+Rebuilt on 2026-09-07 (Sprint 6) so that the two course components the first
+version met in substance but not in shape are on the canvas: a retry with a
+visible fallback after two retries, and one model call per record.
+
+```text
+Chat Input -> Status API URL -> Retry plan (3 rows) -> Loop: Status attempts
+                    |                                      |-- body: Attempt URL -> Attempt counter -> Incident Status API -> Answer gate -> (back)
+                    |                                      `-- Done -> Resolve attempts
+                    |                                                      |-- payload -> Overdue list -> Loop: Per incident
+                    |                                                      |                                 |-- body: Incident to text -> Per-incident reading -> (back)
+                    |                                                      |                                 `-- Done -> Overdue notes
+                    `-- request ----------------------------------------> Briefing input <- payload, note, notes
+                                                                                |
+                                                                          Shift Briefing -> Chat Output
+```
+
+The briefing is where the retry belongs: it is the unattended path, run at shift
+change by a scheduler with nobody watching, so a transient failure there has no
+operator to ask again. The incident branch on the main canvas answers a person who
+can retype the question, which is why it reports instead of retrying.
+
+The four-block output contract did not change. The per-incident readings feed
+the NOTE block only, which is defined as the sentence naming what the counts do
+not show and used to be written from the counts themselves. OPEN, OVERDUE and
+WATCH keep their fields; the OPEN numbers are now counted in code rather than by
+the model, after two runs of the same prompt read the store summary two ways.
+
+**What it costs.** Every briefing issues three status calls, not one, and one
+model call per overdue incident on top of the briefing's own. Fourteen overdue
+incidents today: about sixteen calls and thirty seconds where there was one call
+and four seconds. The status call is an idempotent read on the same Docker
+network; the escalation record API is a write and is retried nowhere.
+
+**Why both mechanisms are Loops, measured rather than chosen.** Six probe flows,
+built by the same helpers and deployed through the same path as the real ones,
+run on 2026-09-07 and deleted afterwards:
+
+| Shape | Result on Langflow 1.11.5 |
+|---|---|
+| A Loop body (rows -> Loop -> Parser -> Agent -> feedback edge -> Done) | Runs, once per row, and aggregates |
+| A graph cycle, five ways: custom and first-class components, with and without a chat input root, v1 and v2 run APIs | Does not run: `completed`, no error, zero vertices built, about 0.3 s |
+| Both outputs of one If-Else into one input | The stopped side's empty Message wins the merge |
+| A node downstream of a stopped branch, merged with a live one | Stays out; the live value arrives |
+| Three conditional attempts, each behind an If-Else, converging on one resolve node | Does not run: the merge node is excluded with the stopped chains |
+| A Loop feeding back the end vertex's second output | The aggregate carries the first declared output whatever the edge names |
+
+So the four-node Flowise retry the course prescribes (Loop, Custom Function
+counter, two Condition nodes, fallback) cannot be reproduced here; the counter
+is kept on the retry path, and the two Condition nodes have no place that is not
+decoration. Two more facts from the same day: a chat input feeding two nodes is
+refused with "Only one chat input is allowed in the graph", and the v2 API
+reports a graph whose sort raised as `completed` with empty outputs, so the
+container log is the only place a structural failure is visible. The feedback
+edge's shape is in `lfbuild.loop_back_edge()`; its target handle is shaped like a
+source handle, copied from Langflow's own `Research Translation Loop` starter.
+
+Evidence and the four runs: `020 Projects/AI_Agents_2B_Meridian/build/sprint6_validation.md`
+in the vault (coursework stays out of this repository by decision).
+
 ## Files
 
 | File | Purpose |
 |---|---|
 | `arkon_quality_assistant.json` | The main canvas, importable into Langflow |
-| `arkon_shift_briefing.json` | The shift handover sub-flow, called through Run Flow and runnable on its own endpoint |
+| `arkon_shift_briefing.json` | The shift handover sub-flow, called through Run Flow and runnable on its own endpoint. Rebuilt 2026-09-07 with a retry loop on the status lookup and a per-incident reading loop; see the section above |
 | `arkon_knowledge_ingest.json` | The ingestion flow: the Arkon documents into the Qdrant collection `arkon-knowledge`, one lane per document |
 | `components/openrouter_embeddings.py` | A custom embedding component, because nothing Langflow ships can reach OpenRouter embeddings |
+| `components/arkon_status_url.py` | Holds the status endpoint once for every attempt, and is the chat input's only consumer (a chat input feeding two nodes is refused by the sorter) |
+| `components/arkon_retry_plan.py` | One row per planned attempt, for the retry loop to iterate; states the cost of an unconditional retry and why it is acceptable for this read and for no write |
+| `components/arkon_retry_counter.py` | Counts attempts in flow state, on the retry path rather than beside it; reads the counter from the thing that counts, which is the point the shipped course canvases miss |
+| `components/arkon_status_gate.py` | Classifies an answer as ok, outage or unreachable; payload declared first because a Loop aggregates the end vertex's first output |
+| `components/arkon_status_resolve.py` | Takes the first ok answer out of the loop's attempts, or reports how many attempts said nothing |
+| `components/arkon_overdue_list.py` | The overdue incidents as rows, most overdue first, for the reading loop |
+| `components/arkon_overdue_notes.py` | Pairs each reading with its incident id by position and renders them as NOTE-block input |
+| `components/arkon_briefing_input.py` | Assembles what the briefing agent reads; counts the OPEN line in code so the model does not |
+| `build/build_briefing_v2_flow.py` | Builds and deploys the sub-flow; `--dead-url` deploys the LS10 failure-path copy under a probe name |
 
 ## How the flow JSON is generated
 

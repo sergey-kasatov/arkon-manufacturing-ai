@@ -19,6 +19,7 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 FLOW = REPO / "langflow" / "arkon_quality_assistant.json"
+SUBFLOW = REPO / "langflow" / "arkon_shift_briefing.json"
 
 # template field -> heading shown for it
 PROMPT_FIELDS = [
@@ -77,6 +78,34 @@ def main():
         name = data.get("display_name") or node["id"]
         template = data.get("template", {})
         for field, heading in PROMPT_FIELDS:
+            value = template.get(field, {}).get("value")
+            if not isinstance(value, str) or len(value.strip()) < 60:
+                continue
+            out.append("## %s" % name)
+            out.append("")
+            out.append("*%s*" % heading)
+            out.append("")
+            out.append("```text")
+            out.append(value.strip())
+            out.append("```")
+            out.append("")
+
+    # The briefing sub-flow carries two agents and a per-record parser pattern of
+    # its own, deployed separately from the main canvas. Until 2026-09-07 this
+    # export read the main canvas only, so the briefing prompt never reached the
+    # consolidated document at all.
+    sub = json.loads(SUBFLOW.read_text(encoding="utf-8"))
+    sub_nodes = sub["data"]["nodes"]
+    out.append("# Prompts on the shift briefing sub-flow")
+    out.append("")
+    out.append("Read out of `langflow/arkon_shift_briefing.json`, the canvas the main flow")
+    out.append("reaches through Run Flow. Sub-flow `%s`, %d nodes." % (sub.get("name", "?"), len(sub_nodes)))
+    out.append("")
+    for node in sub_nodes:
+        data = node["data"]["node"]
+        name = data.get("display_name") or node["id"]
+        template = data.get("template", {})
+        for field, heading in PROMPT_FIELDS + [("pattern", "Per-record pattern")]:
             value = template.get(field, {}).get("value")
             if not isinstance(value, str) or len(value.strip()) < 60:
                 continue

@@ -34,11 +34,26 @@ COMPONENTS = {
     "tableops": "DataFrameOperations",
     "qdrant": "ext:qdrant:QdrantVectorStoreComponent@official",
     "chatoutput": "ChatOutput",
+    "loop": "LoopComponent",
+    "conditionalrouter": "ConditionalRouter",
+    "parser": "ParserComponent",
+    "languagemodel": "LanguageModelComponent",
 }
 
 # Custom components have no catalog entry: Langflow builds their template from
 # the posted source, which is also how the UI does it.
-CUSTOM = {"openrouterembeddings": REPO / "langflow" / "components" / "openrouter_embeddings.py"}
+COMPONENT_DIR = REPO / "langflow" / "components"
+CUSTOM = {
+    "openrouterembeddings": COMPONENT_DIR / "openrouter_embeddings.py",
+    "statusgate": COMPONENT_DIR / "arkon_status_gate.py",
+    "retrycounter": COMPONENT_DIR / "arkon_retry_counter.py",
+    "overduelist": COMPONENT_DIR / "arkon_overdue_list.py",
+    "overduenotes": COMPONENT_DIR / "arkon_overdue_notes.py",
+    "statusurl": COMPONENT_DIR / "arkon_status_url.py",
+    "statusresolve": COMPONENT_DIR / "arkon_status_resolve.py",
+    "briefinginput": COMPONENT_DIR / "arkon_briefing_input.py",
+    "retryplan": COMPONENT_DIR / "arkon_retry_plan.py",
+}
 
 # A Run Flow node outside tool mode grows inputs and outputs named after the
 # sub-flow's own vertices. Langflow computes them; guessing the convention is how

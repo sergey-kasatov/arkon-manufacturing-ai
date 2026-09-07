@@ -142,3 +142,47 @@ def router_outputs(routes, enable_else):
             "value": "__UNDEFINED__",
         })
     return outputs
+
+
+def loop_back_edge(source, source_output, loop_node):
+    """Wire the last vertex of a loop body back into the Loop node's item input.
+
+    This edge is not shaped like the others and guessing it is how a loop ends up
+    drawn on the canvas and never iterating. Its TARGET handle carries the source
+    handle's fields (`dataType`, `id`, `name`, `output_types`) rather than
+    `fieldName` / `inputTypes` / `type`, because `item` is an output name that the
+    Loop component also reads as an incoming parameter
+    (`get_incoming_edge_by_target_param("item")`), not a template field. The shape
+    is copied from Langflow's own "Research Translation Loop" starter project,
+    read out of the running image on 2026-09-07.
+
+    `output_types` is the item output's `types` plus its `loop_types`, which is
+    what the frontend writes when it draws the feedback connection.
+    """
+    out = output_spec(source, source_output)
+    item = output_spec(loop_node, "item")
+    source_handle = {
+        "dataType": source["data"]["type"],
+        "id": source["id"],
+        "name": source_output,
+        "output_types": out["types"],
+    }
+    target_handle = {
+        "dataType": loop_node["data"]["type"],
+        "id": loop_node["id"],
+        "name": "item",
+        "output_types": list(item["types"][:1]) + list(item.get("loop_types") or []),
+    }
+    source_text = escaped(source_handle)
+    target_text = escaped(target_handle)
+    return {
+        "animated": False,
+        "className": "",
+        "data": {"sourceHandle": source_handle, "targetHandle": target_handle},
+        "id": "reactflow__edge-%s%s-%s%s" % (source["id"], source_text, loop_node["id"], target_text),
+        "selected": False,
+        "source": source["id"],
+        "sourceHandle": source_text,
+        "target": loop_node["id"],
+        "targetHandle": target_text,
+    }
