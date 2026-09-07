@@ -393,6 +393,60 @@
         "responseBody": "={{ JSON.stringify({status: \"transition_recorded\", transition_id: $('Build Transition Record').item.json.transition.transition_id, incident_id: $('Build Transition Record').item.json.transition.incident_id, from_status: $('Build Transition Record').item.json.transition.from_status, to_status: $('Build Transition Record').item.json.transition.to_status, recorded_at: $('Build Transition Record').item.json.transition.recorded_at, minutes_since_created: $('Build Transition Record').item.json.transition.minutes_since_created, acknowledged_within_window: $('Build Transition Record').item.json.transition.acknowledged_within_window}) }}",
         "options": {}
       }
+    },
+    {
+      "id": "e1000000-0000-4000-8000-000000000052",
+      "name": "Sync Store",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1360,
+        -16
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "arkonStoreSync1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "source": "transition",
+            "rebuild": false
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "rebuild",
+              "displayName": "rebuild",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "connections": {
@@ -575,6 +629,11 @@
         [
           {
             "node": "Respond Recorded",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sync Store",
             "type": "main",
             "index": 0
           }

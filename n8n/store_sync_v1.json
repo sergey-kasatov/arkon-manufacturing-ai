@@ -1,0 +1,1139 @@
+{
+  "id": "arkonStoreSync1",
+  "name": "Arkon Store Sync v1",
+  "nodes": [
+    {
+      "id": "d1000000-0000-4000-8000-000000000001",
+      "name": "Sync Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        160
+      ],
+      "webhookId": "arkon-store-sync",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "arkon-store-sync",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000002",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1552,
+        400
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "source",
+              "type": "string"
+            },
+            {
+              "name": "rebuild",
+              "type": "boolean"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000003",
+      "name": "Read Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1328,
+        280
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Store Sync - what kind of run this is.\n// Three ways in: a caller workflow (the Steering Cell after it appended an\n// incident, the transition endpoint after it appended a move), the webhook for a\n// person or a script, and the command line. Only the webhook can ask for a\n// rebuild, and the source is recorded on the sync line.\nconst first = $input.first().json ?? {};\nconst isWebhook = first.headers !== undefined && (first.body !== undefined || first.query !== undefined);\nconst body = isWebhook ? (first.body && typeof first.body === \"object\" ? first.body : {}) : first;\nconst rebuild = [\"1\", \"true\", \"yes\"].includes(String(body.rebuild ?? \"\").toLowerCase());\nconst source = isWebhook ? \"webhook\" : String(first.source ?? \"\").trim() || \"command_line\";\nreturn [{ json: { rebuild, source } }];\n"
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000004",
+      "name": "Create Incidents Table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1104,
+        280
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "arkon_incidents",
+        "columns": {
+          "column": [
+            {
+              "name": "incident_id",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "priority",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "raised_as",
+              "type": "string"
+            },
+            {
+              "name": "is_terminal",
+              "type": "boolean"
+            },
+            {
+              "name": "transition_count",
+              "type": "number"
+            },
+            {
+              "name": "acknowledged_at",
+              "type": "string"
+            },
+            {
+              "name": "resolved_at",
+              "type": "string"
+            },
+            {
+              "name": "closed_at",
+              "type": "string"
+            },
+            {
+              "name": "minutes_to_acknowledge",
+              "type": "number"
+            },
+            {
+              "name": "minutes_to_resolve",
+              "type": "number"
+            },
+            {
+              "name": "minutes_to_close",
+              "type": "number"
+            },
+            {
+              "name": "acknowledge_due_minutes",
+              "type": "number"
+            },
+            {
+              "name": "unit",
+              "type": "string"
+            },
+            {
+              "name": "record_id",
+              "type": "string"
+            },
+            {
+              "name": "summary",
+              "type": "string"
+            },
+            {
+              "name": "recommended_action",
+              "type": "string"
+            },
+            {
+              "name": "source_module",
+              "type": "string"
+            },
+            {
+              "name": "business_domain",
+              "type": "string"
+            },
+            {
+              "name": "assigned_to",
+              "type": "string"
+            },
+            {
+              "name": "assigned_role",
+              "type": "string"
+            },
+            {
+              "name": "escalation_contact",
+              "type": "string"
+            },
+            {
+              "name": "event_id",
+              "type": "string"
+            },
+            {
+              "name": "risk_score",
+              "type": "number"
+            },
+            {
+              "name": "evidence_json",
+              "type": "string"
+            },
+            {
+              "name": "predicted_rul",
+              "type": "number"
+            },
+            {
+              "name": "priority_threshold",
+              "type": "number"
+            },
+            {
+              "name": "model_version",
+              "type": "string"
+            },
+            {
+              "name": "data_origin",
+              "type": "string"
+            },
+            {
+              "name": "operational_context_origin",
+              "type": "string"
+            },
+            {
+              "name": "history_json",
+              "type": "string"
+            },
+            {
+              "name": "store_line",
+              "type": "number"
+            },
+            {
+              "name": "synced_at",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000005",
+      "name": "Create Transitions Table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        280
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "arkon_transitions",
+        "columns": {
+          "column": [
+            {
+              "name": "transition_id",
+              "type": "string"
+            },
+            {
+              "name": "recorded_at",
+              "type": "string"
+            },
+            {
+              "name": "incident_id",
+              "type": "string"
+            },
+            {
+              "name": "incident_priority",
+              "type": "string"
+            },
+            {
+              "name": "incident_created_at",
+              "type": "string"
+            },
+            {
+              "name": "from_status",
+              "type": "string"
+            },
+            {
+              "name": "to_status",
+              "type": "string"
+            },
+            {
+              "name": "actor",
+              "type": "string"
+            },
+            {
+              "name": "note",
+              "type": "string"
+            },
+            {
+              "name": "minutes_since_created",
+              "type": "number"
+            },
+            {
+              "name": "minutes_since_previous_transition",
+              "type": "number"
+            },
+            {
+              "name": "acknowledge_window_minutes",
+              "type": "number"
+            },
+            {
+              "name": "acknowledged_within_window",
+              "type": "boolean"
+            },
+            {
+              "name": "context_origin",
+              "type": "string"
+            },
+            {
+              "name": "log_line",
+              "type": "number"
+            },
+            {
+              "name": "synced_at",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000006",
+      "name": "Create Summary Table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -656,
+        280
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "arkon_store_summary",
+        "columns": {
+          "column": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "synced_at",
+              "type": "string"
+            },
+            {
+              "name": "sync_mode",
+              "type": "string"
+            },
+            {
+              "name": "sync_source",
+              "type": "string"
+            },
+            {
+              "name": "duration_ms",
+              "type": "number"
+            },
+            {
+              "name": "incidents_lines",
+              "type": "number"
+            },
+            {
+              "name": "transitions_lines",
+              "type": "number"
+            },
+            {
+              "name": "incidents_unreadable",
+              "type": "number"
+            },
+            {
+              "name": "transitions_unreadable",
+              "type": "number"
+            },
+            {
+              "name": "total_incidents",
+              "type": "number"
+            },
+            {
+              "name": "open_incidents",
+              "type": "number"
+            },
+            {
+              "name": "overdue_incidents",
+              "type": "number"
+            },
+            {
+              "name": "incidents_by_priority_json",
+              "type": "string"
+            },
+            {
+              "name": "incidents_by_status_json",
+              "type": "string"
+            },
+            {
+              "name": "total_transitions",
+              "type": "number"
+            },
+            {
+              "name": "incidents_with_transitions",
+              "type": "number"
+            },
+            {
+              "name": "response_times_json",
+              "type": "string"
+            },
+            {
+              "name": "incident_rows_written",
+              "type": "number"
+            },
+            {
+              "name": "transition_rows_written",
+              "type": "number"
+            },
+            {
+              "name": "highest_incident_id",
+              "type": "string"
+            },
+            {
+              "name": "highest_transition_id",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000007",
+      "name": "Rebuild?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        280
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "d1000000-0000-4000-8000-000000000007",
+              "leftValue": "={{ $('Read Request').first().json.rebuild }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000008",
+      "name": "Wipe Incidents",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        80
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "arkon_incidents"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "incident_id",
+              "condition": "isNotEmpty",
+              "keyValue": ""
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000009",
+      "name": "Wipe Transitions",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        16,
+        80
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "arkon_transitions"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "transition_id",
+              "condition": "isNotEmpty",
+              "keyValue": ""
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000a",
+      "name": "Wipe Summary",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        80
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "arkon_store_summary"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "condition": "isNotEmpty",
+              "keyValue": ""
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000b",
+      "name": "Read Incident Store",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        280
+      ],
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "/data/arkon/incidents.jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000c",
+      "name": "Extract Store Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        280
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "store_text",
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000d",
+      "name": "Read Transition Store",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        912,
+        280
+      ],
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "/data/arkon/incident_transitions.jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000e",
+      "name": "Extract Transitions Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1136,
+        280
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "transitions_text",
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000000f",
+      "name": "Get Summary",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1360,
+        280
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "arkon_store_summary"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "condition": "eq",
+              "keyValue": "store"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000010",
+      "name": "Fold Store",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        280
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Store Sync - fold both logs, then decide which rows to write.\n// The incident line is written once, at new, and never rewritten; the current\n// status of an incident is the fold of the transition log onto that line\n// (charter 7.2). This node folds every incident, computes the store summary\n// from all of them, and emits rows only for what the last sync had not seen:\n// new incident lines, and every incident a new transition line touched. On a\n// rebuild, or when no summary row exists yet, everything is a row.\nconst LIFECYCLE = [\"new\", \"acknowledged\", \"in_containment\", \"resolved\", \"closed\", \"false_positive\"];\nconst OPEN_STATUSES = [\"new\", \"acknowledged\", \"in_containment\"];\nconst TERMINAL_STATUSES = [\"closed\", \"false_positive\"];\nconst REQUESTABLE_STATUSES = [\"acknowledged\", \"in_containment\", \"resolved\", \"closed\", \"false_positive\"];\nconst ALLOWED_TRANSITIONS = {\"new\": [\"acknowledged\", \"false_positive\"], \"acknowledged\": [\"in_containment\", \"resolved\", \"false_positive\"], \"in_containment\": [\"resolved\", \"false_positive\"], \"resolved\": [\"closed\", \"in_containment\", \"false_positive\"], \"closed\": [], \"false_positive\": []};\nconst ACK_WINDOW_MINUTES = {\"P1\": 15, \"P2\": 60};\n// Apply the transition log to one incident. The incident line in the store is\n// written once, at new, and never rewritten; the current status is therefore the\n// last transition recorded against it, and the KPI timestamps are the first time\n// each milestone was reached. Charter 7.2.\nfunction arkonFold(incident, transitionsById) {\n  const list = (transitionsById[incident.incident_id] ?? [])\n    .slice()\n    .sort((a, b) => String(a.recorded_at ?? \"\").localeCompare(String(b.recorded_at ?? \"\")));\n\n  const stored = String(incident.status ?? \"new\").toLowerCase();\n  const current = list.length ? String(list[list.length - 1].to_status).toLowerCase() : stored;\n\n  const firstAt = (status) => {\n    const hit = list.find((t) => String(t.to_status).toLowerCase() === status);\n    return hit ? hit.recorded_at : null;\n  };\n\n  const created = Date.parse(incident.created_at ?? \"\");\n  const minutesFromCreated = (iso) => {\n    if (!iso || Number.isNaN(created)) return null;\n    const at = Date.parse(iso);\n    return Number.isNaN(at) ? null : Math.round(((at - created) / 60000) * 10) / 10;\n  };\n\n  const acknowledgedAt = firstAt(\"acknowledged\");\n  const resolvedAt = firstAt(\"resolved\");\n  // A false_positive is a closing outcome: the incident is finished with, and a\n  // response time that counted only \"closed\" would silently drop those cases.\n  const closedAt = firstAt(\"closed\") ?? firstAt(\"false_positive\");\n\n  return {\n    status: current,\n    stored_status: stored,\n    transition_count: list.length,\n    is_terminal: TERMINAL_STATUSES.includes(current),\n    acknowledged_at: acknowledgedAt,\n    resolved_at: resolvedAt,\n    closed_at: closedAt,\n    minutes_to_acknowledge: minutesFromCreated(acknowledgedAt),\n    minutes_to_resolve: minutesFromCreated(resolvedAt),\n    minutes_to_close: minutesFromCreated(closedAt),\n    history: list.map((t) => ({\n      transition_id: t.transition_id ?? null,\n      recorded_at: t.recorded_at ?? null,\n      from_status: t.from_status ?? null,\n      to_status: t.to_status ?? null,\n      actor: t.actor ?? null,\n      note: t.note ?? null,\n    })),\n  };\n}\n\n// Parse a JSONL store into transitions grouped by incident id. Damaged lines are\n// counted rather than thrown: one bad line must not take the whole lifecycle out.\nfunction arkonTransitionsById(text) {\n  const byId = {};\n  let unreadable = 0;\n  for (const line of String(text ?? \"\").split(\"\\n\").map((l) => l.trim()).filter(Boolean)) {\n    try {\n      const record = JSON.parse(line);\n      const id = String(record.incident_id ?? \"\");\n      if (!id) {\n        unreadable += 1;\n        continue;\n      }\n      (byId[id] = byId[id] ?? []).push(record);\n    } catch (error) {\n      unreadable += 1;\n    }\n  }\n  return { byId, unreadable };\n}\n\n// A CMAPSS record id is FD<digits>-Unit-<token>. Only these carry an engine unit;\n// SCANIA-APS-000056 is a service record and has none, and reporting its last\n// token as a \"unit\" is how a field that reads fine comes to mean nothing.\nconst CMAPSS_RECORD = /^FD\\d+-Unit-.+$/i;\nconst arkonRecordId = (incident) => String(incident.event?.evidence?.record_id ?? \"\");\nconst arkonUnitToken = (incident) => {\n  const recordId = arkonRecordId(incident);\n  return CMAPSS_RECORD.test(recordId) ? recordId.split(\"-\").pop() : null;\n};\n\n// The flat projection of one incident line with its fold applied. Every field the\n// status API serves per incident except the two clock-dependent ones.\nfunction arkonProject(incident, life) {\n  const recordId = arkonRecordId(incident);\n  const isCmapss = CMAPSS_RECORD.test(recordId);\n  return {\n    incident_id: incident.incident_id,\n    created_at: incident.created_at ?? null,\n    priority: incident.priority ?? null,\n    status: life.status,\n    raised_as: life.stored_status,\n    is_terminal: life.is_terminal,\n    transition_count: life.transition_count,\n    acknowledged_at: life.acknowledged_at,\n    resolved_at: life.resolved_at,\n    closed_at: life.closed_at,\n    minutes_to_acknowledge: life.minutes_to_acknowledge,\n    minutes_to_resolve: life.minutes_to_resolve,\n    minutes_to_close: life.minutes_to_close,\n    acknowledge_due_minutes: ACK_WINDOW_MINUTES[String(incident.priority ?? \"\").toUpperCase()] ?? null,\n    unit: arkonUnitToken(incident),\n    record_id: recordId || null,\n    summary: incident.summary ?? null,\n    recommended_action: incident.recommended_action ?? null,\n    source_module: incident.source_module ?? null,\n    business_domain: incident.business_domain ?? null,\n    assigned_to: incident.assigned_to ?? null,\n    assigned_role: incident.assigned_role ?? null,\n    escalation_contact: incident.escalation_contact ?? null,\n    event_id: incident.event?.event_id ?? null,\n    risk_score: incident.event?.risk_score ?? null,\n    evidence: incident.event?.evidence ?? null,\n    // predicted_rul is a CMAPSS word and only a CMAPSS record has one; served\n    // from evidence.prediction for every module it once turned a Scania failure\n    // probability into a remaining useful life of 0.0373 cycles.\n    predicted_rul: isCmapss ? (incident.event?.evidence?.prediction ?? null) : null,\n    priority_threshold: isCmapss ? (incident.event?.evidence?.threshold ?? null) : null,\n    model_version: incident.event?.evidence?.model_version ?? null,\n    data_origin: incident.event?.context_origin ?? null,\n    operational_context_origin: incident.event?.operational_context?.context_origin ?? null,\n    history: life.history,\n  };\n}\nconst INCIDENT_COLUMNS = [\"incident_id\", \"created_at\", \"priority\", \"status\", \"raised_as\", \"is_terminal\", \"transition_count\", \"acknowledged_at\", \"resolved_at\", \"closed_at\", \"minutes_to_acknowledge\", \"minutes_to_resolve\", \"minutes_to_close\", \"acknowledge_due_minutes\", \"unit\", \"record_id\", \"summary\", \"recommended_action\", \"source_module\", \"business_domain\", \"assigned_to\", \"assigned_role\", \"escalation_contact\", \"event_id\", \"risk_score\", \"evidence_json\", \"predicted_rul\", \"priority_threshold\", \"model_version\", \"data_origin\", \"operational_context_origin\", \"history_json\", \"store_line\", \"synced_at\"];\nconst TRANSITION_COLUMNS = [\"transition_id\", \"recorded_at\", \"incident_id\", \"incident_priority\", \"incident_created_at\", \"from_status\", \"to_status\", \"actor\", \"note\", \"minutes_since_created\", \"minutes_since_previous_transition\", \"acknowledge_window_minutes\", \"acknowledged_within_window\", \"context_origin\", \"log_line\", \"synced_at\"];\nconst SUMMARY_COLUMNS = [\"key\", \"synced_at\", \"sync_mode\", \"sync_source\", \"duration_ms\", \"incidents_lines\", \"transitions_lines\", \"incidents_unreadable\", \"transitions_unreadable\", \"total_incidents\", \"open_incidents\", \"overdue_incidents\", \"incidents_by_priority_json\", \"incidents_by_status_json\", \"total_transitions\", \"incidents_with_transitions\", \"response_times_json\", \"incident_rows_written\", \"transition_rows_written\", \"highest_incident_id\", \"highest_transition_id\"];\nconst request = $(\"Read Request\").first().json;\nconst storeText = $(\"Extract Store Text\").first().json.store_text ?? \"\";\nconst transitionsText = $(\"Extract Transitions Text\").first().json.transitions_text ?? \"\";\nconst summaryRows = $(\"Get Summary\").all().map((item) => item.json).filter((row) => row && row.key === \"store\");\nconst previous = request.rebuild || !summaryRows.length ? null : summaryRows[0];\nconst started = Date.now();\nconst now = new Date();\nconst syncedAt = now.toISOString();\n\n// Every non-empty line gets an ordinal, readable or not: the summary records how\n// many lines the sync had seen, and the next sync starts after that many.\nconst incidents = [];\nlet incidentLines = 0;\nlet incidentsUnreadable = 0;\nfor (const raw of storeText.split(\"\\n\")) {\n  const line = raw.trim();\n  if (!line) continue;\n  incidentLines += 1;\n  try {\n    const incident = JSON.parse(line);\n    if (!incident || typeof incident !== \"object\" || !incident.incident_id) {\n      incidentsUnreadable += 1;\n      continue;\n    }\n    incidents.push({ incident, line: incidentLines });\n  } catch (error) {\n    incidentsUnreadable += 1;\n  }\n}\n\n// The same parse for transitions, grouped by incident for the fold and kept in\n// log order for the rows. The rule for a damaged line is the fold's own: count\n// it, never throw, because one bad line must not take the lifecycle out.\nconst transitionsById = {};\nconst transitionRecords = [];\nlet transitionLines = 0;\nlet transitionsUnreadable = 0;\nfor (const raw of transitionsText.split(\"\\n\")) {\n  const line = raw.trim();\n  if (!line) continue;\n  transitionLines += 1;\n  try {\n    const record = JSON.parse(line);\n    const id = String(record?.incident_id ?? \"\");\n    if (!id) {\n      transitionsUnreadable += 1;\n      continue;\n    }\n    (transitionsById[id] = transitionsById[id] ?? []).push(record);\n    transitionRecords.push({ record, line: transitionLines });\n  } catch (error) {\n    transitionsUnreadable += 1;\n  }\n}\n\nconst folded = incidents.map((entry) => ({ ...entry, life: arkonFold(entry.incident, transitionsById) }));\nconst statusOf = (entry) => entry.life.status;\n\n// What to write. Without a previous summary every row is new.\nconst prevIncidentLines = previous ? Number(previous.incidents_lines ?? 0) : 0;\nconst prevTransitionLines = previous ? Number(previous.transitions_lines ?? 0) : 0;\nconst touched = new Set();\nfor (const { record, line } of transitionRecords) {\n  if (line > prevTransitionLines) touched.add(String(record.incident_id));\n}\nconst changed = folded.filter(\n  (entry) => !previous || entry.line > prevIncidentLines || touched.has(String(entry.incident.incident_id))\n);\nconst newTransitions = transitionRecords.filter((entry) => !previous || entry.line > prevTransitionLines);\n\n// A data table row holds strings, numbers, booleans and nulls. Anything nested\n// travels as JSON text and is decoded again by the status API.\nconst flat = (value) => {\n  if (value === null || value === undefined) return null;\n  if (typeof value === \"object\") return JSON.stringify(value);\n  return value;\n};\n\nconst incidentRow = ({ incident, line, life }) => {\n  const projected = arkonProject(incident, life);\n  const row = {};\n  for (const column of INCIDENT_COLUMNS) {\n    if (column === \"evidence_json\") row[column] = projected.evidence === null ? null : JSON.stringify(projected.evidence);\n    else if (column === \"history_json\") row[column] = JSON.stringify(projected.history ?? []);\n    else if (column === \"store_line\") row[column] = line;\n    else if (column === \"synced_at\") row[column] = syncedAt;\n    else row[column] = flat(projected[column]);\n  }\n  return row;\n};\n\nconst transitionRow = ({ record, line }) => {\n  const row = {};\n  for (const column of TRANSITION_COLUMNS) {\n    if (column === \"log_line\") row[column] = line;\n    else if (column === \"synced_at\") row[column] = syncedAt;\n    else row[column] = flat(record[column]);\n  }\n  return row;\n};\n\n// The store summary, computed over every incident exactly as the status API\n// computed it before the move, so the numbers a consumer sees do not change\n// with the storage.\nconst byPriority = {};\nconst byStatus = {};\nfor (const entry of folded) {\n  const key = String(entry.incident.priority ?? \"unknown\").toUpperCase();\n  byPriority[key] = (byPriority[key] ?? 0) + 1;\n  const state = statusOf(entry);\n  byStatus[state] = (byStatus[state] ?? 0) + 1;\n}\n\nconst ageMinutes = (incident) => {\n  const created = Date.parse(incident.created_at ?? \"\");\n  return Number.isNaN(created) ? null : Math.round((now.getTime() - created) / 60000);\n};\nconst isOverdue = (entry) => {\n  const window = ACK_WINDOW_MINUTES[String(entry.incident.priority ?? \"\").toUpperCase()];\n  if (window === undefined) return false;\n  if (statusOf(entry) !== \"new\") return false;\n  const age = ageMinutes(entry.incident);\n  return age !== null && age > window;\n};\n\n// The median rather than the mean, because one incident acknowledged the next\n// morning would otherwise move the number more than every one acknowledged on\n// time (charter 7.2).\nconst median = (values) => {\n  const sorted = values.filter((v) => v !== null && v !== undefined).sort((a, b) => a - b);\n  if (!sorted.length) return null;\n  const middle = Math.floor(sorted.length / 2);\n  const value = sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;\n  return Math.round(value * 10) / 10;\n};\nconst ackMinutes = [];\nconst closeMinutes = [];\nlet acknowledgedInWindow = 0;\nlet acknowledgedLate = 0;\nfor (const entry of folded) {\n  const life = entry.life;\n  if (life.minutes_to_acknowledge !== null) {\n    ackMinutes.push(life.minutes_to_acknowledge);\n    const window = ACK_WINDOW_MINUTES[String(entry.incident.priority ?? \"\").toUpperCase()];\n    if (window !== undefined) {\n      if (life.minutes_to_acknowledge <= window) acknowledgedInWindow += 1;\n      else acknowledgedLate += 1;\n    }\n  }\n  if (life.minutes_to_close !== null) closeMinutes.push(life.minutes_to_close);\n}\n\nconst highest = (values) => values.reduce((best, value) => (best === null || String(value) > best ? String(value) : best), null);\n\nconst summaryRow = {\n  key: \"store\",\n  synced_at: syncedAt,\n  sync_mode: request.rebuild ? \"rebuild\" : previous ? \"incremental\" : \"initial\",\n  sync_source: request.source,\n  duration_ms: Date.now() - started,\n  incidents_lines: incidentLines,\n  transitions_lines: transitionLines,\n  incidents_unreadable: incidentsUnreadable,\n  transitions_unreadable: transitionsUnreadable,\n  total_incidents: folded.length,\n  open_incidents: folded.filter((entry) => OPEN_STATUSES.includes(statusOf(entry))).length,\n  overdue_incidents: folded.filter(isOverdue).length,\n  incidents_by_priority_json: JSON.stringify(byPriority),\n  incidents_by_status_json: JSON.stringify(byStatus),\n  total_transitions: transitionRecords.length,\n  incidents_with_transitions: Object.keys(transitionsById).length,\n  response_times_json: JSON.stringify({\n    acknowledged_incidents: ackMinutes.length,\n    median_minutes_to_acknowledge: median(ackMinutes),\n    acknowledged_within_window: acknowledgedInWindow,\n    acknowledged_late: acknowledgedLate,\n    closed_incidents: closeMinutes.length,\n    median_minutes_to_close: median(closeMinutes),\n  }),\n  incident_rows_written: changed.length,\n  transition_rows_written: newTransitions.length,\n  highest_incident_id: highest(folded.map((entry) => entry.incident.incident_id)),\n  highest_transition_id: highest(transitionRecords.map((entry) => entry.record.transition_id ?? \"\")),\n};\nfor (const column of SUMMARY_COLUMNS) {\n  if (!(column in summaryRow)) summaryRow[column] = null;\n}\n\nreturn [\n  {\n    json: {\n      request,\n      summary_row: summaryRow,\n      incident_rows: changed.map(incidentRow),\n      transition_rows: newTransitions.map(transitionRow),\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000011",
+      "name": "Incident Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        40
+      ],
+      "parameters": {
+        "jsCode": "// One item per incident row the fold decided to write; none is a valid answer.\nreturn $(\"Fold Store\").first().json.incident_rows.map((row) => ({ json: row }));\n"
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000012",
+      "name": "Upsert Incidents",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2032,
+        40
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "arkon_incidents"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "incident_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.incident_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000013",
+      "name": "Transition Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        280
+      ],
+      "parameters": {
+        "jsCode": "// One item per new transition line; none is a valid answer.\nreturn $(\"Fold Store\").first().json.transition_rows.map((row) => ({ json: row }));\n"
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000014",
+      "name": "Upsert Transitions",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2032,
+        280
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "arkon_transitions"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "transition_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.transition_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000015",
+      "name": "Summary Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        520
+      ],
+      "parameters": {
+        "jsCode": "// The one summary row, rewritten by every sync. Always exactly one item, which\n// is why this branch carries the sync line and the webhook's answer.\nreturn [{ json: $(\"Fold Store\").first().json.summary_row }];\n"
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000016",
+      "name": "Upsert Summary",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2032,
+        520
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "arkon_store_summary"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "condition": "eq",
+              "keyValue": "store"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000017",
+      "name": "Sync Line",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        520
+      ],
+      "parameters": {
+        "jsCode": "// The sync's own record, one line per run: the summary numbers and the row\n// counts. Successful executions are not stored (workflow settings), so this\n// line is the evidence that a sync happened and what it found.\nconst summary = $(\"Fold Store\").first().json.summary_row;\nreturn [{ json: { ...summary, sync_jsonl: JSON.stringify(summary) + \"\\n\" } }];\n"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000018",
+      "name": "Build Sync Line",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2480,
+        520
+      ],
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "sync_jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000019",
+      "name": "Append Sync Log",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        2704,
+        520
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "/data/arkon/store_sync.jsonl",
+        "options": {
+          "append": true
+        }
+      }
+    },
+    {
+      "id": "d1000000-0000-4000-8000-00000000001a",
+      "name": "Sync Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2928,
+        520
+      ],
+      "parameters": {
+        "jsCode": "// The last node: its output is the webhook's answer (response mode \"last node\").\nreturn [{ json: $(\"Fold Store\").first().json.summary_row }];\n"
+      },
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Sync Request": {
+      "main": [
+        [
+          {
+            "node": "Read Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Read Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Request": {
+      "main": [
+        [
+          {
+            "node": "Create Incidents Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Incidents Table": {
+      "main": [
+        [
+          {
+            "node": "Create Transitions Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Transitions Table": {
+      "main": [
+        [
+          {
+            "node": "Create Summary Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Summary Table": {
+      "main": [
+        [
+          {
+            "node": "Rebuild?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rebuild?": {
+      "main": [
+        [
+          {
+            "node": "Wipe Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Incident Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wipe Incidents": {
+      "main": [
+        [
+          {
+            "node": "Wipe Transitions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wipe Transitions": {
+      "main": [
+        [
+          {
+            "node": "Wipe Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wipe Summary": {
+      "main": [
+        [
+          {
+            "node": "Read Incident Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Incident Store": {
+      "main": [
+        [
+          {
+            "node": "Extract Store Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Store Text": {
+      "main": [
+        [
+          {
+            "node": "Read Transition Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Transition Store": {
+      "main": [
+        [
+          {
+            "node": "Extract Transitions Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Transitions Text": {
+      "main": [
+        [
+          {
+            "node": "Get Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summary": {
+      "main": [
+        [
+          {
+            "node": "Fold Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fold Store": {
+      "main": [
+        [
+          {
+            "node": "Incident Rows",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Transition Rows",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Summary Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incident Rows": {
+      "main": [
+        [
+          {
+            "node": "Upsert Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transition Rows": {
+      "main": [
+        [
+          {
+            "node": "Upsert Transitions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary Row": {
+      "main": [
+        [
+          {
+            "node": "Upsert Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Summary": {
+      "main": [
+        [
+          {
+            "node": "Sync Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Line": {
+      "main": [
+        [
+          {
+            "node": "Build Sync Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Sync Line": {
+      "main": [
+        [
+          {
+            "node": "Append Sync Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Sync Log": {
+      "main": [
+        [
+          {
+            "node": "Sync Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true
+  },
+  "pinData": {}
+}

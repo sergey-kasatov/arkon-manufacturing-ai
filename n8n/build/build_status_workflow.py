@@ -1,13 +1,25 @@
 """Build the Arkon Incident Status API n8n workflow JSON.
 
-The workflow is written from a script rather than by hand so the two Code-node
+The workflow is written from a script rather than by hand so the Code-node
 bodies stay readable and quoting stays under control.
+
+Since 2026-09-07 it answers from the queryable store of charter 7.5: the three
+n8n data tables the store sync keeps level with the two JSONL logs
+(`build_store_sync_workflow.py`, `store_schema.py`). The contract is the one of
+2026-08-30 unchanged - the same parameters, the same four answers, the same
+per-incident projection and the same store summary - and what changed is the
+cost: a request reads the rows its filter names plus the one summary row,
+instead of parsing both logs whole and folding every incident on every call.
+The two clock-dependent fields, `age_minutes` and `overdue`, are still computed
+at read time, so an incident going overdue between two writes is reported as
+overdue without any sync.
 """
 
 import json
 import pathlib
 
-from lifecycle import FOLD_JS, js_constants
+from lifecycle import js_constants
+from store_schema import INCIDENTS_TABLE, ROW_TO_API_JS, SUMMARY_KEY, SUMMARY_TABLE
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "incident_status_api_v1.json"
 
@@ -23,7 +35,7 @@ PARSE_QUERY = (
     + js_constants()
     + r"""
 const PRIORITIES = ["P1", "P2", "P3", "P4"];
-const MAX_LIMIT = 50;
+const MAX_LIMIT = 500;
 const DEFAULT_LIMIT = 5;
 
 const params = $input.first().json.query ?? {};
@@ -107,6 +119,23 @@ if (limitRaw !== null) {
 // it behind an operator role.
 const simulateFailure = ["1", "true", "yes"].includes((raw("simulate_failure") ?? "").toLowerCase());
 
+// The one condition the data table answers, the most selective filter first;
+// every other filter is applied to the rows it returns. A contains match (ilike)
+// is a superset that the answer node narrows to the exact rule, so the row read
+// stays one condition wide. Without any filter the table returns the newest
+// `limit` rows and the summary row supplies the count.
+let dbFilter;
+if (incidentId) dbFilter = { column: "incident_id", condition: "eq", value: incidentId, return_all: true };
+else if (status) dbFilter = { column: "status", condition: "eq", value: status, return_all: true };
+else if (priority.length === 1) dbFilter = { column: "priority", condition: "eq", value: priority[0], return_all: true };
+else if (sourceModule) dbFilter = { column: "source_module", condition: "ilike", value: sourceModule, return_all: true };
+else if (businessDomain) dbFilter = { column: "business_domain", condition: "ilike", value: businessDomain, return_all: true };
+else if (recordId) dbFilter = { column: "record_id", condition: "ilike", value: recordId, return_all: true };
+else if (unit) dbFilter = { column: "unit", condition: "ilike", value: unit, return_all: true };
+else if (priority.length > 1) dbFilter = { column: "incident_id", condition: "isNotEmpty", value: "", return_all: true };
+else dbFilter = { column: "incident_id", condition: "isNotEmpty", value: "", return_all: false };
+dbFilter.limit = limit;
+
 return [
   {
     json: {
@@ -114,88 +143,57 @@ return [
       errors,
       simulate_failure: simulateFailure,
       query: { incident_id: incidentId, unit, record_id: recordId, source_module: sourceModule, business_domain: businessDomain, priority, status, limit },
+      db_filter: dbFilter,
     },
   },
 ];
 """
 )
 
-FILTER_INCIDENTS = (
-    r"""// Arkon Incident Status API - answer the query from the JSONL incident store.
+ANSWER_QUERY = (
+    r"""// Arkon Incident Status API - answer the query from the queryable store.
 // Response times come from charter 7.1, the status vocabulary from charter 7.2.
 //
-// The incident line is written once, at new, and never rewritten, so a status
-// read off it is the status the incident was raised with. Every status below is
-// the fold of the transition log onto that line: current state, the three
-// milestone timestamps, and the response times computed from them.
+// The rows are the store sync's projection of the two JSONL logs: the incident
+// line with the transition log folded onto it (charter 7.2), written by the
+// sync after every append. `status` on a row is that fold; `raised_as` is what
+// the incident line itself says, which is always new. The two fields that
+// depend on the clock, age and overdue, are computed here on every read.
 """
     + js_constants()
-    + FOLD_JS
+    + ROW_TO_API_JS
     + r"""
 const request = $("Parse Query").first().json;
 const filters = request.query;
-const storeText = $("Extract Store Text").first().json.store_text ?? "";
-const transitionsText = $("Extract Transitions Text").first().json.transitions_text ?? "";
 const now = new Date();
 
-const lines = storeText.split("\n").map((line) => line.trim()).filter(Boolean);
-const incidents = [];
-let unreadableLines = 0;
-for (const line of lines) {
+const isRow = (json) => json && typeof json === "object" && typeof json.incident_id === "string";
+const summary = $("Get Summary").all().map((item) => item.json).find((row) => row && row.key === "__SUMMARY_KEY__") ?? {};
+const matchRows = $("Get Matches").all().map((item) => item.json).filter(isRow);
+const openRows = $("Get Open").all().map((item) => item.json).filter(isRow);
+
+const parse = (text, fallback) => {
+  if (text === null || text === undefined || text === "") return fallback;
   try {
-    incidents.push(JSON.parse(line));
+    return JSON.parse(text);
   } catch (error) {
-    unreadableLines += 1;
+    return fallback;
   }
-}
-
-// Fold once per incident, keyed by the parsed object rather than by id, so two
-// store lines carrying the same id cannot share one answer.
-const transitions = arkonTransitionsById(transitionsText);
-const folded = new Map();
-for (const incident of incidents) {
-  folded.set(incident, arkonFold(incident, transitions.byId));
-}
-const lifecycleOf = (incident) => folded.get(incident);
-const statusOf = (incident) => lifecycleOf(incident).status;
-
-const recordIdOf = (incident) => String(incident.event?.evidence?.record_id ?? "");
-
-// A CMAPSS record id is FD<digits>-Unit-<token>. The prefix is the module
-// marker; the token after it is the unit and is not always numeric, because the
-// attribution test wrote FD001-Unit-ATTRTEST. Only these carry an engine unit;
-// SCANIA-APS-000056 is a service record and has none, and reporting its last
-// token as a "unit" is how a field that reads fine comes to mean nothing.
-const CMAPSS_RECORD = /^FD\d+-Unit-.+$/i;
-const unitToken = (incident) => {
-  const recordId = recordIdOf(incident);
-  return CMAPSS_RECORD.test(recordId) ? recordId.split("-").pop() : null;
 };
+const number = (value) => (value === null || value === undefined || value === "" ? null : Number(value));
 
-const ageMinutes = (incident) => {
-  const created = Date.parse(incident.created_at ?? "");
-  return Number.isNaN(created) ? null : Math.round((now.getTime() - created) / 60000);
-};
+const incidents = matchRows.map((row) => arkonRowToIncident(row, now));
 
-// Overdue means still unacknowledged past the charter 7.1 window. Before the
-// transition log existed every incident read new for ever, so this counted the
-// whole store and meant nothing; it is a real measurement now.
-const isOverdue = (incident) => {
-  const window = ACK_WINDOW_MINUTES[String(incident.priority ?? "").toUpperCase()];
-  if (window === undefined) return false;
-  if (statusOf(incident) !== "new") return false;
-  const age = ageMinutes(incident);
-  return age !== null && age > window;
-};
-
+// The exact rules of the contract, over the superset the one table condition
+// returned. Same rules as before the move, so a filter answers the same way.
 const matches = (incident) => {
   if (filters.incident_id && incident.incident_id !== filters.incident_id) return false;
-  if (filters.status && statusOf(incident) !== filters.status) return false;
+  if (filters.status && incident.status !== filters.status) return false;
   if (filters.priority.length && !filters.priority.includes(String(incident.priority ?? "").toUpperCase())) {
     return false;
   }
   if (filters.record_id
-      && recordIdOf(incident).toUpperCase() !== String(filters.record_id).toUpperCase()) {
+      && String(incident.record_id ?? "").toUpperCase() !== String(filters.record_id).toUpperCase()) {
     return false;
   }
   if (filters.source_module
@@ -207,153 +205,74 @@ const matches = (incident) => {
     return false;
   }
   if (filters.unit) {
-    const token = unitToken(incident);
-    if (token === null) return false;
-    const tokenDigits = token.replace(/[^0-9]/g, "");
+    const token = incident.unit;
+    if (token === null || token === undefined) return false;
+    const tokenDigits = String(token).replace(/[^0-9]/g, "");
     const filterDigits = String(filters.unit).replace(/[^0-9]/g, "");
     if (tokenDigits !== "" && filterDigits !== "") {
       if (parseInt(tokenDigits, 10) !== parseInt(filterDigits, 10)) return false;
-    } else if (token.toUpperCase() !== String(filters.unit).toUpperCase()) {
+    } else if (String(token).toUpperCase() !== String(filters.unit).toUpperCase()) {
       return false;
     }
   }
   return true;
 };
 
-const project = (incident) => ({
-  incident_id: incident.incident_id,
-  created_at: incident.created_at,
-  age_minutes: ageMinutes(incident),
-  // The folded status, not the one on the store line. raised_as is the store
-  // line's own value and is always new; it is returned so a reader who opens the
-  // JSONL and sees a different word knows the two are not in conflict.
-  status: statusOf(incident),
-  raised_as: lifecycleOf(incident).stored_status,
-  lifecycle: {
-    transition_count: lifecycleOf(incident).transition_count,
-    is_terminal: lifecycleOf(incident).is_terminal,
-    acknowledged_at: lifecycleOf(incident).acknowledged_at,
-    resolved_at: lifecycleOf(incident).resolved_at,
-    closed_at: lifecycleOf(incident).closed_at,
-    minutes_to_acknowledge: lifecycleOf(incident).minutes_to_acknowledge,
-    minutes_to_resolve: lifecycleOf(incident).minutes_to_resolve,
-    minutes_to_close: lifecycleOf(incident).minutes_to_close,
-    history: lifecycleOf(incident).history,
-  },
-  priority: incident.priority,
-  unit: unitToken(incident),
-  record_id: recordIdOf(incident) || null,
-  summary: incident.summary,
-  recommended_action: incident.recommended_action,
-  acknowledge_due_minutes: ACK_WINDOW_MINUTES[String(incident.priority ?? "").toUpperCase()] ?? null,
-  overdue: isOverdue(incident),
-  source_module: incident.source_module,
-  business_domain: incident.business_domain,
-  assigned_to: incident.assigned_to,
-  assigned_role: incident.assigned_role,
-  escalation_contact: incident.escalation_contact,
-  event_id: incident.event?.event_id ?? null,
-  risk_score: incident.event?.risk_score ?? null,
-  // The evidence object as the module published it. Every module fills this and
-  // no consumer has to know which one did.
-  evidence: incident.event?.evidence ?? null,
-  // predicted_rul is a CMAPSS word and only a CMAPSS record has one. It used to
-  // be filled from evidence.prediction whatever the module was, so a Scania
-  // failure probability of 0.0373 was served as a remaining useful life of
-  // 0.0373 cycles, and the assistant read it out as one. Nothing failed.
-  predicted_rul: CMAPSS_RECORD.test(recordIdOf(incident))
-    ? (incident.event?.evidence?.prediction ?? null)
-    : null,
-  priority_threshold: CMAPSS_RECORD.test(recordIdOf(incident))
-    ? (incident.event?.evidence?.threshold ?? null)
-    : null,
-  model_version: incident.event?.evidence?.model_version ?? null,
-  data_origin: incident.event?.context_origin ?? null,
-  operational_context_origin: incident.event?.operational_context?.context_origin ?? null,
-});
-
-const byPriority = {};
-const byStatus = {};
-for (const incident of incidents) {
-  const key = String(incident.priority ?? "unknown").toUpperCase();
-  byPriority[key] = (byPriority[key] ?? 0) + 1;
-  const state = statusOf(incident);
-  byStatus[state] = (byStatus[state] ?? 0) + 1;
-}
-
-// Response-time KPIs, charter 7.2. The median rather than the mean, because one
-// incident acknowledged the next morning would otherwise move the number more
-// than every incident acknowledged on time.
-const median = (values) => {
-  const sorted = values.filter((v) => v !== null && v !== undefined).sort((a, b) => a - b);
-  if (!sorted.length) return null;
-  const middle = Math.floor(sorted.length / 2);
-  const value = sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-  return Math.round(value * 10) / 10;
-};
-
-const ackMinutes = [];
-const closeMinutes = [];
-let acknowledgedInWindow = 0;
-let acknowledgedLate = 0;
-for (const incident of incidents) {
-  const life = lifecycleOf(incident);
-  if (life.minutes_to_acknowledge !== null) {
-    ackMinutes.push(life.minutes_to_acknowledge);
-    const window = ACK_WINDOW_MINUTES[String(incident.priority ?? "").toUpperCase()];
-    if (window !== undefined) {
-      if (life.minutes_to_acknowledge <= window) acknowledgedInWindow += 1;
-      else acknowledgedLate += 1;
-    }
-  }
-  if (life.minutes_to_close !== null) closeMinutes.push(life.minutes_to_close);
-}
-
 const hits = incidents
   .filter(matches)
   .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")));
-const page = hits.slice(0, filters.limit).map(project);
+const page = hits.slice(0, filters.limit);
+
+// Without a filter the table returned only the newest page, and the count of
+// everything is the summary's, which the sync computed over every incident.
+const matchCount = request.db_filter.return_all ? hits.length : (number(summary.total_incidents) ?? hits.length);
+
+// Overdue is live: the new incidents past their window right now, not at the
+// last sync. Everything else in the summary changes only when a line is written,
+// and every written line is followed by a sync.
+const overdueNow = openRows.map((row) => arkonRowToIncident(row, now)).filter((incident) => incident.overdue).length;
+const syncedAt = Date.parse(summary.synced_at ?? "");
+const syncLagSeconds = Number.isNaN(syncedAt) ? null : Math.max(0, Math.round((now.getTime() - syncedAt) / 1000));
 
 return [
   {
     json: {
-      status: hits.length ? "ok" : "no_match",
-      message: hits.length
-        ? hits.length + " incident(s) match the query, " + page.length + " returned."
+      status: matchCount ? "ok" : "no_match",
+      message: matchCount
+        ? matchCount + " incident(s) match the query, " + page.length + " returned."
         : "No incident in the store matches the query.",
       as_of: now.toISOString(),
       query: filters,
       store: {
         path: "__STORE_PATH__",
-        total_incidents: incidents.length,
-        unreadable_lines: unreadableLines,
-        incidents_by_priority: byPriority,
-        incidents_by_status: byStatus,
-        open_incidents: incidents.filter((i) => OPEN_STATUSES.includes(statusOf(i))).length,
-        overdue_incidents: incidents.filter(isOverdue).length,
+        total_incidents: number(summary.total_incidents) ?? 0,
+        unreadable_lines: number(summary.incidents_unreadable) ?? 0,
+        incidents_by_priority: parse(summary.incidents_by_priority_json, {}),
+        incidents_by_status: parse(summary.incidents_by_status_json, {}),
+        open_incidents: number(summary.open_incidents) ?? 0,
+        overdue_incidents: overdueNow,
+        projection: "n8n data tables __INCIDENTS_TABLE__, arkon_transitions, __SUMMARY_TABLE__",
+        synced_at: summary.synced_at ?? null,
+        sync_mode: summary.sync_mode ?? null,
+        sync_lag_seconds: syncLagSeconds,
       },
       transitions: {
         path: "__TRANSITION_STORE__",
-        total_transitions: Object.values(transitions.byId).reduce((sum, list) => sum + list.length, 0),
-        incidents_with_transitions: Object.keys(transitions.byId).length,
-        unreadable_lines: transitions.unreadable,
+        total_transitions: number(summary.total_transitions) ?? 0,
+        incidents_with_transitions: number(summary.incidents_with_transitions) ?? 0,
+        unreadable_lines: number(summary.transitions_unreadable) ?? 0,
       },
-      response_times: {
-        acknowledged_incidents: ackMinutes.length,
-        median_minutes_to_acknowledge: median(ackMinutes),
-        acknowledged_within_window: acknowledgedInWindow,
-        acknowledged_late: acknowledgedLate,
-        closed_incidents: closeMinutes.length,
-        median_minutes_to_close: median(closeMinutes),
-      },
-      match_count: hits.length,
+      response_times: parse(summary.response_times_json, {}),
+      match_count: matchCount,
       returned: page.length,
       incidents: page,
     },
   },
 ];
 """
-).replace("__STORE_PATH__", STORE_PATH).replace("__TRANSITION_STORE__", TRANSITION_STORE)
+).replace("__STORE_PATH__", STORE_PATH).replace("__TRANSITION_STORE__", TRANSITION_STORE) \
+    .replace("__SUMMARY_KEY__", SUMMARY_KEY).replace("__INCIDENTS_TABLE__", INCIDENTS_TABLE) \
+    .replace("__SUMMARY_TABLE__", SUMMARY_TABLE)
 
 
 def if_node(node_id, name, position, left_value):
@@ -404,6 +323,41 @@ def respond_node(node_id, name, position, body_expression, response_code=None):
             "options": options,
         },
     }
+
+
+def table_ref(name):
+    return {"__rl": True, "mode": "name", "value": name}
+
+
+def get_rows(node_id, name, position, table, conditions, return_all, limit=None, order_by=False, execute_once=False):
+    # A read that finds nothing still emits one empty item, so the chain reaches
+    # the answer node and answers no_match instead of leaving the caller waiting.
+    node = {
+        "id": node_id,
+        "name": name,
+        "type": "n8n-nodes-base.dataTable",
+        "typeVersion": 1.1,
+        "position": position,
+        "alwaysOutputData": True,
+        "onError": "continueErrorOutput",
+        "parameters": {
+            "resource": "row",
+            "operation": "get",
+            "dataTableId": table_ref(table),
+            "matchType": "allConditions",
+            "filters": {"conditions": conditions},
+            "returnAll": return_all,
+        },
+    }
+    if limit is not None:
+        node["parameters"]["limit"] = limit
+    if order_by:
+        node["parameters"]["orderBy"] = True
+        node["parameters"]["orderByColumn"] = "created_at"
+        node["parameters"]["orderByDirection"] = "DESC"
+    if execute_once:
+        node["executeOnce"] = True
+    return node
 
 
 workflow = {
@@ -458,82 +412,84 @@ workflow = {
             '={{ JSON.stringify({status: "unavailable", message: "Incident store lookup failed (simulated failure requested by the caller)."}) }}',
             503,
         ),
-        {
-            "id": "a1000000-0000-4000-8000-000000000007",
-            "name": "Read Incident Store",
-            "type": "n8n-nodes-base.readWriteFile",
-            "typeVersion": 1.1,
-            "position": [-432, 224],
-            "onError": "continueErrorOutput",
-            "parameters": {
-                "operation": "read",
-                "fileSelector": STORE_PATH,
-                "options": {},
-            },
-        },
+        # The one summary row. A table that cannot be read is a 503, the same
+        # answer an unreadable file used to get: nothing about incident state may
+        # be inferred from a lookup that failed.
+        get_rows(
+            "a1000000-0000-4000-8000-000000000007",
+            "Get Summary",
+            [-432, 224],
+            SUMMARY_TABLE,
+            [{"keyName": "key", "condition": "eq", "keyValue": SUMMARY_KEY}],
+            return_all=False,
+            limit=1,
+        ),
         respond_node(
             "a1000000-0000-4000-8000-000000000008",
             "Respond Store Unavailable",
             [-208, 416],
-            '={{ JSON.stringify({status: "unavailable", message: "The incident store could not be read."}) }}',
+            '={{ JSON.stringify({status: "unavailable", message: "The incident store could not be read (the store data tables did not answer)."}) }}',
             503,
         ),
-        {
-            "id": "a1000000-0000-4000-8000-000000000009",
-            "name": "Extract Store Text",
-            "type": "n8n-nodes-base.extractFromFile",
-            "typeVersion": 1.1,
-            "position": [-208, 224],
-            "parameters": {
-                "operation": "text",
-                "binaryPropertyName": "data",
-                "destinationKey": "store_text",
-                "options": {},
-            },
-        },
-        {
-            "id": "a1000000-0000-4000-8000-00000000000c",
-            "name": "Read Transition Store",
-            "type": "n8n-nodes-base.readWriteFile",
-            "typeVersion": 1.1,
-            "position": [16, 224],
-            "onError": "continueErrorOutput",
-            "parameters": {
-                "operation": "read",
-                "fileSelector": TRANSITION_STORE,
-                "options": {},
-            },
-        },
-        # An unreadable transition log is a 503, not an empty log. Reading it as
-        # empty would report every incident as new with a 200, and a wrong status
-        # served confidently is the one answer this endpoint exists to prevent.
+        # No summary row means no sync has run since the tables were created: a
+        # store that exists but has never been filled must not answer "empty".
+        if_node(
+            "a1000000-0000-4000-8000-000000000009",
+            "Store Synced?",
+            [-208, 224],
+            '={{ $json.key === "' + SUMMARY_KEY + '" }}',
+        ),
         respond_node(
-            "a1000000-0000-4000-8000-00000000000d",
-            "Respond Transition Log Unavailable",
-            [240, 416],
-            '={{ JSON.stringify({status: "unavailable", message: "The incident transition log could not be read, so no incident status could be determined."}) }}',
+            "a1000000-0000-4000-8000-00000000000c",
+            "Respond Store Not Synced",
+            [16, 416],
+            '={{ JSON.stringify({status: "unavailable", message: "The incident store has not been synced yet (no summary row), so no incident status could be determined. Run the store sync."}) }}',
             503,
         ),
-        {
-            "id": "a1000000-0000-4000-8000-00000000000e",
-            "name": "Extract Transitions Text",
-            "type": "n8n-nodes-base.extractFromFile",
-            "typeVersion": 1.1,
-            "position": [240, 224],
-            "parameters": {
-                "operation": "text",
-                "binaryPropertyName": "data",
-                "destinationKey": "transitions_text",
-                "options": {},
-            },
-        },
+        # The new incidents, for the live overdue count. Bounded by what the crew
+        # has not yet acknowledged, whatever the size of the store.
+        get_rows(
+            "a1000000-0000-4000-8000-00000000000d",
+            "Get Open",
+            [16, 224],
+            INCIDENTS_TABLE,
+            [{"keyName": "status", "condition": "eq", "keyValue": "new"}],
+            return_all=True,
+            execute_once=True,
+        ),
+        respond_node(
+            "a1000000-0000-4000-8000-00000000000e",
+            "Respond Rows Unavailable",
+            [240, 416],
+            '={{ JSON.stringify({status: "unavailable", message: "The incident store could not be read (the incidents table did not answer)."}) }}',
+            503,
+        ),
+        # The rows the query names, one condition wide, newest first. Without a
+        # filter, only the newest page.
+        get_rows(
+            "a1000000-0000-4000-8000-00000000000f",
+            "Get Matches",
+            [240, 224],
+            INCIDENTS_TABLE,
+            [
+                {
+                    "keyName": "={{ $('Parse Query').first().json.db_filter.column }}",
+                    "condition": "={{ $('Parse Query').first().json.db_filter.condition }}",
+                    "keyValue": "={{ $('Parse Query').first().json.db_filter.value }}",
+                }
+            ],
+            return_all="={{ $('Parse Query').first().json.db_filter.return_all }}",
+            limit="={{ $('Parse Query').first().json.db_filter.limit }}",
+            order_by=True,
+            execute_once=True,
+        ),
         {
             "id": "a1000000-0000-4000-8000-00000000000a",
-            "name": "Filter Incidents",
+            "name": "Answer Query",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [464, 224],
-            "parameters": {"jsCode": FILTER_INCIDENTS},
+            "parameters": {"jsCode": ANSWER_QUERY},
         },
         respond_node(
             "a1000000-0000-4000-8000-00000000000b",
@@ -554,26 +510,46 @@ workflow = {
         "Simulated Failure?": {
             "main": [
                 [{"node": "Respond Unavailable", "type": "main", "index": 0}],
-                [{"node": "Read Incident Store", "type": "main", "index": 0}],
+                [{"node": "Get Summary", "type": "main", "index": 0}],
             ]
         },
-        "Read Incident Store": {
+        "Get Summary": {
             "main": [
-                [{"node": "Extract Store Text", "type": "main", "index": 0}],
+                [{"node": "Store Synced?", "type": "main", "index": 0}],
                 [{"node": "Respond Store Unavailable", "type": "main", "index": 0}],
             ]
         },
-        "Extract Store Text": {"main": [[{"node": "Read Transition Store", "type": "main", "index": 0}]]},
-        "Read Transition Store": {
+        "Store Synced?": {
             "main": [
-                [{"node": "Extract Transitions Text", "type": "main", "index": 0}],
-                [{"node": "Respond Transition Log Unavailable", "type": "main", "index": 0}],
+                [{"node": "Get Open", "type": "main", "index": 0}],
+                [{"node": "Respond Store Not Synced", "type": "main", "index": 0}],
             ]
         },
-        "Extract Transitions Text": {"main": [[{"node": "Filter Incidents", "type": "main", "index": 0}]]},
-        "Filter Incidents": {"main": [[{"node": "Respond Status", "type": "main", "index": 0}]]},
+        "Get Open": {
+            "main": [
+                [{"node": "Get Matches", "type": "main", "index": 0}],
+                [{"node": "Respond Rows Unavailable", "type": "main", "index": 0}],
+            ]
+        },
+        "Get Matches": {
+            "main": [
+                [{"node": "Answer Query", "type": "main", "index": 0}],
+                [{"node": "Respond Rows Unavailable", "type": "main", "index": 0}],
+            ]
+        },
+        "Answer Query": {"main": [[{"node": "Respond Status", "type": "main", "index": 0}]]},
     },
-    "settings": {"executionOrder": "v1", "binaryMode": "separate", "availableInMCP": False},
+    # A read endpoint called every few seconds by the cockpit, the plant and the
+    # timers is not worth an execution record per successful call; those records
+    # had grown n8n's database to 3.6 GB in eight days. Failures are kept.
+    "settings": {
+        "executionOrder": "v1",
+        "binaryMode": "separate",
+        "availableInMCP": False,
+        "saveDataSuccessExecution": "none",
+        "saveDataErrorExecution": "all",
+        "saveManualExecutions": True,
+    },
     "pinData": {},
 }
 

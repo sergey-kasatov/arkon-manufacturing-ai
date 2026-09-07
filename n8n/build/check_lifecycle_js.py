@@ -25,10 +25,12 @@ from lifecycle import ALLOWED_TRANSITIONS, FOLD_JS, LIFECYCLE, js_constants
 N8N_DIR = pathlib.Path(__file__).resolve().parent.parent
 
 # The fold rides in these workflows. Each entry names the Code node carrying it.
+# Since 2026-09-07 the status API reads the store sync's rows instead of
+# folding, so the sync carries the fold on its behalf (charter 7.5).
 CARRIERS = [
     ("incident_transition_v1.json", "Build Transition Record"),
-    ("incident_status_api_v1.json", "Filter Incidents"),
     ("escalation_record_v1.json", "Build Escalation Record"),
+    ("store_sync_v1.json", "Fold Store"),
 ]
 
 CASES = r"""

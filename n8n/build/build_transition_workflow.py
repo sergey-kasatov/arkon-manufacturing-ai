@@ -12,11 +12,17 @@ the intake workflow, which appends to the same file with no lock; and a log of
 transitions is what a response-time KPI actually needs, because a KPI needs two
 timestamps and an overwritten record keeps one. The current status of an incident
 is therefore a fold, and every consumer that reports a status performs it.
+
+Since 2026-09-07 the endpoint also starts the store sync of charter 7.5 after
+every append (`add_store_sync.py`), so the queryable projection the status API
+reads is level with the log seconds after a move. The sync is not waited for and
+cannot fail a transition.
 """
 
 import json
 import pathlib
 
+from add_store_sync import sync_node
 from lifecycle import FOLD_JS, js_constants
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "incident_transition_v1.json"
@@ -432,6 +438,9 @@ workflow = {
             [1360, 160],
             RECORDED_BODY,
         ),
+        # Charter 7.5: every appended transition is followed by a store sync,
+        # started without waiting and never able to fail the write.
+        sync_node("transition", [1360, -16]),
     ],
     "connections": {
         "Transition Intake": {"main": [[{"node": "Validate Transition", "type": "main", "index": 0}]]},
@@ -478,7 +487,14 @@ workflow = {
             ]
         },
         "Build Transition Line": {"main": [[{"node": "Append Transition Record", "type": "main", "index": 0}]]},
-        "Append Transition Record": {"main": [[{"node": "Respond Recorded", "type": "main", "index": 0}]]},
+        "Append Transition Record": {
+            "main": [
+                [
+                    {"node": "Respond Recorded", "type": "main", "index": 0},
+                    {"node": "Sync Store", "type": "main", "index": 0},
+                ]
+            ]
+        },
     },
     "settings": {"executionOrder": "v1", "binaryMode": "separate", "availableInMCP": False},
     "pinData": {},

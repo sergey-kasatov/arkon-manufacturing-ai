@@ -173,7 +173,9 @@ for source in ("Respond Invalid", "Respond Duplicate", "Respond Recorded", "Resp
 if any(t != ["Build Intake Outcome"] for t in targets.values()):
     raise SystemExit("the Respond nodes do not all continue to the outcome node alone: %s" % targets)
 incident_path = [t["node"] for out in workflow["connections"]["Append Incident Record"]["main"] for t in out]
-if incident_path != ["Alert?"]:
+# Since 2026-09-07 the append also starts the store sync (charter 7.5); the
+# alert branch stays first and nothing else may hang off the append.
+if incident_path[:1] != ["Alert?"] or set(incident_path[1:]) - {"Sync Store"}:
     raise SystemExit("the incident path changed: Append Incident Record -> %s" % incident_path)
 append = node_named(workflow, "Append Intake Log")
 if append["parameters"] != {"operation": "write", "fileName": "/data/arkon/intake_outcomes.jsonl", "options": {"append": True}}:
