@@ -1,0 +1,77 @@
+{
+  "id": "arkonCustDeskPg1",
+  "name": "Arkon Customer Quality Desk page v1",
+  "nodes": [
+    {
+      "id": "f1000000-0000-4000-8000-000000000001",
+      "name": "Desk Page Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        0
+      ],
+      "webhookId": "arkon-desk",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "arkon-desk",
+        "authentication": "basicAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "arkonDeskBasic1",
+          "name": "Arkon Customer Desk (basic auth)"
+        }
+      }
+    },
+    {
+      "id": "f1000000-0000-4000-8000-000000000002",
+      "name": "Serve Desk Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -656,
+        0
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Arkon Customer Quality Desk</title>\n<style>\n  :root { color-scheme: light; }\n  body { margin: 0; background: #f2f4f8; color: #101330; font: 15px/1.5 -apple-system, \"Segoe UI\", Roboto, sans-serif; }\n  header { background: #101330; color: #f2f4f8; padding: 14px 20px; }\n  header h1 { margin: 0; font-size: 18px; }\n  header p { margin: 4px 0 0; font-size: 13px; opacity: .8; }\n  main { max-width: 760px; margin: 0 auto; padding: 16px; }\n  #log { display: flex; flex-direction: column; gap: 10px; min-height: 50vh; }\n  .msg { max-width: 82%; padding: 10px 14px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; }\n  .desk { background: #fff; align-self: flex-start; border: 1px solid #e6e9f1; }\n  .you { background: #20b69e; color: #fff; align-self: flex-end; }\n  .meta { font-size: 12px; color: #667; margin-top: 12px; }\n  form { display: flex; gap: 8px; margin-top: 14px; }\n  textarea { flex: 1; min-height: 52px; padding: 10px; border: 1px solid #c2c5cc; border-radius: 6px; font: inherit; resize: vertical; }\n  button { padding: 0 18px; border: 0; border-radius: 6px; background: #20b69e; color: #fff; font: inherit; cursor: pointer; }\n  button[disabled] { background: #81bbb1; cursor: default; }\n</style>\n</head>\n<body>\n<header>\n  <h1>Arkon Customer Quality Desk</h1>\n  <p>Quality notices and complaints on parts delivered by Arkon (simulated context)</p>\n</header>\n<main>\n  <div id=\"log\"></div>\n  <form id=\"form\">\n    <textarea id=\"input\" placeholder=\"Your question, with the ARK-INC reference..\" required></textarea>\n    <button id=\"send\" type=\"submit\">Send</button>\n  </form>\n  <p class=\"meta\">Session <code id=\"session\"></code>. The desk keeps this conversation for this session only. Arkon Manufacturing is a fictional company; this is a simulated quality process.</p>\n</main>\n<script>\n  // The chat address is this page's own origin plus the desk's chat path, so\n  // the same page works on the LAN, on the tailnet and through the Funnel.\n  var CHAT = location.origin + \"/webhook/arkon-customer-desk/chat\";\n  var session = \"desk-\" + Math.random().toString(36).slice(2, 10) + \"-\" + Date.now().toString(36);\n  var log = document.getElementById(\"log\");\n  var form = document.getElementById(\"form\");\n  var input = document.getElementById(\"input\");\n  var send = document.getElementById(\"send\");\n  document.getElementById(\"session\").textContent = session;\n\n  function show(text, who) {\n    var node = document.createElement(\"div\");\n    node.className = \"msg \" + who;\n    node.textContent = text;\n    log.appendChild(node);\n    node.scrollIntoView({ block: \"end\" });\n  }\n\n  show(\"Welcome to the Arkon Customer Quality Desk. Please tell me who you are and which Arkon reference (format ARK-INC-#####) you are writing about, and how I can help.\", \"desk\");\n\n  form.addEventListener(\"submit\", function (event) {\n    event.preventDefault();\n    var text = input.value.trim();\n    if (!text) { return; }\n    show(text, \"you\");\n    input.value = \"\";\n    send.disabled = true;\n    fetch(CHAT, {\n      method: \"POST\",\n      credentials: \"same-origin\",\n      headers: { \"Content-Type\": \"application/json\" },\n      body: JSON.stringify({ action: \"sendMessage\", sessionId: session, chatInput: text })\n    }).then(function (response) {\n      if (!response.ok) { throw new Error(\"HTTP \" + response.status); }\n      return response.json();\n    }).then(function (answer) {\n      show(typeof answer.output === \"string\" ? answer.output : JSON.stringify(answer), \"desk\");\n    }).catch(function (error) {\n      show(\"The desk did not answer (\" + error.message + \"). Please try again, or write to the Arkon Customer Quality Contact.\", \"desk\");\n    }).then(function () {\n      send.disabled = false;\n      input.focus();\n    });\n  });\n\n  input.addEventListener(\"keydown\", function (event) {\n    if (event.key === \"Enter\" && !event.shiftKey) {\n      event.preventDefault();\n      form.requestSubmit();\n    }\n  });\n</script>\n</body>\n</html>\n",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Desk Page Request": {
+      "main": [
+        [
+          {
+            "node": "Serve Desk Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all"
+  },
+  "pinData": {}
+}

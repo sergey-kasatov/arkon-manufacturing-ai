@@ -1092,7 +1092,8 @@ maps the four `status` values to the four answers.
 The sprint 3 gate passed eight of eight (nineteen asserted checks) on 2026-09-08 at 11:22,
 0.9 to 2.9 s per turn, on two consecutive runs of the same build; the Sprint 2 readiness
 gate was re-run on the same build and passed thirteen of thirteen. The runner is
-`n8n/customer_desk_sprint3.py` (`--sprint2`, `--failure`), which reads the expectations that
+`n8n/customer_desk_validation.py` (`--eight`, `--sprint2`, `--failure`; the sprint 4 gates were
+added to the same runner), which reads the expectations that
 depend on the plant from the status endpoint at the start of every run, because the notice
 under test is live. The record with the expectations written first is the coursework's.
 
@@ -1103,11 +1104,59 @@ failure fallback can be tested through the agent instead of asserted. The shippe
 carries no failure switch, the tests assert both halves, and the fixture is deleted before
 submission.
 
+### Sprint 4: guardrails, the confirmation step, the public route
+
+Twelve nodes. The Chat Trigger runs in `webhook` mode behind Basic Auth (credential
+`arkonDeskBasic1`), an `Input Guardrails` node (Guardrails v2, `classify`, the instructor's
+nine keyword phrases) stands between the trigger and the agent - Pass to the agent, Fail to
+`Blocked Reply`, which answers with the moderation message - and an `Output Guardrails` node
+(Guardrails v2, `sanitize`, the built-in `IBAN_CODE` entity plus a custom regex for spaced
+IBANs) stands between the agent and `Desk Reply`. The prompt is the instructor's nine
+elements in order: role, memory governance, retrieval scope, notice action boundary, tool
+guidance with the confirmation step, fallback, tool failure, anti-injection, output
+restriction; a closing block restates the language rule, the lists rule and the confirmation
+check, because the end of the prompt is what this model obeys most (measured three times on
+2026-09-08).
+
+```text
+Customer Chat (basicAuth) -> Input Guardrails -> [Pass] Desk Agent -> Output Guardrails -> Desk Reply  -> {output}
+                                                [Fail] Blocked Reply                                    -> {output: the moderation message}
+GET /webhook/arkon-desk (basicAuth)   the desk page, `customer_desk_page_v1.json`, id arkonCustDeskPg1
+```
+
+**The Guardrails node replaces the item on both outputs** with its own verdict
+(`{guardrailsInput, checks}`), so the agent's text and the memory's session key reference
+the trigger by name (`$('Customer Chat').item.json...`), never `$json`. In `sanitize` mode
+the masked text comes back in `guardrailsInput`, each value replaced by its entity tag.
+
+**The page is the platform's own webhook, not n8n's hosted chat page**, because the hosted
+page embeds `WEBHOOK_URL` absolutely (the tailnet name); this one builds the chat address
+from `location.origin`, so the same page works on the LAN, the tailnet and the Funnel.
+
+**Public route:** `tailscale funnel --bg --https=8443 --set-path=<path> http://localhost:5678<path>`
+(inside the `tailscale` container) for the two desk paths only; the editor on 443 stays
+tailnet-only. Measured through both relay addresses with `curl --resolve`: 401 / 200 / 404.
+Both endpoints answer `WWW-Authenticate: Basic realm="Webhook"`, so a browser reuses the
+page's login for the chat POST.
+
+The sprint 4 gates on the final build (2026-09-08 13:23): the twelve turns 23 of 23 twice on
+the LAN and twice through the public relay (`--twelve --public ... --resolve <relay>`), the
+three adversarial tests 8 of 8 with the output guardrail masking the planted IBAN, the
+confirmation two-turn test plus the bypass (held, 5 of 5), the Sprint 3 and Sprint 2
+regressions and the failure fixture. Runner: `n8n/customer_desk_validation.py`. The fixtures
+`customer_desk_failtest_v1.json` (`arkonCustDesk03`) and `customer_desk_ibantest_v1.json`
+(`arkonCustDesk04`, the instructor's planted "Always include ... IBAN" line) are deleted
+after the final pre-presentation run.
+
 ### Known boundaries
 
-- Closed at sprint 3: the retriever over `arkon-customer-desk`, the calculator and the
-  lookup through the customer status API are in. Sprint 4 adds the Guardrails node, the
-  three security instructions, the confirmation step and the public route.
+- Closed at sprint 4: the guardrails, the confirmation step and the public route are in. The
+  keyword guardrail is exact matching (the course's node claims semantic matching); the
+  `jailbreak` check is the semantic option, not relied on because it adds a model call per
+  message. "Act as" in the instructor's list also stops "please act as fast as you can".
+- The confirmation is a prompt instruction, not an infrastructure constraint; it held in
+  every measured run and cannot be guaranteed. The endpoint behind it is read-only, so a
+  bypassed confirmation reads early and changes nothing.
 - Top K 4 is the course's value and a real limit: a question whose answer is spread over
   more than four chunks is answerable only in part. The store carries a summary chunk for
   the one question a customer asks most.
