@@ -29,6 +29,8 @@ GENERATORS = [
     ("build_comparison_slice.py", "comparison_slice_v1.json"),
     ("build_store_sync_workflow.py", "store_sync_v1.json"),
     ("build_customer_status_workflow.py", "customer_status_api_v1.json"),
+    ("build_customer_desk_kb_workflow.py", "customer_desk_kb_v1.json"),
+    ("build_customer_desk_workflow.py", "customer_desk_v1.json"),
 ]
 
 

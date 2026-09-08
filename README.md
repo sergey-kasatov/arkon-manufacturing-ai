@@ -1002,9 +1002,10 @@ arkon-manufacturing-ai/
 │   ├── Dockerfile              Built from the repository root
 │   └── docker-compose.yml      Deploys to the NAS on 8303
 ├── docs/                       Charter, SOP and one model card per module
+│   └── customer/               The documents a customer may read, and the ones kept out (docs/customer/README.md)
 ├── events/                     The shared event contract and the adapters
 ├── langflow/                   The assistant canvas, its prompts and build scripts
-├── n8n/                        The eight workflows, their generators and probes, the NAS-side deploy and check scripts
+├── n8n/                        The eleven workflows, their generators and probes, the NAS-side deploy and check scripts
 ├── live_plant/                 The demo engine, a mini-project: real-model incidents on a clock plus the crew (live_plant/README.md)
 ├── tableau/                    The executive view: the extract layer, the workbook generator and its design specification (tableau/README.md)
 ├── assets/                     Saved plots for README and Streamlit

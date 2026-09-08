@@ -265,8 +265,8 @@ anything but CMAPSS.
 ## Workflow ids, and the one that is not readable
 
 Every workflow file carries a fixed `id`, so `n8n import:workflow` updates the
-existing workflow instead of creating another copy. Five of them read like
-names. The sixth does not, and the reason is worth keeping:
+existing workflow instead of creating another copy. All but one read like
+names. The exception does not, and the reason is worth keeping:
 
 | File | id |
 |---|---|
@@ -275,6 +275,11 @@ names. The sixth does not, and the reason is worth keeping:
 | `comparison_slice_v1.json` | `arkonSlice001` |
 | `overdue_escalation_v1.json` | `arkonOverdue01` |
 | `daily_digest_v1.json` | `arkonDigest001` |
+| `incident_transition_v1.json` | `arkonTransit01` |
+| `store_sync_v1.json` | `arkonStoreSync1` |
+| `customer_status_api_v1.json` | `arkonCustDesk01` |
+| `customer_desk_kb_v1.json` | `arkonCustDeskKB1` |
+| `customer_desk_v1.json` | `arkonCustDesk02` |
 | `quality_steering_cell_v1.json` | **`o0vXtlRWIs9yFrUJ`** |
 
 **The steering cell keeps the id n8n generated for it, because that row is where
@@ -932,6 +937,129 @@ API's record of it, and the four answers were timed from the laptop: 400 in 0.09
   endpoint is never on it: the agent calls it from inside the container network.
 - `simulate_failure` is the same test affordance as on the status API, and a production
   deployment removes it or puts it behind an operator role.
+
+## Customer desk knowledge base (the collection a customer may read)
+
+Tenth workflow, `customer_desk_kb_v1.json`, id `arkonCustDeskKB1`, built and **deployed
+2026-09-08** together with the desk below. The document store of the Customer Quality Desk:
+the three customer documents of `docs/customer/` (`n8n/build/customer_documents.py` owns the
+set and the reason each of the other five candidates stays out), chunked at 500 characters
+with a 50 overlap, embedded with `models/gemini-embedding-001` on the Google Gemini node and
+held in the Qdrant collection `arkon-customer-desk`, plus a retrieval endpoint over the same
+collection through the same embedding node the desk's retriever tool will use, so the
+in-store retrieval test measures the path the agent takes.
+
+```text
+POST /webhook/arkon-customer-desk-ingest      drop the collection, ingest the three documents, answer with what was offered
+GET  /webhook/arkon-customer-desk-search?q=   the top-4 passages for a query: rank, source, score, text
+```
+
+Both LAN and Tailscale only; neither is on the Funnel. The texts are injected into the
+workflow verbatim by the generator, so the tracked file is the record of what the collection
+holds and `tests/test_generators.py` fails when a document changes without a rebuild;
+`tests/test_customer_documents.py` pins the documents to `customer_projection.py` (every
+customer word and every commitment window, rendered from the numbers) and to the deny list
+(no roster name, no underscored internal field name, no module or dataset name, no value of
+the superseded 2025 guide). The two collections of the platform are its two trust
+boundaries: the operators' assistant reads `arkon-knowledge`, the desk reads this one, and
+neither reaches the other's.
+
+### Measured, 2026-09-08
+
+`python n8n/customer_desk_kb_probe.py --rebuild --suite`, reading Qdrant point by point rather
+than the ingest answer: ingest 200 in 3.6 s; the collection created by the insert at 3072
+dimensions, Cosine; 57 points (guide 29, commitments 16, checklist 12); chunk length 55 to
+500, median 382; every point with `content` and `metadata.source`; no roster name and no
+superseded value in any chunk. The retrieval suite, five queries with the expected source
+written in the probe before the run: five of five to the expected document in 0.54 to 0.63 s
+at top scores 0.70 to 0.85, and the "which engineer is working on my notice" query lands on
+the paragraph that says employee names are not shared, the only place the store speaks of
+engineers at all.
+
+### Three things worth keeping
+
+- **The insert appends, so the ingest drops first.** n8n's Qdrant insert writes every chunk
+  under a fresh point id (Langflow's component hashed the chunk and overwrote), so a second
+  run without a drop is a doubled store, silently. The ingest path starts with an HTTP
+  `DELETE` of the collection at `http://qdrant:6333` with `neverError`, and the 404 of a
+  collection that does not exist yet is the normal first run.
+- **`collectionConfig` is passed raw.** The node hands that `json`-typed option straight to
+  LangChain's `fromDocuments` (read in the container's `VectorStoreQdrant.node.js`), and a
+  `json` parameter arrives as a string, so setting it would send a string to Qdrant's
+  create-collection call. It is left empty; the insert creates the collection from the
+  embedding's own vector size, and the probe reads the result back.
+- **The payload key is `content` here and `page_content` in `arkon-knowledge`.** The desk's
+  retriever over this collection keeps n8n's default. The comparison slice sets
+  `page_content` because its collection was written by Langflow; copying that setting here
+  retrieves empty passages without an error.
+
+### Deploying it
+
+```bash
+python n8n/build/build_customer_desk_kb_workflow.py
+python -m pytest tests/test_customer_documents.py tests/test_generators.py
+tar cf - -C n8n customer_desk_kb_v1.json | ssh ResSak@AK2101 'tar xf - -C /volume1/docker/arkon/_deploy'
+# on the NAS, from ~/arkon-tmp
+python3 deploy_plain_workflows.py customer_desk_kb_v1.json
+# back on the laptop
+python n8n/customer_desk_kb_probe.py --rebuild --suite
+```
+
+`n8n/build/deploy_plain_workflows.py` is this README's plain-import recipe as code: import
+each file, publish it by the id it carries, one restart inside the quiet window after a
+plant tick (the Steering Cell's counter lives in the running row, `deploy_steering_cell.py`
+explains), healthz, then the activation lines and the webhook rows read back, and a refusal
+to call it done if one is missing. It deployed both desk workflows on 2026-09-08 at
+10:34:54, 50 s after tick 390: healthz after 4 s, eleven Arkon workflows re-activated, the
+four webhook rows present.
+
+## Customer Quality Desk (the agent, sprint 1)
+
+Eleventh workflow, `customer_desk_v1.json`, id `arkonCustDesk02`, **deployed 2026-09-08** with
+the knowledge base. The customer-facing agent of the MSIT course project 2A, built sprint by
+sprint on the platform the plant runs on. The coursework (the memory policy, the validation
+runs, the brief) lives outside this repository; the workflow, its prompt
+(`n8n/build/customer_desk_prompt.py`, one version per sprint) and its generator
+(`n8n/build/build_customer_desk_workflow.py`) are platform and live here, and the git
+history keeps each sprint's shape.
+
+Sprint 1 shape: a Chat Trigger (hosted page, `public`, no authentication until sprint 4 puts
+Basic Auth in front of the public route), the AI Agent with the sprint 1 prompt (the role,
+what this version can and cannot do, the boundaries, the three memory rules of remember,
+discard and consent; no retrieval, no tools), the OpenRouter chat model
+`google/gemini-3.1-flash-lite` at temperature 0.3, and Buffer Window Memory keyed by the
+chat session id with a window of six.
+
+```text
+GET  /webhook/arkon-customer-desk/chat   the hosted chat page
+POST /webhook/arkon-customer-desk/chat   {"action": "sendMessage", "sessionId": "...", "chatInput": "..."}  ->  {"output": "..."}
+```
+
+The Chat Trigger's URL is `/webhook/<webhookId>/chat`: its own webhook path is the constant
+`chat` and the node's `webhookId` is the segment in front of it. `responseMode` is
+`lastNode`, so the agent's `{output}` is the reply body, which is what
+`n8n/customer_desk_chat.py --session <id> --turns-file <turns.json>` reads back when it
+sends a scripted conversation and prints the transcript as returned.
+
+The sprint 1 validation passed seven of seven on 2026-09-08 at 10:35, 0.9 to 3.0 s per turn:
+name, company and reference recalled three turns later; the consent question verbatim
+before a health-linked communication preference is kept, and the preference honoured
+unprompted two turns on; an IBAN and a private number refused without being repeated back;
+a second session blind to the first. The record with the expectations written first and
+the transcript is the coursework's.
+
+### Known boundaries of sprint 1
+
+- No retrieval and no lookup: the prompt says so and the agent says so to the customer.
+  Sprint 3 adds the retriever over `arkon-customer-desk`, the calculator and the lookup
+  through the customer status API; sprint 4 the Guardrails node, the confirmation step and
+  the public route.
+- The prompt governs behaviour, not persistence: a refused IBAN is not repeated back, but
+  the raw message is in the memory node's history for that session. The production answer
+  is a Guardrails node in `sanitize` mode in front of the agent.
+- Execution data is kept for every conversation (`saveDataSuccessExecution: all`) so a
+  validation run can be read back; a chat desk does not produce the volume the status API
+  did.
 
 ## Escalation record (write path, guarded)
 
