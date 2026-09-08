@@ -18,6 +18,7 @@ All of them run on a self-hosted n8n instance, pinned to `n8nio/n8n:2.29.9`.
 | `overdue_escalation_v1.json` | scheduled | every 15 minutes, no endpoint | 2026-09-06, record fix the same evening |
 | `daily_digest_v1.json` | scheduled | daily at 07:05 Europe/Berlin, no endpoint | 2026-09-06 |
 | `store_sync_v1.json` | sync | `POST /webhook/arkon-store-sync`; also started by the two write paths after every append | 2026-09-07 |
+| `customer_status_api_v1.json` | read | `GET /webhook/arkon-customer-status` | 2026-09-08 |
 
 **Three of the seven that run the plant share one piece of code.** The incident line is written once,
 at `new`, and never rewritten, so the current status of an incident is the fold of
@@ -805,6 +806,132 @@ private IP ranges by default and needs
 - No authentication. The endpoint sits on the LAN and the Tailscale network
   only. Anything beyond the demo needs at least a header credential, and that is
   a stated item in the readiness account.
+
+## Customer status API (read path, the Customer Quality Desk)
+
+Ninth workflow, `customer_status_api_v1.json`, built and **deployed 2026-09-08** on n8n
+2.29.9, workflow id `arkonCustDesk01`. It is the read endpoint of the Customer Quality
+Desk, the customer-facing agent built as the MSIT course project 2A (the coursework lives
+outside this repository, the endpoint is platform): an OEM customer's quality engineer, or
+the agent answering them, asks about one quality notice or complaint by its `ARK-INC`
+reference and gets the customer projection back. Same store as the plant (charter 7.5),
+eight fields of it.
+
+The point is the boundary. The incident status API serves the whole record (assignee,
+evidence, priority, thresholds, other incidents) to the plant's own people. A customer may
+see none of that, and an agent's instructions can only ask the model not to repeat it. This
+endpoint makes the restriction an infrastructure fact: the agent never receives what it
+must not say.
+
+```text
+GET /webhook/arkon-customer-status?reference=ARK-INC-00348
+  -> Parse the reference (the only parameter read; every other one is ignored)   (400, one reason)
+  -> Simulated failure requested?                                                (503, test affordance)
+  -> Read the summary row of arkon_store_summary                                 (503 if the tables do not answer, 503 if never synced)
+  -> Read the one row of arkon_incidents the reference names                     (503 if the table does not answer)
+  -> Project it for the customer                                                 (200, status ok or no_match)
+```
+
+### Contract
+
+| Parameter | Accepts | Notes |
+|---|---|---|
+| `reference` | `ARK-INC-00348`, `ark-inc-348`, `348` | required; normalised to the padded form |
+| `simulate_failure` | `true`, `1`, `yes` | test affordance, the same as on the incident status API |
+
+The same four answers as the incident status API, for the same reason: `ok` (200) with a
+`notice`; `no_match` (200, "No quality notice or complaint with reference ... is on
+record.", `notice: null`); `rejected` (400, one `errors` entry); `unavailable` (503). A
+`no_match` is a fact about the store; a 503 means the lookup failed and nothing may be
+inferred from it. A customer told that their complaint is not on record because a table did
+not answer is the one thing this endpoint must never do, so a store that cannot be read, or
+that has never been synced, is a 503 before the reference is looked up.
+
+The notice, and nothing else:
+
+| Field | What it is |
+|---|---|
+| `reference` | the incident id |
+| `type` | `quality_notice`: the plant's incidents are read as quality notices to the customer; a complaint intake of its own is the post-course extension |
+| `received_at` | the intake time |
+| `customer_status` | the customer's word for the folded lifecycle status, table below |
+| `stage` | `{number, of: 5, name}` |
+| `next_step` | `{name, due_at, overdue}`, or `null` on a closed notice; the commitment counts from the moment the current stage was entered (the last recorded transition, or intake) |
+| `last_update_at` | the last recorded transition, or intake |
+| `closed_at` | the closing transition, or `null` |
+
+| Lifecycle status | Customer status | Stage | Next step | Arkon's commitment |
+|---|---|---|---|---|
+| `new` | Received | 1, Received and logged | Acknowledgement by the Arkon quality team | the charter 7.1 window: P1 15 min, P2 1 h; P3 and P4 one business day (24 h) |
+| `acknowledged` | Under investigation | 2, Investigation opened | Containment decision | 24 h |
+| `in_containment` | Containment in place | 3, Containment measures active | Root cause and corrective action | 240 h |
+| `resolved` | Corrective action implemented | 4, Corrective action implemented | Effectiveness check and closure | 120 h |
+| `closed` | Closed | 5, Closed | none | - |
+| `false_positive` | Closed, no defect confirmed | 5, Closed | none | - |
+
+The vocabulary and the windows live in one file, `n8n/build/customer_projection.py`, read
+by the generator, by the checker and by the desk's customer documents, for the reason
+`lifecycle.py` is one file. The acknowledgement commitment is taken from
+`lifecycle.ACK_WINDOW_MINUTES`, so the customer is promised exactly what the plant is
+measured on; the other three windows are the desk's own, decided 2026-09-08, and the
+charter measures none of them yet.
+
+### Checking it
+
+```bash
+python n8n/build/check_customer_status_js.py
+python -m pytest tests/test_customer_projection.py tests/test_generators.py
+```
+
+The checker runs the two Code nodes under node: the generator reproduces the tracked file;
+empty reads reach the answer and failed reads answer 503; the parser accepts the three
+reference forms, refuses the rest, and ignores an internal filter rather than honouring it;
+and, over rows the store sync's own fold produced from logs written by hand, every lifecycle
+status gets its words, its stage and its commitment date (a reopened containment counts
+from the reopening). Two checks carry the boundary claim. The answer node's code must not
+name an internal field at all; the check is a string search, and on its first run it
+caught the word "evidence" in a comment, which is the class of edit it exists for. And
+every served notice is searched for the internal values of its record (the assignee, the
+escalation contact, the record id, the module, the priority, a transition note) and must
+contain none. The pytest module pins the vocabulary to the lifecycle and the served field
+list against the row columns: the one name both share is `closed_at`, and it means the same
+date on both sides.
+
+### Deploying it
+
+No credentials, no static data, so a plain import, inside the quiet window after a plant
+tick because the restart is not optional (see the status API section):
+
+```bash
+docker exec n8n n8n import:workflow --input=/data/arkon/_deploy/customer_status_api_v1.json
+docker exec n8n n8n publish:workflow --id=arkonCustDesk01 && docker restart n8n
+python n8n/customer_status_probe.py http://AK2101:5678/webhook/arkon-customer-status
+```
+
+**Deployed 2026-09-08, 07:09:56 to 07:10:17 UTC**, 41 s after plant tick 382, which had
+been recorded (`ARK-INC-00421`) and synced (07:09:19) before the restart began: import,
+publish, restart, healthz ok after 6 s, all nine Arkon workflows re-activated (read from the
+container log), the webhook row present in `webhook_entity`. The probe passed 14 of 14
+against `ARK-INC-00421`, cross-checking every served value against the incident status
+API's record of it, and the four answers were timed from the laptop: 400 in 0.09 s, 503 in
+0.12 s, `no_match` in 0.52 s, `ok` in 0.18 to 0.25 s.
+
+### Known boundaries
+
+- Read-only, one reference per call, and it stays that way. There is no list, no filter
+  and no search: a caller who does not hold a reference gets nothing.
+- Every incident is readable as a quality notice, and the ids are sequential, so anyone
+  who can reach the endpoint can enumerate them. The projection bounds what a guess
+  returns to the eight customer fields; who may see which reference is the identity and
+  per-customer scoping gap the desk's brief names, the same gap the course's public URL
+  has.
+- The commitment dates for stages 2 to 4 are the desk's, not the charter's, and the plant
+  is not measured against them.
+- No authentication, like the status API: LAN and Tailscale only. The desk's public page
+  is a separate decision (a tunnel on the chat path, Basic Auth on the page), and this
+  endpoint is never on it: the agent calls it from inside the container network.
+- `simulate_failure` is the same test affordance as on the status API, and a production
+  deployment removes it or puts it behind an operator role.
 
 ## Escalation record (write path, guarded)
 

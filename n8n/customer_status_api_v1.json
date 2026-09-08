@@ -1,0 +1,451 @@
+{
+  "id": "arkonCustDesk01",
+  "name": "Arkon Customer Status API v1",
+  "nodes": [
+    {
+      "id": "c1000000-0000-4000-8000-000000000001",
+      "name": "Customer Status Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1328,
+        240
+      ],
+      "webhookId": "arkon-customer-status",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "arkon-customer-status",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000002",
+      "name": "Parse Reference",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        240
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Customer Status API - request parsing.\n// One parameter is required: the customer's reference, which is the plant's\n// incident id. Every other parameter is ignored, so a caller cannot reach an\n// internal filter (priority, module, assignee) through this endpoint.\nconst params = $input.first().json.query ?? {};\nconst errors = [];\n\nconst raw = (key) => {\n  const value = params[key];\n  if (value === undefined || value === null) return null;\n  const text = String(Array.isArray(value) ? value[0] : value).trim();\n  return text === \"\" ? null : text;\n};\n\n// reference: accepts ARK-INC-00348, ark-inc-348, or a bare number, and is\n// normalised to the padded form the store holds.\nlet reference = raw(\"reference\");\nif (reference === null) {\n  errors.push(\"reference is required, for example ARK-INC-00348\");\n} else {\n  const digits = reference.replace(/[^0-9]/g, \"\");\n  if (!/^(ARK-INC-)?[0-9]+$/i.test(reference) || digits === \"\") {\n    errors.push(\"reference must look like ARK-INC-00348\");\n    reference = null;\n  } else {\n    reference = \"ARK-INC-\" + digits.padStart(5, \"0\");\n  }\n}\n\n// Test affordance only, the same one the incident status API carries: lets the\n// agent's failure path be demonstrated on demand without unpublishing the\n// workflow. A production deployment removes it or puts it behind an operator role.\nconst simulateFailure = [\"1\", \"true\", \"yes\"].includes((raw(\"simulate_failure\") ?? \"\").toLowerCase());\n\nreturn [\n  {\n    json: {\n      valid: errors.length === 0,\n      errors,\n      simulate_failure: simulateFailure,\n      reference,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000003",
+      "name": "Valid Request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1000000-0000-4000-8000-000000000003",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000004",
+      "name": "Respond Bad Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -656,
+        416
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"rejected\", errors: $json.errors}) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000005",
+      "name": "Simulated Failure?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1000000-0000-4000-8000-000000000005",
+              "leftValue": "={{ $json.simulate_failure }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000006",
+      "name": "Respond Unavailable",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        -16
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"unavailable\", message: \"Reference lookup failed (simulated failure requested by the caller).\"}) }}",
+        "options": {
+          "responseCode": 503
+        }
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000007",
+      "name": "Get Summary",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        224
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "arkon_store_summary"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "condition": "eq",
+              "keyValue": "store"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000008",
+      "name": "Respond Store Unavailable",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        416
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"unavailable\", message: \"The reference lookup is temporarily unavailable (the incident store did not answer).\"}) }}",
+        "options": {
+          "responseCode": 503
+        }
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000009",
+      "name": "Store Synced?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        224
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1000000-0000-4000-8000-000000000009",
+              "leftValue": "={{ $json.key === \"store\" }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-00000000000a",
+      "name": "Respond Store Not Synced",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        16,
+        416
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"unavailable\", message: \"The reference lookup is temporarily unavailable (the incident store has not been synced yet).\"}) }}",
+        "options": {
+          "responseCode": 503
+        }
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-00000000000b",
+      "name": "Get Reference",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        16,
+        224
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "arkon_incidents"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "incident_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Parse Reference').first().json.reference }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "c1000000-0000-4000-8000-00000000000c",
+      "name": "Respond Rows Unavailable",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        416
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status: \"unavailable\", message: \"The reference lookup is temporarily unavailable (the incidents table did not answer).\"}) }}",
+        "options": {
+          "responseCode": 503
+        }
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-00000000000d",
+      "name": "Project For Customer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        224
+      ],
+      "parameters": {
+        "jsCode": "// Arkon Customer Status API - answer one reference for a customer.\n// The row is the store sync's projection of the incident line with its\n// transition log folded on (charter 7.2 and 7.5). What leaves this node is the\n// customer projection and nothing else: nothing about the people working the\n// notice, what the models saw, how urgent the plant rates it, or any other\n// notice. The vocabulary and the commitment windows come from\n// customer_projection.py, shared with the desk's customer documents.\nconst CUSTOMER_STAGES = {\"new\": {\"customer_status\": \"Received\", \"stage\": 1, \"stage_name\": \"Received and logged\", \"next_step\": \"Acknowledgement by the Arkon quality team\"}, \"acknowledged\": {\"customer_status\": \"Under investigation\", \"stage\": 2, \"stage_name\": \"Investigation opened\", \"next_step\": \"Containment decision\"}, \"in_containment\": {\"customer_status\": \"Containment in place\", \"stage\": 3, \"stage_name\": \"Containment measures active\", \"next_step\": \"Root cause and corrective action\"}, \"resolved\": {\"customer_status\": \"Corrective action implemented\", \"stage\": 4, \"stage_name\": \"Corrective action implemented\", \"next_step\": \"Effectiveness check and closure\"}, \"closed\": {\"customer_status\": \"Closed\", \"stage\": 5, \"stage_name\": \"Closed\", \"next_step\": null}, \"false_positive\": {\"customer_status\": \"Closed, no defect confirmed\", \"stage\": 5, \"stage_name\": \"Closed\", \"next_step\": null}};\nconst STAGE_COUNT = 5;\nconst COMMITMENT_HOURS = {\"new\": {\"P1\": 0.25, \"P2\": 1.0}, \"acknowledged\": 24.0, \"in_containment\": 240.0, \"resolved\": 120.0};\nconst DEFAULT_ACK_HOURS = 24.0;\nconst TERMINAL_STATUSES = [\"closed\", \"false_positive\"];\nconst arkonCustomerParseJson = (text, fallback) => {\n  if (text === null || text === undefined || text === \"\") return fallback;\n  try {\n    return JSON.parse(text);\n  } catch (error) {\n    return fallback;\n  }\n};\n\n// Hours Arkon has committed to for the next step of a notice in this status.\n// The acknowledgement window is the charter's per priority; a priority without\n// one gets the desk's default; a status without a next step gets null.\nfunction arkonCommitmentHours(status, priority) {\n  const window = COMMITMENT_HOURS[status];\n  if (window === undefined) return null;\n  if (typeof window === \"number\") return window;\n  const byPriority = window[String(priority ?? \"\").toUpperCase()];\n  return byPriority === undefined ? DEFAULT_ACK_HOURS : byPriority;\n}\n\n// One incident row of the store, seen by the customer who holds its reference.\n// The current stage was entered at the last recorded transition, or at intake\n// when there is none, and the commitment date counts from that moment, so a\n// containment that was reopened counts from the reopening.\nfunction arkonCustomerProjection(row, now) {\n  const status = String(row.status ?? \"new\").toLowerCase();\n  const stage = CUSTOMER_STAGES[status] ?? CUSTOMER_STAGES[\"new\"];\n  const history = arkonCustomerParseJson(row.history_json, []);\n  const last = history.length ? history[history.length - 1] : null;\n  const enteredAt = last && last.recorded_at ? last.recorded_at : (row.created_at ?? null);\n  const entered = Date.parse(enteredAt ?? \"\");\n\n  let nextStep = null;\n  if (stage.next_step) {\n    const hours = arkonCommitmentHours(status, row.priority);\n    const due = Number.isNaN(entered) || hours === null ? null : new Date(entered + hours * 3600000);\n    nextStep = {\n      name: stage.next_step,\n      due_at: due ? due.toISOString() : null,\n      overdue: due ? now.getTime() > due.getTime() : false,\n    };\n  }\n\n  const terminal = TERMINAL_STATUSES.includes(status);\n  return {\n    reference: row.incident_id,\n    type: \"quality_notice\",\n    received_at: row.created_at ?? null,\n    customer_status: stage.customer_status,\n    stage: { number: stage.stage, of: STAGE_COUNT, name: stage.stage_name },\n    next_step: nextStep,\n    last_update_at: enteredAt,\n    closed_at: terminal ? (row.closed_at ?? enteredAt) : null,\n  };\n}\n\nconst request = $(\"Parse Reference\").first().json;\nconst now = new Date();\n\nconst isRow = (json) => json && typeof json === \"object\" && typeof json.incident_id === \"string\";\nconst rows = $(\"Get Reference\")\n  .all()\n  .map((item) => item.json)\n  .filter(isRow)\n  .filter((row) => row.incident_id === request.reference);\n\nif (!rows.length) {\n  return [\n    {\n      json: {\n        status: \"no_match\",\n        message: \"No quality notice or complaint with reference \" + request.reference + \" is on record.\",\n        as_of: now.toISOString(),\n        reference: request.reference,\n        notice: null,\n      },\n    },\n  ];\n}\n\nreturn [\n  {\n    json: {\n      status: \"ok\",\n      message: \"Reference \" + request.reference + \" found.\",\n      as_of: now.toISOString(),\n      reference: request.reference,\n      notice: arkonCustomerProjection(rows[0], now),\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "c1000000-0000-4000-8000-00000000000e",
+      "name": "Respond Customer Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        224
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Customer Status Request": {
+      "main": [
+        [
+          {
+            "node": "Parse Reference",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reference": {
+      "main": [
+        [
+          {
+            "node": "Valid Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Request?": {
+      "main": [
+        [
+          {
+            "node": "Simulated Failure?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Bad Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulated Failure?": {
+      "main": [
+        [
+          {
+            "node": "Respond Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summary": {
+      "main": [
+        [
+          {
+            "node": "Store Synced?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Store Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Synced?": {
+      "main": [
+        [
+          {
+            "node": "Get Reference",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Store Not Synced",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Reference": {
+      "main": [
+        [
+          {
+            "node": "Project For Customer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Rows Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project For Customer": {
+      "main": [
+        [
+          {
+            "node": "Respond Customer Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true
+  },
+  "pinData": {}
+}

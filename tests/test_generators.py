@@ -28,6 +28,7 @@ GENERATORS = [
     ("build_digest_workflow.py", "daily_digest_v1.json"),
     ("build_comparison_slice.py", "comparison_slice_v1.json"),
     ("build_store_sync_workflow.py", "store_sync_v1.json"),
+    ("build_customer_status_workflow.py", "customer_status_api_v1.json"),
 ]
 
 
