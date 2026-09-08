@@ -344,14 +344,18 @@ def test_the_shipped_desk_carries_neither_switch():
 # -- the page --------------------------------------------------------------------
 
 def test_the_desk_page_builds_its_chat_address_from_its_own_origin():
+    """The page is public and sends the desk login itself: browsers did not reuse
+    the page's Basic Auth for the chat POST (measured 2026-09-08, HTTP 401)."""
     nodes = {node["name"]: node for node in PAGE["nodes"]}
     request = nodes["Desk Page Request"]
-    assert request["parameters"]["authentication"] == "basicAuth"
-    assert request["credentials"]["httpBasicAuth"]["id"] == "arkonDeskBasic1"
+    assert request["parameters"]["authentication"] == "none"
+    assert "credentials" not in request
     assert request["parameters"]["httpMethod"] == "GET" and request["parameters"]["path"] == "arkon-desk"
     html = nodes["Serve Desk Page"]["parameters"]["responseBody"]
     assert 'location.origin + "/webhook/arkon-customer-desk/chat"' in html
     assert "ts.net" not in html and "AK2101" not in html, "no absolute host in the page"
+    assert '"Authorization": auth' in html and 'btoa(user + ":" + pw)' in html
+    assert "ArkonDesk" not in html, "the password is never in the page"
     assert prompt.GREETING in html and prompt.PAGE_TITLE in html
     headers = nodes["Serve Desk Page"]["parameters"]["options"]["responseHeaders"]["entries"]
     assert {"name": "Content-Type", "value": "text/html; charset=utf-8"} in headers

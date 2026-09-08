@@ -8,13 +8,16 @@ not the public one. This page builds the chat address from its own origin
 (`location.origin + "/webhook/arkon-customer-desk/chat"`), so it works on the
 LAN, on the tailnet and through the Funnel without knowing which one it is on.
 
-    GET /webhook/arkon-desk      the page, Basic Auth (the same credential as the chat)
+    GET /webhook/arkon-desk      the page, public; the chat behind it stays behind Basic Auth
 
-Both webhooks sit under `/webhook/` on the same origin and use the same
-credential, so a browser that authenticated for the page reuses the header for
-the chat POST (RFC 7617 protection space); measured through the Funnel on
-2026-09-08. The page is served by the platform itself, so no second server and
-no second certificate exist to keep alive.
+The first version put the page behind the same Basic Auth as the chat and
+relied on the browser reusing the login for the chat POST (same origin, same
+realm, same `/webhook/` prefix). Measured on 2026-09-08 in Sergey's browser
+through the Funnel: the page loaded, the chat POST came back 401. So the page
+asks for the desk login once in its own panel, keeps it in the tab's session
+storage, and sends the `Authorization` header itself. The page is served by
+the platform, so no second server and no second certificate exist to keep
+alive.
 """
 
 import json
@@ -54,6 +57,12 @@ PAGE_HTML = """<!doctype html>
   textarea { flex: 1; min-height: 52px; padding: 10px; border: 1px solid #c2c5cc; border-radius: 6px; font: inherit; resize: vertical; }
   button { padding: 0 18px; border: 0; border-radius: 6px; background: #20b69e; color: #fff; font: inherit; cursor: pointer; }
   button[disabled] { background: #81bbb1; cursor: default; }
+  #login { display: block; margin: 0 0 14px; padding: 12px 14px; background: #fff; border: 1px solid #e6e9f1; border-radius: 8px; }
+  #login[hidden] { display: none; }
+  #login .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  #login input { flex: 1; min-width: 140px; padding: 9px 10px; border: 1px solid #c2c5cc; border-radius: 6px; font: inherit; }
+  #login button { padding: 9px 16px; }
+  #login .meta { margin: 0 0 8px; }
 </style>
 </head>
 <body>
@@ -62,6 +71,14 @@ PAGE_HTML = """<!doctype html>
   <p>__SUBTITLE__</p>
 </header>
 <main>
+  <form id="login" hidden>
+    <p class="meta" id="loginNote">Please sign in to the desk. The desk login is the one Arkon gave you with this page.</p>
+    <div class="row">
+      <input id="user" placeholder="User" autocomplete="username" value="arkon">
+      <input id="pw" type="password" placeholder="Password" autocomplete="current-password" required>
+      <button id="signin" type="submit">Sign in</button>
+    </div>
+  </form>
   <div id="log"></div>
   <form id="form">
     <textarea id="input" placeholder="__PLACEHOLDER__" required></textarea>
@@ -90,19 +107,55 @@ PAGE_HTML = """<!doctype html>
 
   show("__GREETING__", "desk");
 
+  // The chat webhook sits behind Basic Auth. Browsers do not reliably reuse a
+  // login taken for one path on a fetch to another (measured 2026-09-08: the
+  // page loaded, the chat POST came back 401), so the page asks once and sends
+  // the header itself; the login lives in this tab's session storage only.
+  var login = document.getElementById("login");
+  var loginNote = document.getElementById("loginNote");
+  var auth = null;
+  try { auth = sessionStorage.getItem("arkonDeskAuth"); } catch (e) { auth = null; }
+  function needLogin(message) {
+    auth = null;
+    try { sessionStorage.removeItem("arkonDeskAuth"); } catch (e) {}
+    if (message) { loginNote.textContent = message; }
+    login.hidden = false;
+    send.disabled = true;
+    document.getElementById("pw").focus();
+  }
+  if (!auth) { needLogin(); }
+
+  login.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var user = document.getElementById("user").value.trim();
+    var pw = document.getElementById("pw").value;
+    if (!user || !pw) { return; }
+    auth = "Basic " + btoa(user + ":" + pw);
+    try { sessionStorage.setItem("arkonDeskAuth", auth); } catch (e) {}
+    document.getElementById("pw").value = "";
+    login.hidden = true;
+    send.disabled = false;
+    input.focus();
+  });
+
   form.addEventListener("submit", function (event) {
     event.preventDefault();
     var text = input.value.trim();
     if (!text) { return; }
+    if (!auth) { needLogin(); return; }
     show(text, "you");
     input.value = "";
     send.disabled = true;
     fetch(CHAT, {
       method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
+      credentials: "omit",
+      headers: { "Content-Type": "application/json", "Authorization": auth },
       body: JSON.stringify({ action: "sendMessage", sessionId: session, chatInput: text })
     }).then(function (response) {
+      if (response.status === 401 || response.status === 403) {
+        needLogin("The desk login was not accepted. Please sign in again.");
+        throw new Error("HTTP " + response.status + ", the login was not accepted");
+      }
       if (!response.ok) { throw new Error("HTTP " + response.status); }
       return response.json();
     }).then(function (answer) {
@@ -110,7 +163,7 @@ PAGE_HTML = """<!doctype html>
     }).catch(function (error) {
       show("The desk did not answer (" + error.message + "). Please try again, or write to the Arkon Customer Quality Contact.", "desk");
     }).then(function () {
-      send.disabled = false;
+      if (auth) { send.disabled = false; }
       input.focus();
     });
   });
@@ -145,14 +198,16 @@ workflow = {
             "typeVersion": 2,
             "position": [-880, 0],
             "webhookId": PAGE_PATH,
+            # The page itself is public: it carries no secret and does nothing
+            # without the desk login, which the page asks for and sends on the
+            # chat POST. Basic Auth stays on the chat webhook.
             "parameters": {
                 "httpMethod": "GET",
                 "path": PAGE_PATH,
-                "authentication": "basicAuth",
+                "authentication": "none",
                 "responseMode": "responseNode",
                 "options": {},
             },
-            "credentials": BASIC_AUTH_CREDENTIAL,
         },
         {
             "id": "f1000000-0000-4000-8000-000000000002",
