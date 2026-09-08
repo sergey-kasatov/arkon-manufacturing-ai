@@ -20,6 +20,12 @@ by e-mail to customer.quality@arkon-manufacturing.example.
 
 ## 2. The twelve items
 
+Send these twelve items with every complaint: part number and part description,
+drawing revision, lot code or date code, quantity delivered, quantity affected
+or suspect, defect description, photographs, measurements or test results,
+containment at the customer, customer contact, language, and prior reference.
+Each item is explained below, with the reason Arkon asks for it.
+
 1. Part number and part description. The Arkon part number as printed on the
    delivery note, and the part description. Why: the part number identifies the
    production process and the drawing the parts were made to.

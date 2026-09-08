@@ -31,6 +31,7 @@ GENERATORS = [
     ("build_customer_status_workflow.py", "customer_status_api_v1.json"),
     ("build_customer_desk_kb_workflow.py", "customer_desk_kb_v1.json"),
     ("build_customer_desk_workflow.py", "customer_desk_v1.json"),
+    ("build_customer_desk_workflow.py", "customer_desk_failtest_v1.json"),
 ]
 
 

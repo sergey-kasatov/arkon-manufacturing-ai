@@ -1,6 +1,6 @@
 {
-  "id": "arkonCustDesk02",
-  "name": "Arkon Customer Quality Desk v1 (sprint 3)",
+  "id": "arkonCustDesk03",
+  "name": "Arkon Customer Quality Desk v1 (sprint 3) - tool-failure fixture",
   "nodes": [
     {
       "id": "e1000000-0000-4000-8000-000000000001",
@@ -11,7 +11,7 @@
         -880,
         0
       ],
-      "webhookId": "arkon-customer-desk",
+      "webhookId": "arkon-customer-desk-failtest",
       "parameters": {
         "public": true,
         "mode": "hostedChat",
@@ -164,6 +164,10 @@
             {
               "name": "reference",
               "value": "={{ $fromAI('reference', 'The Arkon notice reference the customer named, in the format ARK-INC-#####, for example ARK-INC-00348.', 'string') }}"
+            },
+            {
+              "name": "simulate_failure",
+              "value": "true"
             }
           ]
         },

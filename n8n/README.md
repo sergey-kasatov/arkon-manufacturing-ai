@@ -280,6 +280,7 @@ names. The exception does not, and the reason is worth keeping:
 | `customer_status_api_v1.json` | `arkonCustDesk01` |
 | `customer_desk_kb_v1.json` | `arkonCustDeskKB1` |
 | `customer_desk_v1.json` | `arkonCustDesk02` |
+| `customer_desk_failtest_v1.json` | `arkonCustDesk03` (tool-failure fixture, deleted before submission) |
 | `quality_steering_cell_v1.json` | **`o0vXtlRWIs9yFrUJ`** |
 
 **The steering cell keeps the id n8n generated for it, because that row is where
@@ -1013,10 +1014,10 @@ to call it done if one is missing. It deployed both desk workflows on 2026-09-08
 10:34:54, 50 s after tick 390: healthz after 4 s, eleven Arkon workflows re-activated, the
 four webhook rows present.
 
-## Customer Quality Desk (the agent, sprint 1)
+## Customer Quality Desk (the agent, sprints 1 and 3)
 
 Eleventh workflow, `customer_desk_v1.json`, id `arkonCustDesk02`, **deployed 2026-09-08** with
-the knowledge base. The customer-facing agent of the MSIT course project 2A, built sprint by
+the knowledge base and **re-deployed the same day at sprint 3** with its three tools. The customer-facing agent of the MSIT course project 2A, built sprint by
 sprint on the platform the plant runs on. The coursework (the memory policy, the validation
 runs, the brief) lives outside this repository; the workflow, its prompt
 (`n8n/build/customer_desk_prompt.py`, one version per sprint) and its generator
@@ -1048,12 +1049,68 @@ unprompted two turns on; an IBAN and a private number refused without being repe
 a second session blind to the first. The record with the expectations written first and
 the transcript is the coursework's.
 
-### Known boundaries of sprint 1
+### Sprint 3: the three tools
 
-- No retrieval and no lookup: the prompt says so and the agent says so to the customer.
-  Sprint 3 adds the retriever over `arkon-customer-desk`, the calculator and the lookup
-  through the customer status API; sprint 4 the Guardrails node, the confirmation step and
-  the public route.
+Same trigger, agent, model and memory; three tools added and the prompt replaced with the
+course's six elements in its order (role and context, retrieval scope, notice action
+boundary, tool invocation guidance, fallback behaviour, tool failure fallback), Max
+Iterations 6.
+
+| Tool | Node | Called when |
+|---|---|---|
+| `arkon_customer_documents` | Qdrant vector store, `retrieve-as-tool`, collection `arkon-customer-desk`, Top K 4, `contentPayloadKey` `content` | Documented information without notice data |
+| `Calculator` | `toolCalculator` | Arithmetic on numbers the customer supplied or a tool verified |
+| `complaint_status_lookup` | `n8n-nodes-base.httpRequestTool` 4.4, `GET http://127.0.0.1:5678/webhook/arkon-customer-status`, one `$fromAI` parameter `reference`, `neverError` | Only when the customer explicitly asks for the status of their own notice AND supplies the reference |
+
+**The tool name is the NODE name.** At typeVersion 1.3 the Qdrant node dropped its
+`toolName` field and the HTTP request tool never had one, so n8n derives the name the model
+sees from the node name (`nodeNameToToolName` in `n8n-workflow`: everything outside
+`[a-zA-Z0-9_-]` becomes an underscore, truncated at 64). The three node names above are
+therefore the three names quoted in the prompt, and `tests/test_customer_desk.py` pins them
+to each other.
+
+**Do not use `@n8n/n8n-nodes-langchain.toolHttpRequest` on 2.29.** It is `hidden: true` in
+this build and carries no `execute` method, so the execution engine refuses it the moment
+the agent calls it - `The node "@n8n/n8n-nodes-langchain.toolHttpRequest" has a "supplyData"
+method but no "execute" method` in `docker logs n8n`, once per attempted call - and the
+agent tells the customer the system is unreachable. The supported path is the base node used
+as a tool: any node with `usableAsTool` is registered a second time as `<type>Tool` by
+`convertNodeToAiTool`, which appends `Tool` to the name and adds the `toolDescription`
+property, and the model fills parameters through `$fromAI('name', 'description', 'type')`.
+
+**Address n8n's own webhook as `127.0.0.1`, never `localhost`.** Inside the container
+`localhost` resolves to `::1` first and n8n listens on IPv4 only. `fetch` (undici) tries both
+families and succeeds, so a probe says the URL is fine; the HTTP node's client takes the
+first answer and gets ECONNREFUSED. Measured in the container on 2026-09-08: `::1:5678`
+refused, `127.0.0.1:5678` and the dotted alias `n8n.arkon.internal:5678` both 200.
+
+`neverError` is on so that all four answers of the status endpoint reach the model as data -
+`ok`, `no_match`, `rejected` (a malformed reference) and `unavailable` (the 503) are four
+different things to say to a customer, and an exception is only one. Element 6 of the prompt
+maps the four `status` values to the four answers.
+
+The sprint 3 gate passed eight of eight (nineteen asserted checks) on 2026-09-08 at 11:22,
+0.9 to 2.9 s per turn, on two consecutive runs of the same build; the Sprint 2 readiness
+gate was re-run on the same build and passed thirteen of thirteen. The runner is
+`n8n/customer_desk_sprint3.py` (`--sprint2`, `--failure`), which reads the expectations that
+depend on the plant from the status endpoint at the start of every run, because the notice
+under test is live. The record with the expectations written first is the coursework's.
+
+`customer_desk_failtest_v1.json` (id `arkonCustDesk03`, chat path
+`/webhook/arkon-customer-desk-failtest/chat`) is the same desk with the status endpoint's
+`simulate_failure` affordance switched on as a fixed field value, so the prompt's tool
+failure fallback can be tested through the agent instead of asserted. The shipped desk
+carries no failure switch, the tests assert both halves, and the fixture is deleted before
+submission.
+
+### Known boundaries
+
+- Closed at sprint 3: the retriever over `arkon-customer-desk`, the calculator and the
+  lookup through the customer status API are in. Sprint 4 adds the Guardrails node, the
+  three security instructions, the confirmation step and the public route.
+- Top K 4 is the course's value and a real limit: a question whose answer is spread over
+  more than four chunks is answerable only in part. The store carries a summary chunk for
+  the one question a customer asks most.
 - The prompt governs behaviour, not persistence: a refused IBAN is not repeated back, but
   the raw message is in the memory node's history for that session. The production answer
   is a Guardrails node in `sanitize` mode in front of the agent.
