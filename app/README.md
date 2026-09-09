@@ -8,7 +8,9 @@ and the deployed assistant with its approval gate.
 Process owner: `docs/Project_Charter.md` section 7.5. The services it reads are
 owned by `n8n/README.md` and `langflow/README.md`.
 
-**Status: built and deployed 2026-09-04**, `http://AK2101:8303` on the NAS.
+**Status: built and deployed 2026-09-04**, `http://AK2101:8303` on the NAS. Since 2026-09-09
+the assistant page alone is also reachable from the internet behind a login (the section
+"The public assistant page" below).
 
 ## What it is not
 
@@ -127,10 +129,53 @@ listed for everyone and its messages open too. Scoping that list to the name in 
 picker was considered and rejected - it would look like privacy while providing none,
 which is worse than saying so.
 
+## The public assistant page
+
+Since 2026-09-09 the assistant page, and only that page, is reachable from the internet at
+`https://ugreen-nas.tail90586f.ts.net:10000/` behind a login, for people who are not on the
+tailnet. It is `02_assistant.py` run as a single-page app from the same image (the `assistant`
+service in `docker-compose.yml`), with Caddy in front of it holding an HTTP Basic Auth login
+(`assistant-auth`, host port 8304), and Tailscale Funnel mapping port 10000 of the node to
+that host port. Nothing else is published. The Steering Cell page writes transitions with no
+login and stays on the LAN and the tailnet, and Funnel is enabled per port and accepts 443,
+8443 and 10000 only, so the editor on 443 and the customer desk on 8443 are untouched.
+
+The login is a demo credential, not an authentication of anyone: it stops a passer-by. It
+lives on the NAS as a bcrypt hash in `/volume1/docker/arkon-assistant/Caddyfile`, beside
+`.env` and like it outside this repository:
+
+```
+:8080 {
+	basic_auth bcrypt "Arkon Quality Assistant demo" {
+		arkon <the hash: docker run --rm caddy:2-alpine caddy hash-password --plaintext '<password>'>
+	}
+	reverse_proxy arkon-assistant:8501
+}
+```
+
+Bringing it up, from `/volume1/docker/arkon-cockpit` on the NAS:
+
+```bash
+docker compose -f app/docker-compose.yml --env-file .env up -d assistant assistant-auth
+docker exec tailscale tailscale funnel --bg --https=10000 http://localhost:8304
+docker exec tailscale tailscale funnel status
+```
+
+`docker exec tailscale tailscale funnel --https=10000 off` takes it down again and leaves the
+other ports alone. Three things about the page when it is public. An Approve at the gate
+writes a real line into the escalation store, which is the point of the demo rather than a
+side effect. The "All conversations" list is the same shared list as in the cockpit, so a
+visitor sees every conversation held with the assistant, and the page says so under the list.
+And the Langflow key stays in the container's environment: the browser never sees it. Streamlit
+is started with `browser.serverAddress` set to the public host name, because its websocket
+origin check compares the browser's origin with the host it believes it is served from, and
+behind two proxies those can differ.
+
 ## Known boundaries
 
 - **No authentication**, like the two services behind it. LAN and Tailscale only,
-  and it must not be port-forwarded. The identity above is offered by the person,
+  and it must not be port-forwarded; the one page that is public sits behind a login of
+  its own (the section above). The identity above is offered by the person,
   not verified: it makes attribution easy and its absence visible, and it would not
   survive anyone who wanted to lie. Real identity here means a login, not a better
   selector.

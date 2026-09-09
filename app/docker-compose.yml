@@ -72,6 +72,56 @@ services:
     networks:
       - msit
 
+  # The public copy of the assistant page, and nothing else. `assistant` runs the same image
+  # as the cockpit with app/pages/02_assistant.py as its only page (a page file run directly
+  # is a single-page app; PYTHONPATH makes its `utils` imports resolve), and `assistant-auth`
+  # is Caddy in front of it holding an HTTP Basic Auth login, the only container of the pair
+  # with a host port. Tailscale Funnel maps https://<node>.ts.net:10000 to that port, so the
+  # rest of this stack stays LAN and tailnet: the Steering Cell page writes transitions
+  # without a login and must never be published. Funnel accepts ports 443, 8443 and 10000
+  # only, and 8443 carries the customer desk.
+  #
+  #   docker compose -f app/docker-compose.yml --env-file .env up -d assistant assistant-auth
+  #   docker exec tailscale tailscale funnel --bg --https=10000 http://localhost:8304
+  #
+  # The login lives on the NAS as a bcrypt hash in /volume1/docker/arkon-assistant/Caddyfile,
+  # beside .env and like it not in this repository; app/README.md has the file. Streamlit is
+  # told the address the browser sees, because its websocket origin check compares the
+  # browser's origin with the host it believes it is served from.
+  assistant:
+    image: arkon-cockpit
+    container_name: arkon-assistant
+    restart: unless-stopped
+    command: ["streamlit", "run", "app/pages/02_assistant.py",
+              "--server.port", "8501",
+              "--server.address", "0.0.0.0",
+              "--server.headless", "true",
+              "--browser.gatherUsageStats", "false",
+              "--browser.serverAddress", "ugreen-nas.tail90586f.ts.net",
+              "--browser.serverPort", "10000"]
+    environment:
+      PYTHONPATH: /srv/arkon/app
+      ARKON_STATUS_API: http://n8n.arkon.internal:5678/webhook/arkon-incident-status
+      ARKON_TRANSITION_API: http://n8n.arkon.internal:5678/webhook/arkon-incident-transition
+      ARKON_LANGFLOW_URL: http://langflow:7860
+      ARKON_LANGFLOW_API_KEY: ${ARKON_LANGFLOW_API_KEY}
+      TZ: ${TZ:-Europe/Berlin}
+    networks:
+      - msit
+
+  assistant-auth:
+    image: caddy:2-alpine
+    container_name: arkon-assistant-auth
+    restart: unless-stopped
+    depends_on:
+      - assistant
+    ports:
+      - "8304:8080"
+    volumes:
+      - /volume1/docker/arkon-assistant/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      - msit
+
 networks:
   msit:
     # The network n8n and Langflow are already attached to. External, because
