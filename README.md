@@ -855,7 +855,7 @@ Assistant   Langflow 1.11.5, Qdrant, OpenRouter (deployed)
 Automation  n8n (webhooks, incident store, lifecycle endpoint, Telegram alerts) (deployed)
 App         Streamlit cockpit, 9 pages, on the NAS at AK2101:8303 (deployed)
 Demo engine Python service, one re-timed real incident every 8 to 12 min (deployed)
-Tests       pytest, 130 offline tests, GitHub Actions on every push
+Tests       pytest, 203 offline tests, GitHub Actions on every push
 BI          Tableau Public 2026.2, workbook generated from XML by tableau/build_workbook.py
 Infra       Docker Compose on a Ugreen NAS, one network, Tailscale for remote access
 Utilities   pandas, numpy, matplotlib, seaborn, plotly
