@@ -692,8 +692,10 @@ recent incidents plus the store summary.
 | `incident_id` | `ARK-INC-00014`, `ark-inc-14`, `14` | normalised to the padded form |
 | `unit` | `92`, `092`, `FD001-Unit-092`, `ATTRTEST` | matched against the unit token of `event.evidence.record_id` |
 | `priority` | `P1`, `p1`, `P1,P2` | charter 7.1 levels |
-| `status` | charter 7.2 lifecycle value | new, acknowledged, in_containment, resolved, closed, false_positive |
+| `status` | charter 7.2 lifecycle value, or `open` | new, acknowledged, in_containment, resolved, closed, false_positive. `open` is not a stored value: it expands to the three non-terminal states, the same definition the store summary uses, so "what is still open" is one call. Added 2026-09-09 |
+| `assigned_to` | `A. Novak`, `Novak`, `a. novak` | the person the incident is assigned to, as `events/roster.json` writes it. `assignee` is accepted as the same parameter. The row is read with a contains match and narrowed to the whole name or one of its own tokens, so `Novak` finds the person and `ova` finds nobody. Added 2026-09-09 |
 | `limit` | 1 to 500, default 5 | bounds the returned page, not `match_count`. Raised from 50 on 2026-09-06, when the live plant pushed closed incidents past it and the dashboards began reporting their own bands short. It never was a load limit: until 2026-09-07 this workflow read both JSONL files whole on every request whatever the caller asked for, so a small cap saved nothing and cost completeness; since then it reads the rows the query names. |
+| `sort` | `recent` (default), `priority` | `recent` is newest first, the order this endpoint has always answered in. `priority` is the order the work is done in, P1 first and the oldest of a priority first, and it forces a complete read so that the head of the page really is the head of the list. It exists because a model asked to order a page itself listed three P3 incidents above six P2 ones and still called the answer ordered. Added 2026-09-09 |
 | `simulate_failure` | `true`, `1`, `yes` | test affordance, see below |
 
 Four answers, deliberately distinct, so the caller can tell them apart:
@@ -724,6 +726,14 @@ one hour). That answers "is anything overdue" in a single call.
 Since 2026-09-07 the summary comes from the summary row the store sync keeps, with
 `overdue_incidents` still counted live from the `new` rows, and it names its own
 freshness: `store.synced_at`, `store.sync_mode` and `store.sync_lag_seconds`.
+
+`match_summary` does the same thing for the matched set: `total`, `open`,
+`overdue`, `by_status` and `by_priority` over every hit, not over the returned
+page. It is `null` when the query carried no filter, because then the table
+returned the newest page only and counting that page would be a total that is not
+one. Added 2026-09-09 with the assignee filter, and for the same reason: a caller
+that asks "how many are mine" gets the count without paging every hit into its own
+context, and the count it reports is the matched set rather than the plant.
 
 ### The simulate_failure affordance
 
@@ -809,6 +819,12 @@ private IP ranges by default and needs
 - **A status it reports is a fold, not a field.** Reading `incidents.jsonl`
   directly gives `new` for every incident, for ever. `raised_as` is returned on
   every record so the two cannot be mistaken for a contradiction.
+- **`assigned_to` narrows a view, it does not enforce one.** The endpoint has no
+  authentication, so the parameter is a convenience for the caller and not an
+  access boundary: anyone may ask for anyone's incidents, and the store is not
+  private by design (the assistant is told the same). Real per-person visibility
+  would need the credential named in the next bullet plus an identity the caller
+  cannot choose, and that is a readiness item rather than a filter.
 - No authentication. The endpoint sits on the LAN and the Tailscale network
   only. Anything beyond the demo needs at least a header credential, and that is
   a stated item in the readiness account.

@@ -56,10 +56,23 @@ def check_ok(body, params):
             p.strip().upper() for p in str(params["priority"]).split(",")
         ]:
             problems.append(f"{incident['incident_id']} violates the priority filter")
-        if "status" in params and incident["status"].lower() != str(params["status"]).lower():
+        # Read the status filter off the echoed query, not off the parameter: one
+        # accepted value, `open`, stands for three states and the server says which.
+        wanted_states = body.get("query", {}).get("status_set") or []
+        if "status" in params and wanted_states and incident["status"].lower() not in wanted_states:
             problems.append(f"{incident['incident_id']} violates the status filter")
+        asked_for = params.get("assigned_to") or params.get("assignee")
+        if asked_for:
+            held = " ".join(str(incident.get("assigned_to") or "").lower().split())
+            wanted = " ".join(str(asked_for).lower().split())
+            if held != wanted and wanted not in held.split(" "):
+                problems.append(f"{incident['incident_id']} violates the assignee filter")
         if incident.get("operational_context_origin") != "simulated":
             problems.append(f"{incident['incident_id']} lost its simulated-context label")
+    # A filtered read describes its own set; a newest-page read must not pretend to.
+    summary = body.get("match_summary")
+    if summary is not None and summary.get("total") != matched:
+        problems.append("match_summary.total disagrees with match_count")
     return problems
 
 
@@ -77,6 +90,11 @@ CASES = [
     ("priority lowercase", {"priority": "p1"}, 200, None),
     ("status filter", {"status": "new", "limit": "2"}, 200, None),
     ("status with no members", {"status": "closed"}, 200, None),
+    ("status open expands", {"status": "open", "limit": "3"}, 200, None),
+    ("assignee full name", {"assigned_to": "A. Novak", "limit": "3"}, 200, None),
+    ("assignee by surname", {"assignee": "Novak", "limit": "3"}, 200, None),
+    ("assignee and open", {"assigned_to": "A. Novak", "status": "open", "limit": "3"}, 200, None),
+    ("a name fragment matches nobody", {"assigned_to": "ova"}, 200, "no_match"),
     ("unknown incident", {"incident_id": "ARK-INC-99999"}, 200, "no_match"),
     ("limit honoured", {"limit": "2"}, 200, None),
     ("combined filters", {"priority": "P2", "unit": "100"}, 200, None),

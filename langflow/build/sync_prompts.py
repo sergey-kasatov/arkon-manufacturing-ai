@@ -39,18 +39,18 @@ BINDINGS = {
     # The four agents. Every one of them carries a system prompt that this
     # script is the only supported way to change.
     "procedure_v2": ("Procedure Specialist", "system_prompt"),
-    "incident": ("Incident Specialist", "system_prompt"),
+    "incident_v2": ("Incident Specialist", "system_prompt"),
     "escalation_v2": ("Escalation Specialist", "system_prompt"),
     "declined": ("Escalation Declined", "system_prompt"),
     # All six route descriptions, so the router's own definition of a route
     # cannot drift from the document either.
     "route_procedure": ("Intent Router", "routes:Quality procedure"),
-    "route_incident_v2": ("Intent Router", "routes:Incident status"),
+    "route_incident_v3": ("Intent Router", "routes:Incident status"),
     "route_escalation": ("Intent Router", "routes:Escalation request"),
     "route_out_of_scope": ("Intent Router", "routes:Out of scope"),
     "route_briefing": ("Intent Router", "routes:Shift briefing"),
-    "route_unclear": ("Intent Router", "routes:Unclear request"),
-    "router_instructions_v3": ("Intent Router", "custom_prompt"),
+    "route_unclear_v2": ("Intent Router", "routes:Unclear request"),
+    "router_instructions_v4": ("Intent Router", "custom_prompt"),
     # A route can carry a fixed message that reaches its output with no model
     # call. Two of the six do, and they are prompts like any other.
     "unclear_message": ("Intent Router", "routes:Unclear request:output_value"),

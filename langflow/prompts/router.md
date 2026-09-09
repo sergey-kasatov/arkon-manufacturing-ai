@@ -174,3 +174,71 @@ model. If a message is both about Arkon and specific enough to act on, it belong
 to one of the first four categories, not to either of these two.
 ```
 
+### BLOCK: route_incident_v3
+
+```text
+Requests for the current state of incidents that already exist: the status,
+priority, assignee, evidence, age or overdue state of a named incident id such as
+ARK-INC-00014, of an engine unit such as unit 92, or of a set filtered by
+priority or status. Also counts and summaries of what is open right now. Use this
+route whenever the answer depends on looking at live data rather than on a rule.
+Do not use it when the operator asks for the shift briefing or the handover by
+name: that has its own route.
+
+This route also owns what the operator asks about their own work and their own
+name: "how many incidents do I have", "what is assigned to me", "what is my top
+list to solve", "am I overdue on anything", "who am I". Those name no incident,
+but the store records who every incident is assigned to and the cockpit names the
+person at the screen, so they are answered by reading live data like any other
+status question. They are not personal questions and they are never out of scope.
+```
+
+### BLOCK: route_unclear_v2
+
+```text
+Messages that are plainly about Arkon work but cannot be acted on as written,
+because the thing being asked about is not identified. A pronoun with no
+antecedent, "and what about that one", "is it still open", "what did it say".
+A follow-up whose subject was never named in this conversation. A request for a
+status, a rule or an action that names no incident, no unit, no priority and no
+topic. Use this route when the message reads like Arkon work with a piece
+missing, and use Out of scope only when the message is about something other
+than the Arkon quality operating model.
+
+An `[operator: ...]` first line does not identify anything: it names who is
+typing, never what they are asking about. "Escalate it." belongs here with that
+line and without it. The one exception is a question about the operator's own
+incidents or their own name, which the incident-status route owns.
+```
+
+### BLOCK: router_instructions_v4
+
+```text
+Classify the operator message into exactly one of these categories: {routes}.
+Never answer NONE. A message that asks what something means or how it works is
+Quality procedure. A message that asks what is happening now, or about a named
+incident or engine unit, is Incident status. A message that asks for the shift
+briefing or the handover by name is Shift briefing. A message that asks for
+something to be done is Escalation request.
+
+A message may open with a line naming the person at the screen, like
+`[operator: A. Novak, QC Engineer]`. The cockpit puts it there and the operator
+did not type it. It is context and never the message: classify the text below it,
+and do not let the line make a vague message look specific. "Escalate it." is the
+same message with the line and without it.
+
+What the operator asks about their own work is Incident status, not Out of scope
+and not Unclear: how many incidents do I have, what is assigned to me, what is my
+top list to solve, am I overdue on anything, who am I. The store records the
+assignee of every incident, so these are answered by looking at live data.
+
+Two categories are for messages that fit none of those, and they are not
+interchangeable. Use Unclear request when the message reads like Arkon work with
+a piece missing: a pronoun with no antecedent, a follow-up whose subject was
+never named, a request naming no incident, unit, priority or topic and not asking
+about the operator themselves. Use Out of scope when the message is about
+something other than the Arkon quality operating model. If a message is both
+about Arkon and specific enough to act on, it belongs to one of the first four
+categories, not to either of these two.
+```
+

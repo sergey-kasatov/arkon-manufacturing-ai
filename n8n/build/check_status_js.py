@@ -53,6 +53,16 @@ check("no filters is the newest page", parseQuery({}).db_filter, { column: "inci
 check("an incident id is one exact row", parseQuery({ incident_id: "ark-inc-14" }).db_filter, { column: "incident_id", condition: "eq", value: "ARK-INC-00014", return_all: true, limit: 5 });
 check("a status is one exact condition", parseQuery({ status: "NEW", limit: "500" }).db_filter, { column: "status", condition: "eq", value: "new", return_all: true, limit: 500 });
 check("one priority is exact", parseQuery({ priority: "p1" }).db_filter.column, "priority");
+check("an assignee is a contains match on the name", parseQuery({ assigned_to: "A.  Novak" }).db_filter, { column: "assigned_to", condition: "ilike", value: "A. Novak", return_all: true, limit: 5 });
+check("assignee is the same parameter", parseQuery({ assignee: "A. Novak" }).db_filter.column, "assigned_to");
+check("a concrete status outranks an assignee", parseQuery({ status: "new", assigned_to: "A. Novak" }).db_filter.column, "status");
+check("open is not one condition, so the assignee carries the read", parseQuery({ status: "open", assigned_to: "A. Novak" }).db_filter.column, "assigned_to");
+check("open expands to the three non-terminal states", parseQuery({ status: "open" }).query.status_set, ["new", "acknowledged", "in_containment"]);
+check("open alone reads everything and filters after", parseQuery({ status: "open" }).db_filter, { column: "incident_id", condition: "isNotEmpty", value: "", return_all: true, limit: 5 });
+check("open still echoes as it was asked", parseQuery({ status: "OPEN" }).query.status, "open");
+check("a priority sort reads every match, not the newest page", parseQuery({ sort: "priority" }).db_filter.return_all, true);
+check("an unknown sort is refused", parseQuery({ sort: "sideways" }).valid, false);
+check("the default sort is recent", parseQuery({}).query.sort, "recent");
 check("two priorities read everything and filter after", parseQuery({ priority: "P1,P2" }).db_filter, { column: "incident_id", condition: "isNotEmpty", value: "", return_all: true, limit: 5 });
 check("a unit is a contains match on the normalised digits", parseQuery({ unit: "FD001-Unit-092" }).db_filter, { column: "unit", condition: "ilike", value: "92", return_all: true, limit: 5 });
 check("a record id is a contains match", parseQuery({ record_id: "scania-aps-000056" }).db_filter.condition, "ilike");
@@ -82,10 +92,10 @@ const step = (id, n, from, to, minutes) => JSON.stringify({
   from_status: from, to_status: to, actor: "M. Brandt", note: "", context_origin: "simulated",
 });
 const storeText = [
-  incident(1, "P1", "cmapss_rul", "FD001-Unit-092"),
-  incident(2, "P2", "cmapss_rul", "FD002-Unit-100"),
+  incident(1, "P1", "cmapss_rul", "FD001-Unit-092", { assigned_to: "A. Novak" }),
+  incident(2, "P2", "cmapss_rul", "FD002-Unit-100", { assigned_to: "A. Novak" }),
   incident(3, "P3", "scania_aps", "SCANIA-APS-000056"),
-  incident(4, "P2", "cmapss_rul", "FD001-Unit-ATTRTEST"),
+  incident(4, "P2", "cmapss_rul", "FD001-Unit-ATTRTEST", { assigned_to: "P. Lindt" }),
 ].join("\n") + "\n";
 const transitionsText = [
   step(1, 2, "new", "acknowledged", 30),
@@ -150,6 +160,18 @@ check("a priority list is honoured", ask({ priority: "P1,P3" }).incidents.map((i
 check("a module filter", ask({ source_module: "SCANIA_APS" }).match_count, 1);
 check("combined filters", ask({ priority: "P2", unit: "100" }).incidents.map((i) => i.incident_id), ["ARK-INC-00002"]);
 check("an unknown incident is no_match", ask({ incident_id: "ARK-INC-99999" }).status, "no_match");
+
+// The assignee filter and the open expansion, DEFECT-11: without these the
+// assistant answered "how many do I have" for the whole plant.
+check("an assignee filter answers for that person only", ask({ assigned_to: "A. Novak" }).incidents.map((i) => i.incident_id), ["ARK-INC-00002", "ARK-INC-00001"]);
+check("a surname finds the same person", ask({ assigned_to: "novak" }).match_count, 2);
+check("a fragment of a name finds nobody", ask({ assigned_to: "ova" }).status, "no_match");
+check("open is the three non-terminal states", ask({ status: "open" }).incidents.map((i) => i.incident_id), ["ARK-INC-00004", "ARK-INC-00001"]);
+check("resolved is not open", ask({ status: "open", assigned_to: "A. Novak" }).incidents.map((i) => i.incident_id), ["ARK-INC-00001"]);
+check("the matched set has its own summary", ask({ assigned_to: "A. Novak" }).match_summary, { total: 2, open: 1, overdue: 1, by_status: { resolved: 1, new: 1 }, by_priority: { P2: 1, P1: 1 } });
+check("a newest-page read reports no matched summary", ask({}).match_summary, null);
+check("the default order is newest first", ask({ priority: "P1,P2,P3", limit: "10" }).incidents.map((i) => i.incident_id), ["ARK-INC-00004", "ARK-INC-00003", "ARK-INC-00002", "ARK-INC-00001"]);
+check("a priority sort is P1 first, oldest first inside a priority", ask({ priority: "P1,P2,P3", sort: "priority", limit: "10" }).incidents.map((i) => [i.incident_id, i.priority]), [["ARK-INC-00001", "P1"], ["ARK-INC-00002", "P2"], ["ARK-INC-00004", "P2"], ["ARK-INC-00003", "P3"]]);
 check("the limit bounds the page, not the count", (() => { const r = ask({ priority: "P2", limit: "1" }); return [r.returned, r.match_count]; })(), [1, 2]);
 
 // The summary block: the sync's numbers, and overdue from the clock.

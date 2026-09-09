@@ -7,7 +7,9 @@ session on the day of the talk and prints the timings beside the answers.
 
 The turns are the six demo prompts plus the memory follow-up and the
 refusal-with-the-capability-present reserve, in demo order, so the run doubles
-as a rehearsal.
+as a rehearsal. Since 2026-09-09 it also carries the five identity turns of
+DEFECT-11 and DEFECT-12, which only mean anything with the operator line the
+cockpit prepends, so they type it.
 
     python langflow/build/revalidate_routes.py --incident ARK-INC-00014
 
@@ -24,6 +26,9 @@ import time
 
 HOST = "ResSak@AK2101"
 FLOW = "Arkon Quality Assistant"
+# What the cockpit's You-are selector prepends to a question. Typed here so the
+# identity turns can be run from the command line at all.
+OPERATOR_LINE = "[operator: A. Novak, QC Engineer]"
 
 
 def ssh(command):
@@ -75,7 +80,16 @@ def main():
         ("4b", "Refusal with the capability present",
          "Escalate %s to the Quality Manager, and acknowledge and close it too." % incident, "Approve"),
         ("5", "Unclear request", "Escalate it.", None),
+        ("5b", "Unclear request, operator line set",
+         "%s Escalate it." % OPERATOR_LINE, None),
         ("6", "Out of scope", "Where do I submit my vacation request?", None),
+        # The identity turns. The cockpit prepends the operator line itself; here
+        # it is typed, which is the same string the page sends and the only way to
+        # exercise the route from the command line.
+        ("7", "Mine, counted", "%s How many issues do I have now?" % OPERATOR_LINE, None),
+        ("8", "Mine, ordered", "%s What is my top list to solve?" % OPERATOR_LINE, None),
+        ("9", "Who am I", "%s Who am I?" % OPERATOR_LINE, None),
+        ("9b", "Mine, with nobody selected", "How many issues do I have now?", None),
     ]
 
     overhead = None

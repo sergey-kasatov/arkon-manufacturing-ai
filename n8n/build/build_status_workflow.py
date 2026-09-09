@@ -13,6 +13,17 @@ instead of parsing both logs whole and folding every incident on every call.
 The two clock-dependent fields, `age_minutes` and `overdue`, are still computed
 at read time, so an incident going overdue between two writes is reported as
 overdue without any sync.
+
+Since 2026-09-09 the contract has one more filter and one more convenience, and
+both exist for the same reason: the assistant could not answer "how many
+incidents do I have", so it answered for the whole plant instead. `assigned_to`
+(`assignee` is the same parameter) filters by the person an incident is assigned
+to, and `status=open` expands to the three non-terminal states rather than
+forcing three calls. `match_summary` describes the matched set the way `store`
+describes the plant, so a count does not require paging every hit to the caller,
+and `sort=priority` returns the page in the order the work is done, because a
+model asked to sort the page itself put three P3 incidents above six P2 ones and
+called the result ordered.
 """
 
 import json
@@ -78,6 +89,13 @@ const recordId = raw("record_id");
 const sourceModule = raw("source_module");
 const businessDomain = raw("business_domain");
 
+// assigned_to: the person an incident is assigned to, as the roster writes it
+// ("A. Novak"). `assignee` is accepted as the same parameter, because that is
+// the word an operator and an agent reach for. Inner whitespace is collapsed so
+// the contains match on the row stays a superset of the exact rule applied later.
+let assignedTo = raw("assigned_to") ?? raw("assignee");
+if (assignedTo !== null) assignedTo = assignedTo.replace(/\s+/g, " ");
+
 // priority: one or more of P1..P4, comma separated
 let priority = [];
 const priorityRaw = raw("priority");
@@ -90,14 +108,33 @@ if (priorityRaw !== null) {
   }
 }
 
-// status: a value from the charter 7.2 incident lifecycle
+// status: a value from the charter 7.2 incident lifecycle, or the word `open`
+// for the three states an incident can still move out of. `open` is not a stored
+// value and never was: it is expanded here, so "what is still open" is one call
+// instead of three, and the store summary's own definition of open is the one
+// used. statusSet is what the answer node tests; status is what the query echoes.
 let status = raw("status");
+let statusSet = [];
 if (status !== null) {
   status = status.toLowerCase();
-  if (!LIFECYCLE.includes(status)) {
-    errors.push("status must be one of " + LIFECYCLE.join(", "));
+  if (status === "open") {
+    statusSet = OPEN_STATUSES.slice();
+  } else if (!LIFECYCLE.includes(status)) {
+    errors.push("status must be one of " + LIFECYCLE.join(", ") + ", or open");
     status = null;
+  } else {
+    statusSet = [status];
   }
+}
+
+// sort: `recent` is the contract's original order, newest first. `priority` is
+// the order an operator works a list in, P1 first and the oldest of a priority
+// first, and it is computed here because a model asked to sort a page of
+// incidents itself gets it wrong while still calling the result ordered.
+let sort = (raw("sort") ?? "recent").toLowerCase();
+if (!["recent", "priority"].includes(sort)) {
+  errors.push("sort must be recent or priority");
+  sort = "recent";
 }
 
 let limit = DEFAULT_LIMIT;
@@ -126,13 +163,14 @@ const simulateFailure = ["1", "true", "yes"].includes((raw("simulate_failure") ?
 // `limit` rows and the summary row supplies the count.
 let dbFilter;
 if (incidentId) dbFilter = { column: "incident_id", condition: "eq", value: incidentId, return_all: true };
-else if (status) dbFilter = { column: "status", condition: "eq", value: status, return_all: true };
+else if (statusSet.length === 1) dbFilter = { column: "status", condition: "eq", value: statusSet[0], return_all: true };
+else if (assignedTo) dbFilter = { column: "assigned_to", condition: "ilike", value: assignedTo, return_all: true };
 else if (priority.length === 1) dbFilter = { column: "priority", condition: "eq", value: priority[0], return_all: true };
 else if (sourceModule) dbFilter = { column: "source_module", condition: "ilike", value: sourceModule, return_all: true };
 else if (businessDomain) dbFilter = { column: "business_domain", condition: "ilike", value: businessDomain, return_all: true };
 else if (recordId) dbFilter = { column: "record_id", condition: "ilike", value: recordId, return_all: true };
 else if (unit) dbFilter = { column: "unit", condition: "ilike", value: unit, return_all: true };
-else if (priority.length > 1) dbFilter = { column: "incident_id", condition: "isNotEmpty", value: "", return_all: true };
+else if (priority.length > 1 || statusSet.length > 1 || sort === "priority") dbFilter = { column: "incident_id", condition: "isNotEmpty", value: "", return_all: true };
 else dbFilter = { column: "incident_id", condition: "isNotEmpty", value: "", return_all: false };
 dbFilter.limit = limit;
 
@@ -142,7 +180,7 @@ return [
       valid: errors.length === 0,
       errors,
       simulate_failure: simulateFailure,
-      query: { incident_id: incidentId, unit, record_id: recordId, source_module: sourceModule, business_domain: businessDomain, priority, status, limit },
+      query: { incident_id: incidentId, unit, record_id: recordId, source_module: sourceModule, business_domain: businessDomain, assigned_to: assignedTo, priority, status, status_set: statusSet, sort, limit },
       db_filter: dbFilter,
     },
   },
@@ -184,11 +222,21 @@ const number = (value) => (value === null || value === undefined || value === ""
 
 const incidents = matchRows.map((row) => arkonRowToIncident(row, now));
 
+// A roster name is "A. Novak". Compare it whole, or by one of its own tokens, so
+// that "Novak" finds the same person and "ova" finds nobody: a person filter that
+// matched any substring would quietly answer for the wrong operator.
+const nameKey = (value) => String(value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
 // The exact rules of the contract, over the superset the one table condition
 // returned. Same rules as before the move, so a filter answers the same way.
 const matches = (incident) => {
   if (filters.incident_id && incident.incident_id !== filters.incident_id) return false;
-  if (filters.status && incident.status !== filters.status) return false;
+  if (filters.status_set && filters.status_set.length && !filters.status_set.includes(incident.status)) return false;
+  if (filters.assigned_to) {
+    const held = nameKey(incident.assigned_to);
+    const wanted = nameKey(filters.assigned_to);
+    if (held !== wanted && !held.split(" ").includes(wanted)) return false;
+  }
   if (filters.priority.length && !filters.priority.includes(String(incident.priority ?? "").toUpperCase())) {
     return false;
   }
@@ -218,14 +266,41 @@ const matches = (incident) => {
   return true;
 };
 
-const hits = incidents
-  .filter(matches)
-  .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")));
+// Newest first, or the order the work is done in: P1 before P2, and inside a
+// priority the oldest first, so the head of the page is the head of the list.
+const newestFirst = (a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? ""));
+const rank = { P1: 1, P2: 2, P3: 3, P4: 4 };
+const byPriority = (a, b) => {
+  const left = rank[String(a.priority ?? "").toUpperCase()] ?? 9;
+  const right = rank[String(b.priority ?? "").toUpperCase()] ?? 9;
+  return left !== right ? left - right : String(a.created_at ?? "").localeCompare(String(b.created_at ?? ""));
+};
+const hits = incidents.filter(matches).sort(filters.sort === "priority" ? byPriority : newestFirst);
 const page = hits.slice(0, filters.limit);
 
 // Without a filter the table returned only the newest page, and the count of
 // everything is the summary's, which the sync computed over every incident.
 const matchCount = request.db_filter.return_all ? hits.length : (number(summary.total_incidents) ?? hits.length);
+
+// The store summary is the whole plant and stays that way, whatever was asked.
+// This one describes the matched set instead, so a caller that filtered - by
+// assignee above all - can report counts without paging every hit into its own
+// context. Null when the read was the newest page rather than every match,
+// because counting a page and calling it a total is the defect it exists to stop.
+const tally = (values) => values.reduce((counts, value) => {
+  const key = value === null || value === undefined || value === "" ? "unknown" : String(value);
+  counts[key] = (counts[key] ?? 0) + 1;
+  return counts;
+}, {});
+const matchSummary = request.db_filter.return_all
+  ? {
+      total: hits.length,
+      open: hits.filter((incident) => OPEN_STATUSES.includes(incident.status)).length,
+      overdue: hits.filter((incident) => incident.overdue).length,
+      by_status: tally(hits.map((incident) => incident.status)),
+      by_priority: tally(hits.map((incident) => incident.priority)),
+    }
+  : null;
 
 // Overdue is live: the new incidents past their window right now, not at the
 // last sync. Everything else in the summary changes only when a line is written,
@@ -264,6 +339,7 @@ return [
       },
       response_times: parse(summary.response_times_json, {}),
       match_count: matchCount,
+      match_summary: matchSummary,
       returned: page.length,
       incidents: page,
     },
