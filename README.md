@@ -339,14 +339,15 @@ object the endpoint returns. Regenerate it with `py tools/make_desk_screenshot.p
 picks an open notice at run time rather than shipping a reference that will have closed
 by the time anyone looks.
 
-The notice in the frame is **past its committed date** - the picture was taken on
-2026-09-10 and the containment decision was due on the 6th - which is what an untended
-incident looks like in a plant that keeps running, and it is left in rather than waited
-out for a tidier one. **Taking this picture is also what found the last defect in the
-desk**: it reported the date and stopped there, although the projection it reads serves
-`next_step.overdue` beside it. The prompt uses the flag as of the same day, so the desk
-now answers "which was due on 2026-09-06 and is now overdue", and the frame above
-predates that by an hour. `py tools/make_desk_screenshot.py` refreshes it.
+**Taking this picture is what found the last defect in the desk**, which is an argument
+for photographing a system rather than describing it. The first capture landed on a
+notice four days past its committed date, and the desk reported the date and stopped
+there, although the projection it reads serves `next_step.overdue` beside it. The prompt
+uses the flag as of 2026-09-10 and was measured in both directions on the deployed build:
+a late notice now answers "which was due on 2026-09-06 and is now overdue", and the
+notice in the frame above, which is on time, answers "which is committed for 2026-09-20"
+without mentioning it at all. Both sentences are the same rule, and a rule that fired in
+only one of them would not have been a fix.
 
 ![The Customer Quality Desk](assets/ui/customer_desk.png)
 
