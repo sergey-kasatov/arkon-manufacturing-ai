@@ -127,23 +127,41 @@ def main():
             color_scheme="light",
         )
         page = context.new_page()
+        # Named so a failure says which step it was. The first version of this script
+        # reported a bare "Timeout 15000ms exceeded", which named the wait but not what
+        # the page had or had not done by then, and that cost a round trip.
+        step = "loading the page"
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
 
             # The desk asks for its login on every load (see the sandbox note above),
             # so this is the page's normal path rather than a way around it.
+            step = "waiting for the login form"
             page.wait_for_selector("#pw", timeout=30000)
             page.fill("#user", args.user)
             page.fill("#pw", password)
+            step = "submitting the login"
             page.click("#signin")
             # The form hides itself and enables Send only when it has accepted both
             # fields; waiting on that is waiting on the page rather than on a timer.
-            page.wait_for_selector("#login[hidden]", timeout=15000)
+            #
+            # Read the property, do not wait for a `#login[hidden]` selector. Playwright's
+            # wait_for_selector defaults to state="visible", so a selector that can only
+            # ever match a hidden element times out while the page is doing exactly what
+            # it should. Measured 2026-09-10 on a control that set `.hidden` by hand: the
+            # DOM reported hidden true with the attribute present, the selector wait timed
+            # out at 15 s, and this wait_for_function matched at once.
+            page.wait_for_function(
+                "() => document.querySelector('#login').hidden === true",
+                timeout=15000,
+            )
 
+            step = "typing the question"
             # The page opens with one `.msg.desk` bubble, its welcome line.
             before = page.locator(".msg.desk").count()
 
             page.fill("#input", question)
+            step = "waiting for the desk to answer"
             page.click("#send")
 
             # Wait for a NEW desk bubble rather than for a word in it: the reply is a
@@ -162,11 +180,19 @@ def main():
             print("  replied with %d characters" % len(reply))
             page.wait_for_timeout(1200)
 
+            step = "writing the picture"
             page.screenshot(path=str(OUT / NAME), full_page=True)
             print("  %-22s %s" % (NAME, url))
         except Exception as err:
-            sys.exit("the desk did not answer, and no picture was written: %s"
-                     % str(err).splitlines()[0][:200])
+            note = ""
+            try:
+                if not page.eval_on_selector("#login", "e => e.hidden"):
+                    note = (" The login form is still showing, and it says: "
+                            + page.inner_text("#loginNote").strip())
+            except Exception:
+                pass
+            sys.exit("no picture was written. Failed while %s: %s%s"
+                     % (step, str(err).splitlines()[0][:200], note))
         finally:
             context.close()
             browser.close()
