@@ -1,6 +1,6 @@
 # Arkon cockpit (Streamlit)
 
-The operational surface of charter 7.5, Phase 3. Nine pages over two live
+The operational surface of charter 7.5, Phase 3. Ten pages over two live
 services and the repository's own tracked metrics: what is open in the Quality
 Steering Cell right now, what each of the seven modules measures and cannot do,
 and the deployed assistant with its approval gate.

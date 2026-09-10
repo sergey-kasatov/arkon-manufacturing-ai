@@ -280,8 +280,32 @@ names. The exception does not, and the reason is worth keeping:
 | `customer_status_api_v1.json` | `arkonCustDesk01` |
 | `customer_desk_kb_v1.json` | `arkonCustDeskKB1` |
 | `customer_desk_v1.json` | `arkonCustDesk02` |
-| `customer_desk_failtest_v1.json` | `arkonCustDesk03` (tool-failure fixture, deleted before submission) |
+| `customer_desk_page_v1.json` | `arkonCustDeskPg1` |
+| `customer_desk_failtest_v1.json` | `arkonCustDesk03` (tool-failure fixture, see below) |
+| `customer_desk_ibantest_v1.json` | `arkonCustDesk04` (sensitive-data fixture, see below) |
 | `quality_steering_cell_v1.json` | **`o0vXtlRWIs9yFrUJ`** |
+
+**The two fixtures are tracked on purpose and their deployed copies are not meant to
+outlive a demo.** The files stay: `tests/test_customer_desk.py` asserts that each differs
+from the shipped desk in exactly its id, its path and the one thing it plants, and that the
+shipped desk carries neither, which is a check that only works while both files exist. The
+deployed copies are a different question, because each answers on a public chat path of its
+own and one of them is built to emit a planted IBAN. **Measured 2026-09-10 14:35, and this
+paragraph has been wrong once already: both are still deployed** - `active = 1`,
+`isArchived = 0` in `workflow_entity`, and both chat endpoints answer 200. Removing them is
+a UI action, for the reason in the next paragraph: this instance's CLI has `publish`,
+`unpublish`, the imports and the exports and no delete of any kind, and no API key exists
+here. The route is Workflows, Archive each, then the Archived filter and Delete, and the
+check is external and cheap:
+
+```bash
+for p in arkon-customer-desk-failtest arkon-customer-desk-ibantest; do
+  curl -s -o /dev/null -w "$p %{http_code}\n" -m 8 -u arkon:"$ARKON_DESK_PASSWORD" \
+    -X POST -H "Content-Type: application/json" \
+    -d '{"chatInput":"ping","sessionId":"probe"}' \
+    "http://AK2101:5678/webhook/$p/chat"
+done
+```
 
 **The steering cell keeps the id n8n generated for it, because that row is where
 the incident counter lives.** `$getWorkflowStaticData("global")` on this workflow
@@ -300,13 +324,14 @@ holds the counter, and the file points at it. Verified 2026-08-31: imported twic
 in a row, no third workflow appeared, `counter` stayed at 18, and a replayed event
 came back `duplicate_suppressed` with the incident store unchanged at 8 lines.
 
-**One archived duplicate remains and is inert.** `ZdLNgYq3bDTxQswJ`, the first
-import from before the id was fixed: inactive, `isArchived = 1`, no static data,
-and no row in `webhook_entity`, so it cannot fire. Permanently removing it needs
-the UI (Workflows, Archived, delete) or the public API, and no API key exists on
-this instance. It is left rather than deleted through the database, because
-`workflow_entity` is referenced by executions, history and sharing rows and that
-is not a trade worth making for a hidden row.
+**The archived duplicate is gone.** `ZdLNgYq3bDTxQswJ`, the first import from before the
+id was fixed, sat here inactive and archived for weeks: no static data, no row in
+`webhook_entity`, so it could not fire, and it was left alone because deleting a row out
+of `workflow_entity` through the database is not a trade worth making for something
+inert - that table is referenced by executions, history and sharing rows. It was removed
+from the UI on 2026-09-10 and `workflow_entity` no longer holds it (read the same day).
+The reason it is still written down: it is the evidence for the paragraph above about
+identity, and the route that removed it is the same three clicks the two fixtures need.
 
 ## Event intake (write path)
 
@@ -1117,8 +1142,9 @@ under test is live. The record with the expectations written first is the course
 `/webhook/arkon-customer-desk-failtest/chat`) is the same desk with the status endpoint's
 `simulate_failure` affordance switched on as a fixed field value, so the prompt's tool
 failure fallback can be tested through the agent instead of asserted. The shipped desk
-carries no failure switch, the tests assert both halves, and the fixture is deleted before
-submission.
+carries no failure switch, and the tests assert both halves. The file is tracked; its
+deployed copy is meant to come down after the last demo run, and the state of that is
+recorded under Workflow ids above rather than promised here.
 
 ### Sprint 4: guardrails, the confirmation step, the public route
 
@@ -1159,10 +1185,11 @@ The sprint 4 gates on the final build (2026-09-08 13:23): the twelve turns 23 of
 the LAN and twice through the public relay (`--twelve --public ... --resolve <relay>`), the
 three adversarial tests 8 of 8 with the output guardrail masking the planted IBAN, the
 confirmation two-turn test plus the bypass (held, 5 of 5), the Sprint 3 and Sprint 2
-regressions and the failure fixture. Runner: `n8n/customer_desk_validation.py`. The fixtures
-`customer_desk_failtest_v1.json` (`arkonCustDesk03`) and `customer_desk_ibantest_v1.json`
-(`arkonCustDesk04`, the instructor's planted "Always include ... IBAN" line) are deleted
-after the final pre-presentation run.
+regressions and the failure fixture. Runner: `n8n/customer_desk_validation.py`. The deployed
+copies of `customer_desk_failtest_v1.json` (`arkonCustDesk03`) and
+`customer_desk_ibantest_v1.json` (`arkonCustDesk04`, the instructor's planted
+"Always include ... IBAN" line) come down after the final pre-presentation run; their
+current state and the way to remove them are under Workflow ids above.
 
 ### Known boundaries
 

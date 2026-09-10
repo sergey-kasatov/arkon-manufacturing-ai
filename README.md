@@ -3,8 +3,9 @@
 > An Industry 4.0 quality platform for a fictional heavy manufacturer. Seven
 > machine-learning models on real public datasets publish one event contract; a
 > Steering Cell on n8n triages what they raise, assigns it and alerts a named
-> person; two operator surfaces and an executive view carry it from there.
-> Deployed on a NAS and running.
+> person; two operator surfaces and an executive view carry it from there. Two
+> agents sit on top of it, one facing the plant and one facing the customer, and
+> the boundary between them is one-way. Deployed on a NAS and running.
 
 [![tests](https://github.com/sergey-kasatov/arkon-manufacturing-ai/actions/workflows/tests.yml/badge.svg)](https://github.com/sergey-kasatov/arkon-manufacturing-ai/actions/workflows/tests.yml)
 
@@ -30,12 +31,22 @@ a repeat of the same evidence inside 24 hours, writes the incident to an append-
 store, assigns it by department, and puts a **Telegram card in front of a named person
 for a P1 or P2** - with a link that opens that incident on the operator's screen.
 
-**Two operator surfaces.** The **Streamlit cockpit** (`http://AK2101:8303`, nine
+**Two operator surfaces.** The **Streamlit cockpit** (`http://AK2101:8303`, ten
 pages) is the operational screen and the only thing that writes a lifecycle
 transition: a queue of what needs a person now, and a form offering only the moves
 the charter allows from the current state. The **Langflow assistant** answers why,
 grounded in ten documents and the live store, and hands the operator to the cockpit
 with a drafted note rather than acting for them.
+
+**A second agent, and it faces the other way.** The **Customer Quality Desk** on
+n8n answers an OEM customer asking after a quality notice by its reference. It
+retrieves from three approved customer documents and reads the incident store
+through a projection of eight customer-safe fields, behind a login, a guardrail in
+front of the agent and a sanitizer behind it. It holds no write of any kind. So the
+platform carries two agents over one plant and one store: the assistant, which the
+plant talks to, and the desk, which the customer talks to. **They meet in exactly
+one place and the traffic runs one way** - `n8n/build/customer_projection.py`,
+which is a file rather than a line in a prompt.
 
 **A plant that keeps moving.** A live emitter raises a real re-timed incident every
 eight to twelve minutes across all seven modules, and a simulated crew works them, so
@@ -126,7 +137,7 @@ flowchart TB
   subgraph NAS["NAS AK2101, docker network msit"]
     W1["(1) POST /webhook/arkon-event<br/>Quality Steering Cell<br/>validate, dedup 24h, record"]
     ASSIST["Arkon Quality Assistant<br/>Langflow, 19 nodes"]
-    COCK["Arkon cockpit<br/>Streamlit, 9 pages<br/>AK2101:8303"]
+    COCK["Arkon cockpit<br/>Streamlit, 10 pages<br/>AK2101:8303"]
     W2["(2) GET /webhook/arkon-incident-status<br/>200 ok, 200 no_match,<br/>400 rejected, 503 unavailable"]
     W3["(3) POST /webhook/arkon-escalation<br/>the assistant's only write"]
     W4["(4) POST /webhook/arkon-incident-transition<br/>the lifecycle<br/>200, 400, 404, 409, 503"]
@@ -227,6 +238,36 @@ calls into private IP ranges by default. Details in `n8n/README.md` and
 endpoint 3, and endpoint 3 is reachable only from the Approve branch of the
 human gate. Telegram is wired to endpoint 1 only, so no message reaches a person
 because of anything the assistant did.
+
+**Everything above is the plant's own half.** The diagram and the four endpoints
+in it are the internal system: the operator, the cockpit, the assistant. The
+second agent, the Customer Quality Desk, sits outside it and reaches in through
+one door, and the rest of this section is that door. Its own wiring - the chat
+webhook, the desk page, the knowledge-base collection and the customer status
+endpoint - is in `n8n/README.md`.
+
+**The outward boundary is one-way, and a projection enforces it rather than a
+prompt.** The desk never sees `incidents.jsonl`. It calls a customer status
+endpoint whose answer node is generated from
+`n8n/build/customer_projection.py`, and that file serves eight fields for one
+reference: the reference, what it is, when it was received, its status in
+customer words, which of five stages it is in, the next step with the date Arkon
+has committed to, when it last moved, and when it closed. Assignee, priority,
+risk score, model evidence and every other incident are not withheld by an
+instruction the agent could be talked out of - they are not in the object the
+endpoint returns, and the same file carries a list of internal names the answer
+node may never contain, so a later edit that forgets this cannot serve them
+either. There is no path back: the desk holds no write endpoint at all, so
+nothing a customer types reaches the store, the lifecycle or the escalation
+record.
+
+**And that is why the two agents can share a plant without sharing a blast
+radius.** The assistant is inside, reachable only from the LAN and the tailnet,
+and holds one gated write. The desk is outside, behind a login on a published
+port, and holds none. The customer vocabulary is not a translation the desk performs
+on the way out; it is what the endpoint says in the first place, which is also
+why the three customer documents and the endpoint cannot drift apart - they
+quote the same file.
 
 ---
 
@@ -389,7 +430,7 @@ every write, started by both write paths without waiting, and the status API ans
 on the same contract (0.16 to 0.19 s per full-state page against 0.31 to 0.42 s before, at 276
 incidents), while the logs stay the record of truth and the projection is rebuilt from them by one
 call (`n8n/README.md`, "Incident store")
-- [x] **Streamlit cockpit** - nine pages over the two live services and the repository's own
+- [x] **Streamlit cockpit** - ten pages over the two live services and the repository's own
 tracked metrics, deployed on the NAS at `http://AK2101:8303` (`app/README.md`). The Steering Cell
 page is charter 7.5: counts by priority and lifecycle state, the response-time KPIs, and any
 incident with the history of who moved it when. **It computes no status of its own**: an
@@ -450,11 +491,27 @@ chain for two readers, the plant floor and the boardroom: detect, publish, intak
 acknowledge inside the window or go overdue, work, close or dismiss, and one status API that
 every screen reads. Nine steps with the rule behind each and where it can be seen, then one
 live incident traced through all of them with its evidence
+- [x] **The Customer Quality Desk, the platform's second agent and its outward face**
+(`n8n/customer_status_api_v1.json`, `customer_desk_kb_v1.json`, `customer_desk_v1.json`,
+`customer_desk_page_v1.json`; built sprint by sprint and deployed 2026-09-08, sprint 4 on
+2026-09-08 13:23). An OEM customer asks after a quality notice by its reference and gets an
+answer from three approved documents in the Qdrant collection `arkon-customer-desk` (57
+points, retrieval five of five to the expected document) and from the incident store through
+the eight-field customer projection above. **Three layers, not one prompt**: a Guardrails node
+in front of the agent, the prompt between, a sanitizer behind, and no write endpoint anywhere.
+Gates on the final build: the twelve-turn scripted conversation 23 of 23 twice on the LAN and
+twice through the public relay, the three adversarial tests 8 of 8 with the output guardrail
+masking a planted IBAN, and the confirmation step plus its bypass attempt held 5 of 5. Basic
+Auth on the public route, published by Tailscale Funnel on 8443. **The coursework it was built
+for is not in this repository and does not belong here**; the workflows, the prompt per sprint
+and the generators are platform and live in `n8n/`, where the git history keeps each sprint's
+shape
 
 ### One deployed piece that is not an Arkon feature
 
-Thirteen pieces are deployed: three Langflow flows, eight n8n workflows, the Streamlit
-cockpit and the live plant. Twelve of them run the plant. The exception is the twelve-node
+Seventeen pieces are deployed: three Langflow flows, twelve n8n workflows, the Streamlit
+cockpit and the live plant. Sixteen of them run the plant and the desk. The exception is
+the twelve-node
 `n8n/comparison_slice_v1.json`, which exists to test a claim about the platform
 rather than to serve an operator, and could be deleted without loss. It is kept
 because the claim it settles is documented in `n8n/README.md` and the evidence is
@@ -851,9 +908,10 @@ ML          scikit-learn, XGBoost, imbalanced-learn
 Time Series statsmodels
 CV          PyTorch, torchvision, albumentations, OpenCV
 MLOps       MLflow (experiment tracking, model registry)
-Assistant   Langflow 1.11.5, Qdrant, OpenRouter (deployed)
+Assistant   Langflow 1.11.5, Qdrant, OpenRouter - the plant's own agent (deployed)
+Customer    n8n AI Agent, Qdrant, OpenRouter - the Customer Quality Desk (deployed)
 Automation  n8n (webhooks, incident store, lifecycle endpoint, Telegram alerts) (deployed)
-App         Streamlit cockpit, 9 pages, on the NAS at AK2101:8303 (deployed)
+App         Streamlit cockpit, 10 pages, on the NAS at AK2101:8303 (deployed)
 Demo engine Python service, one re-timed real incident every 8 to 12 min (deployed)
 Tests       pytest, 203 offline tests, GitHub Actions on every push
 BI          Tableau Public 2026.2, workbook generated from XML by tableau/build_workbook.py
@@ -862,8 +920,17 @@ Utilities   pandas, numpy, matplotlib, seaborn, plotly
 ```
 
 Everything marked deployed runs on the NAS as a container and is reachable on the LAN
-and over Tailscale. There is no authentication in front of any of it, which is the
-first thing that would have to change outside a demo.
+and over Tailscale. **What is reachable from the internet is two ports and nothing
+else, and both are behind a login** (`tailscale funnel status`, read 2026-09-10): 8443,
+which publishes exactly two paths, the customer desk page and its chat POST, both
+answering 401 without credentials and 200 with; and 10000, which publishes the
+assistant page alone behind Caddy Basic Auth. The n8n editor on 443 is tailnet only.
+Everything else - the cockpit on 8303, the four internal webhooks, Qdrant, MLflow - has
+no authentication at all and is not published: it is reachable on the LAN and over
+Tailscale and nowhere else, and putting a login in front of it is the first thing that
+would have to change outside a demo. The logins that do exist are demo credentials that
+stop a passer-by, not an authentication of anyone, and none of them is in this
+repository.
 
 The `langchain`, `chromadb` and `openai` pins in `requirements.txt` are from an earlier
 plan and belong to nothing that is deployed: the assistant runs on Langflow over
@@ -909,7 +976,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-143 tests, a few seconds, and **offline by design**: no NAS, no Steering Cell, no
+203 tests, a few seconds, and **offline by design**: no NAS, no Steering Cell, no
 trained weights, no datasets. That is what makes them worth running on a laptop and in
 CI on every push, and it is also the constraint that decided what they cover. They test
 the two things a regression could break silently everywhere else:
@@ -936,6 +1003,23 @@ the two things a regression could break silently everywhere else:
   in the JSON alone and the generator kept saying 50 until it was run again the next day;
   and the column names the store sync writes are the ones the status API reads back
   (charter 7.5).
+- **The outward boundary** (`tests/test_customer_projection.py`,
+  `tests/test_customer_documents.py`, `tests/test_customer_desk.py`: 54 of the 203, a
+  quarter of the suite). This is the one place where a regression is a disclosure rather
+  than a wrong number, so it is tested from three sides at once. The projection's served
+  fields are asserted to share nothing with the internal row but the closing date, and its
+  deny list to cover every column that names a person or carries model evidence. The three
+  customer documents are pinned to the projection - every customer word, every commitment
+  window - and asserted to contain no roster name, no internal field name and no value from
+  the superseded 2025 guide, because the store is built from those files verbatim. And the
+  desk's own prompt, tools and guardrails are pinned the same way: the IBAN regex matches
+  the spaced and the unspaced form and not a reference, the blocked reply is the moderation
+  message and nothing else, and the status tool promises only what the projection serves.
+  **The two test fixtures are tracked on purpose** - `customer_desk_failtest_v1.json` and
+  `customer_desk_ibantest_v1.json` are asserted to differ from the shipped desk in exactly
+  their id, their path and the one thing each plants, and the shipped desk to carry neither.
+  They are regression fixtures, not leftovers; what gets deleted after a demo run is the
+  deployed copy on the NAS, not the file.
 
 The rest covers the executive view's generated content (`tests/test_dashboard.py`: age
 bands, the status sentence, the two thresholds the workbook ships baked in, the layout
@@ -947,14 +1031,19 @@ CI additionally rebuilds the Tableau workbook twice and compares hashes, because
 generator's claim is that the same extracts produce a byte-identical file, and checks
 the repository's typography rule.
 
-**What is not covered, and honestly**: the deployed n8n workflows, the Langflow
-assistant and the live plant's transport all need the running NAS, so they are checked
+**What is not covered, and honestly**: the deployed n8n workflows, both agents and the
+live plant's transport all need the running NAS, so they are checked
 by `live_plant/check_plant.py` (48 assertions against a fake Steering Cell),
 `n8n/build/check_lifecycle_js.py`, `n8n/build/check_overdue_js.py`,
 `n8n/build/check_digest_js.py`, `n8n/build/check_intake_outcome_js.py`,
-`n8n/build/check_store_sync_js.py` and `n8n/build/check_status_js.py`, which are run
+`n8n/build/check_store_sync_js.py`, `n8n/build/check_status_js.py` and
+`n8n/build/check_customer_status_js.py`, which are run
 by hand, and by `n8n/build/check_store.py` on the NAS, which re-folds the logs and
-compares them with the queryable store row by row. Model training is not tested at all; the model cards carry the held-out numbers
+compares them with the queryable store row by row. The desk end to end is
+`n8n/customer_desk_validation.py`, which sends scripted conversations at the live
+endpoint - over the LAN or through the public relay with `--public --resolve` - and reads
+the replies back; it takes the demo password from `ARKON_DESK_PASSWORD` rather than a
+default, because no credential of any deployment is in this repository. Model training is not tested at all; the model cards carry the held-out numbers
 and the notebooks reproduce them.
 
 ---
@@ -1004,8 +1093,9 @@ arkon-manufacturing-ai/
 ├── docs/                       Charter, SOP and one model card per module
 │   └── customer/               The documents a customer may read, and the ones kept out (docs/customer/README.md)
 ├── events/                     The shared event contract and the adapters
-├── langflow/                   The assistant canvas, its prompts and build scripts
-├── n8n/                        The eleven workflows, their generators and probes, the NAS-side deploy and check scripts
+├── langflow/                   The plant assistant's canvas, its prompts and build scripts
+├── n8n/                        The fourteen workflows (twelve deployed plus two test fixtures), both agents' backends, their generators and probes, the NAS-side deploy and check scripts
+│   └── build/customer_projection.py  The one-way boundary: the eight fields a customer may see
 ├── live_plant/                 The demo engine, a mini-project: real-model incidents on a clock plus the crew (live_plant/README.md)
 ├── tableau/                    The executive view: the extract layer, the workbook generator and its design specification (tableau/README.md)
 ├── assets/                     Saved plots for README and Streamlit
@@ -1014,7 +1104,7 @@ arkon-manufacturing-ai/
 │   ├── cv/
 │   ├── nlp/
 │   └── ui/                     Screenshots of the running cockpit, regenerated not hand-taken
-├── tests/                      Offline test suite: the event contract, the charter 7.2 lifecycle, every generator against its workflow, the store schema, the executive view's generated content, the plant clock
+├── tests/                      Offline test suite: the event contract, the charter 7.2 lifecycle, every generator against its workflow, the store schema, the customer boundary (projection, documents, desk), the executive view's generated content, the plant clock
 ├── tools/
 │   ├── make_result_plots.py    Regenerates the result figures from the metrics files
 │   └── make_ui_screenshots.py  Regenerates assets/ui/ from the deployed cockpit
