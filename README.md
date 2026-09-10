@@ -62,6 +62,35 @@ to write what, is under [Architecture](#architecture).
 ---
 
 
+## Live demo, and its window
+
+Both agents answer from the internet, and **they run on an OpenRouter key issued for a
+course that ends in mid-September 2026**. That is stated here rather than left to be
+discovered: after the key lapses these two pages still load and the agents answer
+nothing. Everything else in this repository is unaffected, because nothing else needs
+a model at run time.
+
+| Surface | Address | What it is |
+|---|---|---|
+| Customer Quality Desk | `https://ugreen-nas.tail90586f.ts.net:8443/webhook/arkon-desk` | The outward agent. Ask after a quality notice by its `ARK-INC` reference, or ask what the complaint procedure says |
+| Quality Assistant | `https://ugreen-nas.tail90586f.ts.net:10000/` | The plant's own agent, its cockpit page run alone |
+| Executive view | [Tableau Public](https://public.tableau.com/views/ArkonQualitySteeringCell/ArkonExecutiveView) | Needs no key and does not expire |
+
+Both agent pages sit behind an HTTP Basic Auth login, and **the credentials are not in
+this repository**: they gate a live endpoint that spends real tokens, and a password in
+a git history is permanent. They are on the project card at
+[kasatov.de](https://kasatov.de), which can be changed in one deploy. The desk is a
+demo of a fictional company, so an Approve at its escalation gate writes a real line
+into a real store - that is the point of it rather than a side effect.
+
+**What outlives the key** is the part worth reading anyway: the measured runs are
+written up in `n8n/README.md` with their numbers and transcripts - the twelve-turn
+conversation, the eight-case adversarial suite, the retrieval probe - and the 203
+offline tests run on any laptop with no NAS and no key at all.
+
+---
+
+
 ## Architecture
 
 The wiring is drawn under [Runtime wiring](#runtime-wiring-as-deployed-2026-09-05)
@@ -921,10 +950,15 @@ Utilities   pandas, numpy, matplotlib, seaborn, plotly
 
 Everything marked deployed runs on the NAS as a container and is reachable on the LAN
 and over Tailscale. **What is reachable from the internet is two ports and nothing
-else, and both are behind a login** (`tailscale funnel status`, read 2026-09-10): 8443,
-which publishes exactly two paths, the customer desk page and its chat POST, both
-answering 401 without credentials and 200 with; and 10000, which publishes the
-assistant page alone behind Caddy Basic Auth. The n8n editor on 443 is tailnet only.
+else, and every path that spends anything is behind a login** (`tailscale funnel
+status` plus four curls through the public relay, read 2026-09-10): 8443 publishes
+exactly two paths, and they are not the same. The desk page
+`/webhook/arkon-desk` answers **200 to anyone** - it is a static shell with a login
+panel, and `tests/test_customer_desk.py` asserts the password is never in it. The
+chat POST behind it, `/webhook/arkon-customer-desk/chat`, is the one that runs the
+agent, and it answers **401 without credentials and 200 with**, measured through the
+relay and not only on the LAN. Port 10000 publishes the assistant page behind Caddy
+Basic Auth, 401 and 200 the same way. The n8n editor on 443 is tailnet only.
 Everything else - the cockpit on 8303, the four internal webhooks, Qdrant, MLflow - has
 no authentication at all and is not published: it is reachable on the LAN and over
 Tailscale and nowhere else, and putting a login in front of it is the first thing that
