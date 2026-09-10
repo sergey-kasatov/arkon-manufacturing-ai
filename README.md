@@ -1162,7 +1162,8 @@ arkon-manufacturing-ai/
 ├── tools/
 │   ├── make_result_plots.py    Regenerates the result figures from the metrics files
 │   ├── make_ui_screenshots.py  Regenerates assets/ui/ from the deployed cockpit
-│   └── make_desk_screenshot.py Regenerates the desk picture; picks an open notice at run time
+│   ├── make_desk_screenshot.py Regenerates the desk picture; picks an open notice at run time
+│   └── make_social_preview.py  Composes the 1280x640 GitHub social card from assets/ui/
 ├── data/
 │   ├── 01_cmapss/              NASA CMAPSS txt files
 │   ├── 02_scania/              Scania APS csv files
