@@ -67,6 +67,21 @@ QUESTION = (
     "What is the status of quality notice {reference}, and what happens next?"
 )
 
+# The desk asks the customer to confirm the reference before it looks it up, which is
+# a designed step rather than a hesitation. Two answers is one more than it has ever
+# needed and stops a loop if a future prompt asks something else.
+CONFIRMATION = "Yes, that is correct."
+CONFIRMATION_TURNS = 2
+
+
+def read_reply(page):
+    """The desk's last bubble, with a page-rendered error treated as a failure."""
+    reply = page.locator(".msg.desk").last.inner_text()
+    if "did not answer" in reply or "HTTP " in reply:
+        sys.exit("the desk returned an error into the page, so no picture was written: "
+                 + reply.strip()[:200])
+    return reply
+
 
 def pick_reference(base, timeout):
     """Read the open incidents and return a mid-process reference, or any open one."""
@@ -173,11 +188,37 @@ def main():
                 arg=before,
                 timeout=args.timeout * 1000,
             )
-            reply = page.locator(".msg.desk").last.inner_text()
-            if "did not answer" in reply or "HTTP " in reply:
-                sys.exit("the desk returned an error into the page, so no picture was written: "
-                         + reply.strip()[:200])
-            print("  replied with %d characters" % len(reply))
+            reply = read_reply(page)
+            print("  turn 1: %d characters" % len(reply))
+
+            # The desk confirms the reference before it looks anything up (sprint 4, the
+            # two-turn confirmation step in n8n/README.md), so a one-turn capture
+            # photographs the agent ASKING rather than answering, which is the weakest
+            # possible picture of a status desk. Answer it.
+            #
+            # The test is structural, not a phrase: a reply that ends in a question mark
+            # is a reply that wants something back. Matching the confirmation sentence
+            # would tie this picture to wording the prompt is free to change.
+            for _ in range(CONFIRMATION_TURNS):
+                if not reply.rstrip().endswith("?"):
+                    break
+                step = "answering the desk's confirmation question"
+                before = page.locator(".msg.desk").count()
+                page.fill("#input", CONFIRMATION)
+                page.click("#send")
+                page.wait_for_function(
+                    "n => document.querySelectorAll('.msg.desk').length > n",
+                    arg=before,
+                    timeout=args.timeout * 1000,
+                )
+                reply = read_reply(page)
+                print("  turn %d: %d characters" % (page.locator(".msg.desk").count() - 1,
+                                                    len(reply)))
+
+            if reply.rstrip().endswith("?"):
+                sys.exit("the desk is still asking rather than answering after %d turns, so no "
+                         "picture was written. Its last words: %s"
+                         % (CONFIRMATION_TURNS + 1, reply.strip()[:200]))
             page.wait_for_timeout(1200)
 
             step = "writing the picture"
