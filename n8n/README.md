@@ -1203,13 +1203,15 @@ current state and the way to remove them are under Workflow ids above.
 - Top K 4 is the course's value and a real limit: a question whose answer is spread over
   more than four chunks is answerable only in part. The store carries a summary chunk for
   the one question a customer asks most.
-- **The projection serves `next_step.overdue` and the prompt does not use it.** Measured
-  2026-09-10 on ARK-INC-00015: the endpoint returned `"overdue": true` for a containment
-  decision due four days earlier, and the desk answered "which was due on 2026-09-06" and
-  stopped there. Nothing is wrong with the number and a reader can do the subtraction, but
-  the flag exists precisely so nobody has to, and a customer asking after a late notice is
-  the case where saying it plainly matters most. Found while capturing the README picture,
-  which is the first thing in this repository that ever showed the desk answering.
+- **The desk says a next step is overdue, since 2026-09-10.** The projection has always served
+  `next_step.overdue` beside the date and the prompt ignored it, so a notice four days late came
+  back as "which was due on 2026-09-06" and nothing more, which left the customer to compare a
+  date with today in the one case where the answer should say it plainly. Found while capturing
+  the README picture, which was the first thing here that ever showed the desk answering. Element
+  7's `ok` branch now names the flag; measured on the deployed build both ways, because a rule
+  that fires always is not a fix: ARK-INC-00015, four days late, answers "which was due on
+  2026-09-06 and is now overdue", and the control ARK-INC-00747, not late, answers "which is
+  committed for 2026-09-20" with no mention of it.
 - The prompt governs behaviour, not persistence: a refused IBAN is not repeated back, but
   the raw message is in the memory node's history for that session. The production answer
   is a Guardrails node in `sanitize` mode in front of the agent.

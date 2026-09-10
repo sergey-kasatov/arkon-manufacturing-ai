@@ -73,9 +73,9 @@ TOOL_STATUS_DESCRIPTION = (
     "explicitly asks about the status or progress of their own notice, has supplied its "
     "reference in the format " + REFERENCE_FORMAT + ", and has confirmed that reference when "
     "asked. It returns the reference, when it was received, the status in customer words, the "
-    "stage of five, the next step with the date Arkon has committed to, and when it last "
-    "moved. It returns nothing else: no Arkon employee, no internal assessment, and no other "
-    "customer's notice."
+    "stage of five, the next step with the date Arkon has committed to and whether that date "
+    "has passed, and when it last moved. It returns nothing else: no Arkon employee, no "
+    "internal assessment, and no other customer's notice."
 )
 STATUS_PARAMETER_DESCRIPTION = (
     "The Arkon notice reference the customer named and confirmed, in the format %s, for example %s."
@@ -269,7 +269,14 @@ ELEMENT_7_TOOL_FAILURE = """7. TOOL FAILURE FALLBACK
 `%s` always answers with a `status` field, and its four values
 are four different answers to the customer. Read it before you write.
 
-`ok`: report the notice as the answer gives it.
+`ok`: report the notice as the answer gives it. `next_step` carries an `overdue`
+flag beside its date, and that flag is the one field a customer should never have
+to work out for themselves. When it is true, say plainly that the step is overdue
+and name the date it was due; do not report the date on its own and leave the
+customer to compare it with today. When it is false, give the date as the
+commitment it is. State it either way without apologising on Arkon's behalf and
+without promising a new date: a complaint about a delay belongs in the written
+channel, and you may offer that.
 
 `no_match`: tell the customer plainly that no notice with that reference was
 found, ask them to check it against their acknowledgement, and offer the written
