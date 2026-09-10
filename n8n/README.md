@@ -1203,6 +1203,13 @@ current state and the way to remove them are under Workflow ids above.
 - Top K 4 is the course's value and a real limit: a question whose answer is spread over
   more than four chunks is answerable only in part. The store carries a summary chunk for
   the one question a customer asks most.
+- **The projection serves `next_step.overdue` and the prompt does not use it.** Measured
+  2026-09-10 on ARK-INC-00015: the endpoint returned `"overdue": true` for a containment
+  decision due four days earlier, and the desk answered "which was due on 2026-09-06" and
+  stopped there. Nothing is wrong with the number and a reader can do the subtraction, but
+  the flag exists precisely so nobody has to, and a customer asking after a late notice is
+  the case where saying it plainly matters most. Found while capturing the README picture,
+  which is the first thing in this repository that ever showed the desk answering.
 - The prompt governs behaviour, not persistence: a refused IBAN is not repeated back, but
   the raw message is in the memory node's history for that session. The production answer
   is a Guardrails node in `sanitize` mode in front of the agent.

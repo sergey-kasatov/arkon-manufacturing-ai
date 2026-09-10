@@ -331,6 +331,23 @@ opens that incident on the page above, and a drafted note for the transition for
 
 ![The Arkon Quality Assistant](assets/ui/assistant.png)
 
+**The other agent, and the other side of the wall.** The Customer Quality Desk answering
+an OEM about a notice by its reference: it confirms the reference before it looks
+anything up, then returns the status in customer words, the stage, the next step and the
+date Arkon committed to. Nothing else reaches the page, because nothing else is in the
+object the endpoint returns. Regenerate it with `py tools/make_desk_screenshot.py`, which
+picks an open notice at run time rather than shipping a reference that will have closed
+by the time anyone looks.
+
+Two things in this particular capture are worth naming rather than cropping out. The
+notice is **past its committed date** - the picture was taken on 2026-09-10 and the
+containment decision was due on the 6th - which is what an untended incident looks like
+in a plant that keeps running. And the desk states that date without using the word
+overdue, although the projection it reads serves `next_step.overdue` as a boolean; the
+prompt does not use the flag yet, and that is a real gap rather than a rendering choice.
+
+![The Customer Quality Desk](assets/ui/customer_desk.png)
+
 **The cockpit's entry page**, with the live pulse and one page per module.
 
 ![The cockpit entry page](assets/ui/cockpit_home.png)
@@ -1141,7 +1158,8 @@ arkon-manufacturing-ai/
 ├── tests/                      Offline test suite: the event contract, the charter 7.2 lifecycle, every generator against its workflow, the store schema, the customer boundary (projection, documents, desk), the executive view's generated content, the plant clock
 ├── tools/
 │   ├── make_result_plots.py    Regenerates the result figures from the metrics files
-│   └── make_ui_screenshots.py  Regenerates assets/ui/ from the deployed cockpit
+│   ├── make_ui_screenshots.py  Regenerates assets/ui/ from the deployed cockpit
+│   └── make_desk_screenshot.py Regenerates the desk picture; picks an open notice at run time
 ├── data/
 │   ├── 01_cmapss/              NASA CMAPSS txt files
 │   ├── 02_scania/              Scania APS csv files
