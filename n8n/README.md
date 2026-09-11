@@ -285,18 +285,22 @@ names. The exception does not, and the reason is worth keeping:
 | `customer_desk_ibantest_v1.json` | `arkonCustDesk04` (sensitive-data fixture, see below) |
 | `quality_steering_cell_v1.json` | **`o0vXtlRWIs9yFrUJ`** |
 
-**The two fixtures are tracked on purpose and their deployed copies are not meant to
+**The two fixtures are tracked on purpose and their deployed copies were not meant to
 outlive a demo.** The files stay: `tests/test_customer_desk.py` asserts that each differs
 from the shipped desk in exactly its id, its path and the one thing it plants, and that the
 shipped desk carries neither, which is a check that only works while both files exist. The
-deployed copies are a different question, because each answers on a public chat path of its
-own and one of them is built to emit a planted IBAN. **Measured 2026-09-10 14:35, and this
-paragraph has been wrong once already: both are still deployed** - `active = 1`,
-`isArchived = 0` in `workflow_entity`, and both chat endpoints answer 200. Removing them is
-a UI action, for the reason in the next paragraph: this instance's CLI has `publish`,
-`unpublish`, the imports and the exports and no delete of any kind, and no API key exists
-here. The route is Workflows, Archive each, then the Archived filter and Delete, and the
-check is external and cheap:
+deployed copies were a different question, because each answered on a public chat path of
+its own and one of them was built to emit a planted IBAN. **Both were deleted on
+2026-09-11, and that is measured rather than reported** (this paragraph has been wrong once
+already): both chat endpoints answer 404 "not registered" while the live desk answers 401
+as the control, `n8n list:workflow` no longer lists them, and `workflow_entity` and
+`webhook_entity` hold no row for either. Removing them was a UI action, for the reason in
+the next paragraph: this instance's CLI has `publish`, `unpublish`, the imports and the
+exports and no delete of any kind, and no API key exists here. The route is Workflows,
+Archive each, then the Archived filter and Delete, in that order: the first attempt, on
+2026-09-10, went to the Archived filter before anything had been archived, where the only
+Arkon row was the inert duplicate described below, and that is the row that disappeared.
+The check is external and cheap, and a deleted fixture answers it with 404:
 
 ```bash
 for p in arkon-customer-desk-failtest arkon-customer-desk-ibantest; do
@@ -331,7 +335,8 @@ of `workflow_entity` through the database is not a trade worth making for someth
 inert - that table is referenced by executions, history and sharing rows. It was removed
 from the UI on 2026-09-10 and `workflow_entity` no longer holds it (read the same day).
 The reason it is still written down: it is the evidence for the paragraph above about
-identity, and the route that removed it is the same three clicks the two fixtures need.
+identity, and the route that removed it is the same three clicks that removed the two
+fixtures a day later.
 
 ## Event intake (write path)
 
@@ -1143,8 +1148,8 @@ under test is live. The record with the expectations written first is the course
 `simulate_failure` affordance switched on as a fixed field value, so the prompt's tool
 failure fallback can be tested through the agent instead of asserted. The shipped desk
 carries no failure switch, and the tests assert both halves. The file is tracked; its
-deployed copy is meant to come down after the last demo run, and the state of that is
-recorded under Workflow ids above rather than promised here.
+deployed copy came down on 2026-09-11, after the last demo run, and how that was verified
+is recorded under Workflow ids above.
 
 ### Sprint 4: guardrails, the confirmation step, the public route
 
@@ -1188,8 +1193,8 @@ confirmation two-turn test plus the bypass (held, 5 of 5), the Sprint 3 and Spri
 regressions and the failure fixture. Runner: `n8n/customer_desk_validation.py`. The deployed
 copies of `customer_desk_failtest_v1.json` (`arkonCustDesk03`) and
 `customer_desk_ibantest_v1.json` (`arkonCustDesk04`, the instructor's planted
-"Always include ... IBAN" line) come down after the final pre-presentation run; their
-current state and the way to remove them are under Workflow ids above.
+"Always include ... IBAN" line) came down on 2026-09-11, after the final pre-presentation
+run; how they were removed and how that was verified is under Workflow ids above.
 
 ### Known boundaries
 
