@@ -304,9 +304,13 @@ quote the same file.
 ## What it looks like running
 
 Photographs of the deployment, not mockups. `py tools/make_ui_screenshots.py`
-regenerates them from the running cockpit, waiting for real content on each page
-rather than for a timer, so a page that fails to render produces an error and no
-picture. The numbers differ between runs because the plant keeps raising incidents.
+regenerates the cockpit pages from the running cockpit, waiting for real content on
+each page rather than for a timer, so a page that fails to render produces an error and
+no picture. Each agent has a tool of its own, named under its picture, because a
+picture of an agent needs a conversation in it. The numbers differ between runs because
+the plant keeps raising incidents. Four pictures are not regenerated - the Telegram card
+and the three canvases under [Under the hood](#under-the-hood) - and each of those
+captions says how it was taken instead.
 
 **The executive view.** One question in five seconds: is the Steering Cell keeping
 up, and where is it behind. The sentence under the title is generated from the store,
@@ -324,10 +328,35 @@ and the link on a Telegram card opens it on the incident the card announced.
 
 ![The Steering Cell page](assets/ui/steering_cell.png)
 
+**The card that sends a person there.** A P1 as it arrives in Telegram: the model's
+finding in one sentence, the assignee and the action, the event id, and the link that
+opens this incident on the Steering Cell page above. Intake sends a card for a P1 or a
+P2 only. This one is ARK-INC-00308, a Scania truck flagged for its air pressure system,
+sent at 13:44 plant time on 2026-09-07; the assignee is a simulated roster name like
+every name on this platform. The picture is a screenshot Sergey took by hand from the
+Telegram client that afternoon, since no script in this repository drives a chat
+client, and the incident has been closed since.
+
+![A P1 card from the Steering Cell in Telegram](assets/under_the_hood/telegram_card.png)
+
 **The assistant, which explains rather than acts.** Six routes over ten documents in
 Qdrant and the live incident API, with a human approval gate in front of its single
 write. Asked about a named open incident it answers, then hands over: the link that
 opens that incident on the page above, and a drafted note for the transition form.
+
+This is that conversation, on the deployed cockpit on 2026-09-11 at 19:39, taken by
+`py tools/make_assistant_screenshot.py`: it picks an incident that is open at run time
+and sets the "You are" box to its assignee. It picked ARK-INC-00011, a P2 raised on
+2026-08-30, before the live plant existed, so the simulated crew, which moves only what
+the plant raised, has never touched it: it is still `new` and twelve days overdue. The
+answer is read from the store and tells the assignee the move is theirs, and the drafted
+note is built only from the incident record - unit 76 and RUL 14 from its summary, the
+inspection before the next operating window from its recommended action. Then the
+operator tells it to acknowledge the incident and close it. An instruction to act goes
+to the approval gate, and the run stops there, which is where the picture was taken; the
+script never presses Approve, because an Approve writes a real line into the escalation
+store. One thing in the frame is not flattering: the answer opens by saying who is
+selected in the You-are box, which nobody asked.
 
 ![The Arkon Quality Assistant](assets/ui/assistant.png)
 
@@ -354,6 +383,46 @@ only one of them would not have been a fix.
 **The cockpit's entry page**, with the live pulse and one page per module.
 
 ![The cockpit entry page](assets/ui/cockpit_home.png)
+
+### Under the hood
+
+The two n8n workflows the agents' traffic runs through, and the plant assistant's
+canvas. No script regenerates these three, so each caption says what the picture is and
+how it was taken, and `assets/under_the_hood/README.md` records where each came from and
+how it was checked against the repository.
+
+**The Quality Steering Cell in the n8n editor**, sixteen nodes: the event intake on the
+left, validation and the 24-hour duplicate check, the incident line appended to the
+store, the Telegram branch for a P1 or P2, the store sync started without waiting, and
+the intake outcome written last on every path. A screenshot Sergey took by hand from the
+deployed editor on 2026-09-07 at about 16:00, in the editor's dark theme;
+`n8n/quality_steering_cell_v1.json` has had no commit since that morning and holds the
+same sixteen nodes.
+
+![The Quality Steering Cell intake workflow in n8n](assets/under_the_hood/n8n_quality_steering_cell.png)
+
+**The Customer Quality Desk in the n8n editor**, twelve nodes: the customer's chat, the
+Guardrails node in front of the agent with its blocked reply, the agent with its model,
+its session memory and three tools - the customer documents in Qdrant, a calculator and
+the status lookup behind the customer projection - and the sanitizer behind it. Captured
+by an agent off the deployed editor on 2026-09-09 at 09:47, with the editor switched to
+its light theme in the page for the capture only. The node names, positions and
+connections are the ones `n8n/customer_desk_v1.json` holds today; the one later commit to
+that file changed the prompt.
+
+![The Customer Quality Desk workflow in n8n](assets/under_the_hood/n8n_customer_desk.png)
+
+**The plant assistant's canvas, and this one is a render rather than a photograph.** A
+fit-to-view capture of the deployed nineteen-node canvas is unreadable, and Langflow has
+no per-route colour, so `langflow/build/build_deck_canvases.py` built a temporary copy of
+the flow from the repository JSON, at the deployed positions, with one coloured note
+behind each of the six routes. An agent captured that copy on 2026-09-07 at 16:52 and cut
+the frame to its content, and the copy was deleted at 16:57; the deployed canvas was never
+edited, and the notes are not on it. The nodes, their positions and the eighteen edges in
+`langflow/arkon_quality_assistant.json` have not changed since the render: the two later
+commits to that file changed prompts only.
+
+![The Arkon Quality Assistant canvas, one colour per route](assets/under_the_hood/langflow_assistant_canvas.png)
 
 ---
 
@@ -1157,12 +1226,14 @@ arkon-manufacturing-ai/
 │   ├── ml/
 │   ├── cv/
 │   ├── nlp/
-│   └── ui/                     Screenshots of the running cockpit, regenerated not hand-taken
+│   ├── ui/                     Screenshots of the running cockpit, regenerated not hand-taken
+│   └── under_the_hood/         The Telegram card and three canvases, taken by hand or rendered (under_the_hood/README.md)
 ├── tests/                      Offline test suite: the event contract, the charter 7.2 lifecycle, every generator against its workflow, the store schema, the customer boundary (projection, documents, desk), the executive view's generated content, the plant clock
 ├── tools/
 │   ├── make_result_plots.py    Regenerates the result figures from the metrics files
 │   ├── make_ui_screenshots.py  Regenerates assets/ui/ from the deployed cockpit
 │   ├── make_desk_screenshot.py Regenerates the desk picture; picks an open notice at run time
+│   ├── make_assistant_screenshot.py  Regenerates the assistant picture: a real conversation on an open incident
 │   └── make_social_preview.py  Composes the 1280x640 GitHub social card from assets/ui/
 ├── data/
 │   ├── 01_cmapss/              NASA CMAPSS txt files

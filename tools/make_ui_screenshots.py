@@ -47,12 +47,9 @@ SHOTS = [
         "ready": "Needs a person now",
         "size": (1600, 1250),
     },
-    {
-        "name": "assistant.png",
-        "path": "/assistant",
-        "ready": "Arkon Quality Assistant",
-        "size": (1500, 950),
-    },
+    # No assistant.png here. This page before anyone has asked it anything is a picture
+    # of an input box, so `tools/make_assistant_screenshot.py` takes it with a
+    # conversation in it, and a row here would overwrite that with an empty chat.
     {
         "name": "cockpit_home.png",
         "path": "/",
