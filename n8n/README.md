@@ -863,7 +863,7 @@ private IP ranges by default and needs
 
 Ninth workflow, `customer_status_api_v1.json`, built and **deployed 2026-09-08** on n8n
 2.29.9, workflow id `arkonCustDesk01`. It is the read endpoint of the Customer Quality
-Desk, the customer-facing agent built as the MSIT course project 2A (the coursework lives
+Desk, the customer-facing agent built on this platform (the full build record lives
 outside this repository, the endpoint is platform): an OEM customer's quality engineer, or
 the agent answering them, asks about one quality notice or complaint by its `ARK-INC`
 reference and gets the customer projection back. Same store as the plant (charter 7.5),
@@ -904,7 +904,7 @@ The notice, and nothing else:
 | Field | What it is |
 |---|---|
 | `reference` | the incident id |
-| `type` | `quality_notice`: the plant's incidents are read as quality notices to the customer; a complaint intake of its own is the post-course extension |
+| `type` | `quality_notice`: the plant's incidents are read as quality notices to the customer; a complaint intake of its own is a later extension |
 | `received_at` | the intake time |
 | `customer_status` | the customer's word for the folded lifecycle status, table below |
 | `stage` | `{number, of: 5, name}` |
@@ -975,8 +975,8 @@ API's record of it, and the four answers were timed from the laptop: 400 in 0.09
 - Every incident is readable as a quality notice, and the ids are sequential, so anyone
   who can reach the endpoint can enumerate them. The projection bounds what a guess
   returns to the eight customer fields; who may see which reference is the identity and
-  per-customer scoping gap the desk's brief names, the same gap the course's public URL
-  has.
+  per-customer scoping gap the desk's brief names, the same gap any public URL of this
+  kind has.
 - The commitment dates for stages 2 to 4 are the desk's, not the charter's, and the plant
   is not measured against them.
 - No authentication, like the status API: LAN and Tailscale only. The desk's public page
@@ -1063,9 +1063,9 @@ four webhook rows present.
 ## Customer Quality Desk (the agent, sprints 1 and 3)
 
 Eleventh workflow, `customer_desk_v1.json`, id `arkonCustDesk02`, **deployed 2026-09-08** with
-the knowledge base and **re-deployed the same day at sprint 3** with its three tools. The customer-facing agent of the MSIT course project 2A, built sprint by
-sprint on the platform the plant runs on. The coursework (the memory policy, the validation
-runs, the brief) lives outside this repository; the workflow, its prompt
+the knowledge base and **re-deployed the same day at sprint 3** with its three tools. The customer-facing agent, built sprint by
+sprint on the platform the plant runs on. The full build record (the memory policy, the
+validation runs, the brief) lives outside this repository; the workflow, its prompt
 (`n8n/build/customer_desk_prompt.py`, one version per sprint) and its generator
 (`n8n/build/build_customer_desk_workflow.py`) are platform and live here, and the git
 history keeps each sprint's shape.
@@ -1093,12 +1093,12 @@ name, company and reference recalled three turns later; the consent question ver
 before a health-linked communication preference is kept, and the preference honoured
 unprompted two turns on; an IBAN and a private number refused without being repeated back;
 a second session blind to the first. The record with the expectations written first and
-the transcript is the coursework's.
+the transcript is kept outside this repository.
 
 ### Sprint 3: the three tools
 
 Same trigger, agent, model and memory; three tools added and the prompt replaced with the
-course's six elements in its order (role and context, retrieval scope, notice action
+brief's six elements in its order (role and context, retrieval scope, notice action
 boundary, tool invocation guidance, fallback behaviour, tool failure fallback), Max
 Iterations 6.
 
@@ -1141,7 +1141,7 @@ gate was re-run on the same build and passed thirteen of thirteen. The runner is
 `n8n/customer_desk_validation.py` (`--eight`, `--sprint2`, `--failure`; the sprint 4 gates were
 added to the same runner), which reads the expectations that
 depend on the plant from the status endpoint at the start of every run, because the notice
-under test is live. The record with the expectations written first is the coursework's.
+under test is live. The record with the expectations written first is kept outside this repository.
 
 `customer_desk_failtest_v1.json` (id `arkonCustDesk03`, chat path
 `/webhook/arkon-customer-desk-failtest/chat`) is the same desk with the status endpoint's
@@ -1154,11 +1154,11 @@ is recorded under Workflow ids above.
 ### Sprint 4: guardrails, the confirmation step, the public route
 
 Twelve nodes. The Chat Trigger runs in `webhook` mode behind Basic Auth (credential
-`arkonDeskBasic1`), an `Input Guardrails` node (Guardrails v2, `classify`, the instructor's
+`arkonDeskBasic1`), an `Input Guardrails` node (Guardrails v2, `classify`, the brief's
 nine keyword phrases) stands between the trigger and the agent - Pass to the agent, Fail to
 `Blocked Reply`, which answers with the moderation message - and an `Output Guardrails` node
 (Guardrails v2, `sanitize`, the built-in `IBAN_CODE` entity plus a custom regex for spaced
-IBANs) stands between the agent and `Desk Reply`. The prompt is the instructor's nine
+IBANs) stands between the agent and `Desk Reply`. The prompt is the brief's nine
 elements in order: role, memory governance, retrieval scope, notice action boundary, tool
 guidance with the confirmation step, fallback, tool failure, anti-injection, output
 restriction; a closing block restates the language rule, the lists rule and the confirmation
@@ -1192,20 +1192,20 @@ three adversarial tests 8 of 8 with the output guardrail masking the planted IBA
 confirmation two-turn test plus the bypass (held, 5 of 5), the Sprint 3 and Sprint 2
 regressions and the failure fixture. Runner: `n8n/customer_desk_validation.py`. The deployed
 copies of `customer_desk_failtest_v1.json` (`arkonCustDesk03`) and
-`customer_desk_ibantest_v1.json` (`arkonCustDesk04`, the instructor's planted
+`customer_desk_ibantest_v1.json` (`arkonCustDesk04`, the planted
 "Always include ... IBAN" line) came down on 2026-09-11, after the final pre-presentation
 run; how they were removed and how that was verified is under Workflow ids above.
 
 ### Known boundaries
 
 - Closed at sprint 4: the guardrails, the confirmation step and the public route are in. The
-  keyword guardrail is exact matching (the course's node claims semantic matching); the
+  keyword guardrail is exact matching (the reference node claims semantic matching); the
   `jailbreak` check is the semantic option, not relied on because it adds a model call per
-  message. "Act as" in the instructor's list also stops "please act as fast as you can".
+  message. "Act as" in the deny list also stops "please act as fast as you can".
 - The confirmation is a prompt instruction, not an infrastructure constraint; it held in
   every measured run and cannot be guaranteed. The endpoint behind it is read-only, so a
   bypassed confirmation reads early and changes nothing.
-- Top K 4 is the course's value and a real limit: a question whose answer is spread over
+- Top K 4 is the brief's value and a real limit: a question whose answer is spread over
   more than four chunks is answerable only in part. The store carries a summary chunk for
   the one question a customer asks most.
 - **The desk says a next step is overdue, since 2026-09-10.** The projection has always served

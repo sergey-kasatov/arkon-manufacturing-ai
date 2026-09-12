@@ -42,7 +42,7 @@ Usage, from the repository root, with the desk deployed:
     py tools/make_desk_screenshot.py
     py tools/make_desk_screenshot.py --base https://ugreen-nas.tail90586f.ts.net:8443
 
-Note that the demo runs on a course-issued OpenRouter key that ends in
+Note that the demo runs on a temporary OpenRouter key that expires in
 mid-September 2026. After that the page still loads and the agent answers
 nothing, so this script will fail on its own wait rather than write a picture of
 an empty reply - which is the correct behaviour, and the reason to run it while

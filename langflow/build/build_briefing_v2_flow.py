@@ -1,6 +1,6 @@
 """Rebuild Arkon_Shift_Briefing with a visible retry loop and a per-incident loop.
 
-Course 2B Week 3 names two capabilities the first version met in substance but not
+The brief names two capabilities the first version met in substance but not
 in shape: a retry with a visible fallback after two retries (LS10), and iteration
 over a list of records with one model call each (LS11). Both are built here, in the
 sub-flow, so the assistant's own canvas is not touched.

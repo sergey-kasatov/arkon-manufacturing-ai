@@ -1,6 +1,6 @@
 """Build the Arkon Customer Quality Desk's page: one GET webhook that serves the chat page.
 
-The public route of the desk (course project 2A, sprint 4) is Tailscale Funnel
+The public route of the desk (sprint 4) is Tailscale Funnel
 on port 8443 mounting exactly two paths: this page and the desk's chat webhook.
 n8n's own hosted chat page cannot be that page, because it embeds the
 instance's `WEBHOOK_URL` as an absolute address, which is the tailnet name and

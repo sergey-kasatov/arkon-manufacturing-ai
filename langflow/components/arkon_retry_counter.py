@@ -3,7 +3,7 @@
 One node, one job: every time the loop comes back here, the attempt number goes
 up by one and is emitted as text so a Conditional Router can compare it.
 
-**Read the counter from the thing that does the counting.** Both shipped course
+**Read the counter from the thing that does the counting.** Both shipped reference
 canvases update their ``retry_count`` from the Condition Agent's output instead
 of from the function that increments it, so the value written back is whatever
 the router emitted and the counter never actually advances. The loop there is

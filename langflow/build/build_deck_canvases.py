@@ -1,4 +1,4 @@
-"""Generate the temporary Langflow canvases the Course 2B deck is screenshotted from.
+"""Generate the temporary Langflow canvases the project deck is screenshotted from.
 
 A fit-to-view capture of the 19-node assistant canvas is unreadable, and Langflow
 has neither a per-route colour nor a branch filter. So the pictures are built as

@@ -117,7 +117,7 @@ that conflates them will invent a status for one of them.
 
 ## The shift briefing sub-flow
 
-Rebuilt on 2026-09-07 (Sprint 6) so that the two course components the first
+Rebuilt on 2026-09-07 (Sprint 6) so that the two required components the first
 version met in substance but not in shape are on the canvas: a retry with a
 visible fallback after two retries, and one model call per record.
 
@@ -181,8 +181,8 @@ run on 2026-09-07 and deleted afterwards:
 | Three conditional attempts, each behind an If-Else, converging on one resolve node | Does not run: the merge node is excluded with the stopped chains |
 | A Loop feeding back the end vertex's second output | The aggregate carries the first declared output whatever the edge names |
 
-So the four-node Flowise retry the course prescribes (Loop, Custom Function
-counter, two Condition nodes, fallback) cannot be reproduced here; the counter
+So the four-node Flowise retry pattern (Loop, Custom Function counter, two
+Condition nodes, fallback) cannot be reproduced here; the counter
 is kept on the retry path, and the two Condition nodes have no place that is not
 decoration. Two more facts from the same day: a chat input feeding two nodes is
 refused with "Only one chat input is allowed in the graph", and the v2 API
@@ -205,7 +205,7 @@ the four two-output components, redeployed, and proven by a UI save on a copy wi
 all 22 edges intact.
 
 Evidence and the four runs: `020 Projects/AI_Agents_2B_Meridian/build/sprint6_validation.md`
-in the vault (coursework stays out of this repository by decision).
+in the vault (the full build record stays out of this repository by decision).
 
 ## Files
 
@@ -217,14 +217,14 @@ in the vault (coursework stays out of this repository by decision).
 | `components/openrouter_embeddings.py` | A custom embedding component, because nothing Langflow ships can reach OpenRouter embeddings |
 | `components/arkon_status_url.py` | Holds the status endpoint once for every attempt, and is the chat input's only consumer (a chat input feeding two nodes is refused by the sorter) |
 | `components/arkon_retry_plan.py` | One row per planned attempt, for the retry loop to iterate; states the cost of an unconditional retry and why it is acceptable for this read and for no write |
-| `components/arkon_retry_counter.py` | Counts attempts in flow state, on the retry path rather than beside it; reads the counter from the thing that counts, which is the point the shipped course canvases miss |
+| `components/arkon_retry_counter.py` | Counts attempts in flow state, on the retry path rather than beside it; reads the counter from the thing that counts, which is the point the shipped reference canvases miss |
 | `components/arkon_status_gate.py` | Classifies an answer as ok, outage or unreachable; payload declared first because a Loop aggregates the end vertex's first output |
 | `components/arkon_status_resolve.py` | Takes the first ok answer out of the loop's attempts, or reports how many attempts said nothing |
 | `components/arkon_overdue_list.py` | The overdue incidents as rows, most overdue first, for the reading loop |
 | `components/arkon_overdue_notes.py` | Pairs each reading with its incident id by position and renders them as NOTE-block input |
 | `components/arkon_briefing_input.py` | Assembles what the briefing agent reads; counts the OPEN line in code so the model does not |
 | `build/build_briefing_v2_flow.py` | Builds and deploys the sub-flow; `--dead-url` deploys the LS10 failure-path copy under a probe name |
-| `build/build_deck_canvases.py` | Generates the temporary `ZZ_Deck_*` canvases the Course 2B deck is screenshotted from: one frame per route, the whole canvas with a coloured note behind each route, the sub-flow; `--delete` removes them. The deployed canvases are never edited for a picture |
+| `build/build_deck_canvases.py` | Generates the temporary `ZZ_Deck_*` canvases the project deck is screenshotted from: one frame per route, the whole canvas with a coloured note behind each route, the sub-flow; `--delete` removes them. The deployed canvases are never edited for a picture |
 
 ## How the flow JSON is generated
 
@@ -398,12 +398,11 @@ search a store that is entirely on disk. The store cannot be rebuilt either.
 The key lives as the Langflow global variable `OPENROUTER_API_KEY`, set on the NAS and
 never in this repository.
 
-**The key this deployment runs on belongs to a course and ends with it.** It was issued
-by Masterschool and is disconnected when the course finishes, around 2026-09-14, which
-is a date rather than a risk. Replacing it is one credential swap and no node changes;
-any OpenRouter key covers both the chat models and the embeddings, which is why a
-provider-specific key would be a worse answer here - it would leave the embeddings
-without a provider and need a component change on six nodes.
+**The key this deployment runs on is temporary and ends on a known date.** It is
+disconnected around 2026-09-14, which is a date rather than a risk. Replacing it is one
+credential swap and no node changes; any OpenRouter key covers both the chat models and
+the embeddings, which is why a provider-specific key would be a worse answer here - it
+would leave the embeddings without a provider and need a component change on six nodes.
 
 **What does NOT stop**, and it is most of the platform: the n8n Quality Steering Cell,
 the Streamlit cockpit, the executive view, the live plant and the Tableau layer. None

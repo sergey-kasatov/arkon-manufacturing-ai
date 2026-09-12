@@ -30,7 +30,7 @@ from customer_projection import COMMITMENT_HOURS, CUSTOMER_STAGES, DEFAULT_ACK_H
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 CUSTOMER_DOCS = ROOT / "docs" / "customer"
 
-# The collection and how it is built. Same splitter values as the course
+# The collection and how it is built. Same splitter values as the reference
 # (500 / 50), the same embedding model the comparison slice queries
 # `arkon-knowledge` with, at its native 3072 dimensions with Cosine distance.
 COLLECTION = "arkon-customer-desk"

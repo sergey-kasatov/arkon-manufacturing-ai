@@ -7,15 +7,15 @@ escalate to, and what to submit. The rest of `docs/` describes the same system
 from inside the plant, for the plant's own people, and none of it is customer
 information.
 
-They exist for the Customer Quality Desk, the customer-facing agent built as
-the MSIT course project 2A on n8n (the coursework lives outside this
-repository; the platform pieces are here). The desk answers from these three
-documents, held in the Qdrant collection `arkon-customer-desk`, and from the
-customer status endpoint (`n8n/README.md`, "Customer status API"), and from
-nothing else. The two stores of the platform are its two trust boundaries:
-the operators' assistant reads `arkon-knowledge` (the charter, the SOP, the
-model cards), the desk reads `arkon-customer-desk`, and neither can reach the
-other's collection even by accident.
+They exist for the Customer Quality Desk, the customer-facing agent built on
+n8n (the full build record lives outside this repository; the platform pieces
+are here). The desk answers from these three documents, held in the Qdrant
+collection `arkon-customer-desk`, and from the customer status endpoint
+(`n8n/README.md`, "Customer status API"), and from nothing else. The two
+stores of the platform are its two trust boundaries: the operators' assistant
+reads `arkon-knowledge` (the charter, the SOP, the model cards), the desk
+reads `arkon-customer-desk`, and neither can reach the other's collection even
+by accident.
 
 Arkon Manufacturing is a fictional company. Every role, address, commitment
 and certification claim in these documents belongs to the fictional company,

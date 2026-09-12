@@ -5,7 +5,7 @@ Every picture in `assets/ui/` is taken by a script from the running deployment
 so a clone can retake it. The four here cannot be retaken that way, so each one says what
 it is instead: two were captured by hand, one by an agent off the n8n editor, and one is
 a render of the repository's own flow JSON rather than a photograph of the deployed
-canvas. All four were taken for course presentations on 2026-09-07 and 2026-09-09 and
+canvas. All four were taken for presentations on 2026-09-07 and 2026-09-09 and
 copied here byte for byte on 2026-09-11 (SHA-256 compared).
 
 | File | What it shows | When and how it was taken | Checked against the repository on 2026-09-11 |

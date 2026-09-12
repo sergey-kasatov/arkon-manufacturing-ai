@@ -4,10 +4,10 @@ The prompt is the one instruction text the desk agent runs on, and it is
 generated into the workflow JSON by `build_customer_desk_workflow.py` rather
 than typed into the canvas, for the reason every other Code-node body here is:
 the tracked file and the deployed workflow cannot disagree. The memory rules
-block is quoted verbatim by the coursework's memory policy, and the consent
+block is quoted verbatim by the build record's memory policy, and the consent
 question is the sentence the validation runs check for.
 
-Sprint 4 (this version): the nine elements of the instructor's required
+Sprint 4 (this version): the nine elements of the brief's required
 checklist, in its order - role and context; memory governance; retrieval scope
 with the verbatim fallback; notice action boundary; tool invocation guidance
 with the confirmation step; fallback behaviour; tool failure fallback;
@@ -29,8 +29,8 @@ SPRINT = 4
 MODEL = "google/gemini-3.1-flash-lite"
 TEMPERATURE = 0.3
 
-# Buffer window: six exchanges, the course's justified value (the coursework's
-# memory policy carries the justification). Max iterations: the course's
+# Buffer window: six exchanges, the brief's justified value (the build record's
+# memory policy carries the justification). Max iterations: the brief's
 # reference value of 6, which is what a turn here actually needs - the widest
 # turn of the eight tests calls two tools and answers from memory, so the
 # ceiling stops a loop without cutting a legitimate turn short.
@@ -47,7 +47,7 @@ TOOL_CALCULATOR = "Calculator"
 TOOL_STATUS = "complaint_status_lookup"
 
 # The document tool's description, the sentence the model reads before it
-# decides to call it. The instructor's condition, with Arkon's nouns.
+# decides to call it. The brief's condition, with Arkon's nouns.
 TOOL_DOCUMENTS_DESCRIPTION = (
     "Search the documents Arkon has approved for customer use: the Customer Complaint "
     "Handling Guide 2026, the Quality Commitments and Escalation Contacts, and the "
@@ -59,7 +59,7 @@ TOOL_DOCUMENTS_DESCRIPTION = (
 
 # The status tool's description and its one required parameter. `reference` is
 # filled by the model through `$fromAI`, which makes it a required argument of
-# the generated tool schema: the course's "supplies all identifying information"
+# the generated tool schema: the "supplies all identifying information"
 # condition is enforced by the tool rather than by the prompt alone.
 #
 # `127.0.0.1`, not `localhost`: inside the container `localhost` resolves to
@@ -96,7 +96,7 @@ BOUNDARY_SENTENCE = (
     "I can look information up and explain it, but I cannot change anything in Arkon's "
     "records. Please send that request to the Arkon Customer Quality Contact in writing."
 )
-# The confirmation before a lookup: the instructor's sentence with the reference
+# The confirmation before a lookup: the brief's sentence with the reference
 # substituted. The validation asserts the prefix and the reference.
 CONFIRMATION_PREFIX = "Just to confirm, the notice reference you would like me to check is"
 CONFIRMATION_QUESTION = CONFIRMATION_PREFIX + " %s. Is that correct?" % REFERENCE_FORMAT
@@ -106,7 +106,7 @@ MODERATION_MESSAGE = (
     "I am not able to process that request. If you have a question about an Arkon quality "
     "notice or complaint, I am happy to help."
 )
-# The instructor's nine-phrase deny list, verbatim. Checked by the Guardrails
+# The brief's nine-phrase deny list, verbatim. Checked by the Guardrails
 # node's keyword guardrail in front of the agent: word-boundary aware and case
 # insensitive, so "Act as" also stops "please act as fast as you can", which is
 # a false positive the record names rather than hides.
@@ -127,7 +127,7 @@ CONSENT_QUESTION = (
     "may I note that? I will keep it only for this session."
 )
 
-# The memory rules of sprint 1, unchanged in wording since the coursework's
+# The memory rules of sprint 1, unchanged in wording since the build record's
 # memory policy quotes them; they are element 2 of the nine.
 MEMORY_RULES = """Remember, for this session only: the customer company and site; the contact's
 name and role; the contact's language preference; the references under
@@ -154,7 +154,7 @@ answer only, do not store it, confirm this once, and do not ask again in this
 session. Never treat silence as agreement, and never reduce the level of service
 because consent was declined.""" % CONSENT_QUESTION
 
-# The nine elements, in the order the instructor's checklist puts them. Each is
+# The nine elements, in the order the brief's checklist puts them. Each is
 # a named block so the elements can be read off the deployed prompt one by one,
 # which is what the prompt document of session 5 has to show.
 ELEMENT_1_ROLE = """1. ROLE AND CONTEXT

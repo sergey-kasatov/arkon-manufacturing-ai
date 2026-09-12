@@ -40,7 +40,7 @@ Usage, from the repository root, with the cockpit and the assistant deployed:
     py tools/make_assistant_screenshot.py
     py tools/make_assistant_screenshot.py --reference ARK-INC-00014
 
-The assistant runs on a course-issued OpenRouter key that ends in mid-September 2026.
+The assistant runs on a temporary OpenRouter key that expires in mid-September 2026.
 After that the page still loads and a run returns no answer, so this script fails on
 its own check rather than write a picture of an empty reply - which is the reason to
 run it while the key is alive.
