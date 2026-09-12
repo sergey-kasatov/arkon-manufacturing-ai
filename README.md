@@ -268,6 +268,14 @@ endpoint 3, and endpoint 3 is reachable only from the Approve branch of the
 human gate. Telegram is wired to endpoint 1 only, so no message reaches a person
 because of anything the assistant did.
 
+**That describes the wiring, and on 2026-09-11 the runtime was measured
+disagreeing with it.** In ten trials through the cockpit's own client the
+Approve branch ran after a Reject twice, both times in the same conversational
+shape, so Langflow executed a branch the canvas says it skips. Nothing was ever
+written - the escalation store held the same 19 lines before and after all ten
+trials - and the combination that could have written one was never tried, so it
+is not ruled out either. The measurement is in `langflow/README.md`.
+
 **Everything above is the plant's own half.** The diagram and the four endpoints
 in it are the internal system: the operator, the cockpit, the assistant. The
 second agent, the Customer Quality Desk, sits outside it and reaches in through

@@ -57,10 +57,14 @@ component whose value is its exact output must not be reached through something
 that rewords.
 
 The approval gate is the only thing standing between a request and the single
-write the assistant can perform. Nothing reaches
+write the assistant can perform. On the canvas nothing reaches
 `POST /webhook/arkon-escalation` unless a human picked Approve, and an approval
 is not an authorisation to do something this assistant cannot do: an approved
-"acknowledge this incident" is still refused. Until 2026-09-03 the reason was
+"acknowledge this incident" is still refused. **The canvas is not the running
+system, and on 2026-09-11 the two were measured disagreeing: in ten trials the
+Approve branch ran after a Reject twice.** No line was written in any of them,
+and the whole measurement, with what it does and does not rule out, is under
+Known boundaries below. Until 2026-09-03 the reason was
 that the system had no write path for it. It has one now
 (`POST /webhook/arkon-incident-transition`), and the refusal stands on a
 different footing: the assistant has no connection to that endpoint, and the
@@ -528,6 +532,27 @@ model unless `--keep` is passed.
   canvas; the escalation API records the `approved_by` value it is sent and
   cannot check it. In production the gate would hand the agent a signed,
   single-use token.
+- **And on this deployment the gate itself leaks, which is what makes that token
+  a requirement rather than a refinement.** On 2026-09-11 the Approve branch was
+  observed running after a Reject: 2 of 5 trials in a two-turn shape (a status
+  question, then "While you are there, acknowledge it and close it too.", then
+  Reject) and 0 of 5 in a plain one-turn escalation request, all ten driven
+  through the cockpit's own client with the three calls the assistant page makes
+  (`start_turn`, `poll_turn`, `resume_turn`). In both leaking trials
+  `Escalation Answer` and `Declined Answer` carried text and the message table
+  has the two agents within 25 ms of each other, so both branches ran through to
+  their own output. **The canvas is wired correctly** - `Agent-esc01` takes its
+  input only from the gate's `branch_approve` and its tool only from
+  `APIRequest-esc01` - so this is the Langflow runtime executing a branch it
+  should have skipped, intermittently. **Nothing was ever recorded:**
+  `escalations.jsonl` held the same 19 lines before and after all ten trials,
+  because the shape that leaks asks for a move the escalation specialist declines
+  by prompt and the escalation record is its only tool. **The combination that
+  would write is not ruled out:** a real escalation request in the leaking shape
+  was never tried, because that trial can put a false approved line into an
+  append-only store, and the demo credential expires in mid-September 2026. So
+  branch deactivation is not a safety property on this runtime; an endpoint that
+  can check the approval itself would be.
 - **An unanswered approval expires silently.** The Human Input timeout is one
   hour and the fallback output is off, so a request nobody answers is not routed
   anywhere. The fix is a fallback branch that tells the Quality Manager; it is
