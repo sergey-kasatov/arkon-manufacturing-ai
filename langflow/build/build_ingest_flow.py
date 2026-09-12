@@ -42,7 +42,7 @@ REMOTE = "cd ~/arkon-tmp && python3 lf_api.py"
 FLOW_NAME = "Arkon_Knowledge_Ingest"
 ENDPOINT = "arkon-knowledge-ingest"
 COLLECTION = "arkon-knowledge"
-# The container name resolves inside the shared msit network. It also has to be
+# The container name resolves inside the shared network. It also has to be
 # in LANGFLOW_SSRF_ALLOWED_HOSTS: the Qdrant component runs the same private-IP
 # guard that blocked the n8n call.
 QDRANT_HOST = "qdrant"

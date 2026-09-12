@@ -495,7 +495,7 @@ Two of these need a human at a keyboard and cannot be scripted from here.
    - Bind-mount the incident store: `/volume1/docker/arkon:/data/arkon`.
    - `N8N_RESTRICT_FILE_ACCESS_TO=~/.n8n-files;/data/arkon` - **required**, see
      the traps below.
-   - Attach the container to the `msit-flowise_msit` network as well, so the
+   - Attach the container to the `nas-shared` network as well, so the
      agent front-end can reach n8n by name at `http://n8n:5678`.
    - Then `docker compose up -d` per the runbook. Back up `n8n_data` first.
 3. **Create the store file**: `docker exec n8n touch /data/arkon/incidents.jsonl`.
@@ -815,7 +815,7 @@ answered 200 with two P1 incidents.
 
 ### Reaching it from the agent
 
-The n8n container is attached to `msit-flowise_msit` and carries the network
+The n8n container is attached to `nas-shared` and carries the network
 alias `n8n.arkon.internal` there. The laptop and the LAN use `AK2101` instead.
 
 ```text

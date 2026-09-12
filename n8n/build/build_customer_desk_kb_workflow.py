@@ -29,7 +29,7 @@ OUT = pathlib.Path(__file__).resolve().parent.parent / "customer_desk_kb_v1.json
 WORKFLOW_ID = "arkonCustDeskKB1"
 INGEST_PATH = "arkon-customer-desk-ingest"
 SEARCH_PATH = "arkon-customer-desk-search"
-# The container name resolves inside the shared msit network, the same way the
+# The container name resolves inside the shared network, the same way the
 # Qdrant credential reaches it; read from the container on 2026-09-08.
 QDRANT_URL = "http://qdrant:6333"
 

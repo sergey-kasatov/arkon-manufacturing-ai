@@ -163,7 +163,7 @@ flowchart TB
 
   OP(["Operator, in a browser"])
 
-  subgraph NAS["NAS AK2101, docker network msit"]
+  subgraph NAS["NAS AK2101, docker network nas-shared"]
     W1["(1) POST /webhook/arkon-event<br/>Quality Steering Cell<br/>validate, dedup 24h, record"]
     ASSIST["Arkon Quality Assistant<br/>Langflow, 19 nodes"]
     COCK["Arkon cockpit<br/>Streamlit, 10 pages<br/>AK2101:8303"]

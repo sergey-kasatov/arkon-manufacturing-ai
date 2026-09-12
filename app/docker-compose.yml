@@ -29,7 +29,7 @@ services:
     ports:
       - "8303:8501"
     networks:
-      - msit
+      - nas-shared
 
   # The live plant, live_plant/plant.py: one real-model incident every ~10 minutes
   # across all seven modules, plus a simulated crew moving them. Behind a profile
@@ -70,7 +70,7 @@ services:
     # `docker stop` sends SIGTERM; the loop finishes the tick in flight and exits.
     stop_grace_period: 30s
     networks:
-      - msit
+      - nas-shared
 
   # The public copy of the assistant page, and nothing else. `assistant` runs the same image
   # as the cockpit with app/pages/02_assistant.py as its only page (a page file run directly
@@ -107,7 +107,7 @@ services:
       ARKON_LANGFLOW_API_KEY: ${ARKON_LANGFLOW_API_KEY}
       TZ: ${TZ:-Europe/Berlin}
     networks:
-      - msit
+      - nas-shared
 
   assistant-auth:
     image: caddy:2-alpine
@@ -120,11 +120,11 @@ services:
     volumes:
       - /volume1/docker/arkon-assistant/Caddyfile:/etc/caddy/Caddyfile:ro
     networks:
-      - msit
+      - nas-shared
 
 networks:
-  msit:
-    # The network n8n and Langflow are already attached to. External, because
-    # this stack joins theirs rather than creating one.
-    name: msit-flowise_msit
+  nas-shared:
+    # The shared bridge n8n and Langflow are already attached to. External,
+    # because this stack joins it rather than creating one.
+    name: nas-shared
     external: true

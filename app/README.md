@@ -88,7 +88,7 @@ docker compose -f app/docker-compose.yml --env-file .env up -d --build
 The build context is the repository root, because the app reads `assets/` and
 the metrics files. `.dockerignore` excludes `models/**` and puts the metrics
 files back, so the trained weights cannot end up in the image. The container
-joins `msit-flowise_msit`, the network n8n and Langflow are already on, and
+joins `nas-shared`, the network n8n and Langflow are already on, and
 reaches them by alias rather than by host name. `.env` holds the Langflow key and
 lives only on the NAS.
 
